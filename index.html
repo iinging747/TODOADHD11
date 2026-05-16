@@ -39,11 +39,11 @@
   --tan:#DCD1BB;
   --tan-soft:#E8DEC8;
   --tan-deep:#C8BB9E;
-  --ink:#2D2620;
-  --ink-soft:#6E6452;
-  --ink-muted:#A89B85;
-  --hairline:rgba(45,38,32,.12);
-  --hairline-soft:rgba(45,38,32,.06);
+  --ink:#241E18;
+  --ink-soft:#4F4634;
+  --ink-muted:#7A6E58;
+  --hairline:rgba(45,38,32,.20);
+  --hairline-soft:rgba(45,38,32,.10);
   --rose:#C49089;
   --rose-soft:#E8C9C4;
   --olive:#8A8260;
@@ -66,11 +66,11 @@ body.dark{
   --tan:#4A4234;
   --tan-soft:#3A3326;
   --tan-deep:#6B5E48;
-  --ink:#EDE3D0;
-  --ink-soft:#B5A88E;
-  --ink-muted:#7A6F5C;
-  --hairline:rgba(237,227,208,.10);
-  --hairline-soft:rgba(237,227,208,.05);
+  --ink:#F4ECDC;
+  --ink-soft:#D1C6AC;
+  --ink-muted:#A1957A;
+  --hairline:rgba(237,227,208,.18);
+  --hairline-soft:rgba(237,227,208,.09);
   --rose:#D6A29B;
   --rose-soft:#4A3530;
   --olive:#B1A87E;
@@ -570,7 +570,7 @@ body.dark .select{background-image:url("data:image/svg+xml;utf8,<svg xmlns='http
 .btn-ghost:hover{background:var(--ink);color:var(--paper)}
 
 .list{display:flex;flex-direction:column;gap:0}
-.row{display:grid;grid-template-columns:24px 1fr auto;gap:14px;align-items:flex-start;padding:14px 0;border-bottom:1px solid var(--hairline-soft)}
+.row{display:grid;grid-template-columns:24px 1fr auto auto;gap:12px;align-items:flex-start;padding:14px 0;border-bottom:1px solid var(--hairline-soft)}
 .row:last-child{border-bottom:0}
 .row .ic{font-size:16px;line-height:1;text-align:center;margin-top:2px;color:var(--ink-soft);width:24px;height:24px;display:grid;place-items:center}
 .row .body{min-width:0}
@@ -587,9 +587,10 @@ body.dark .select{background-image:url("data:image/svg+xml;utf8,<svg xmlns='http
 .row .check{appearance:none;-webkit-appearance:none;width:16px;height:16px;border:1px solid var(--ink-muted);border-radius:1px;background:transparent;margin-top:4px;cursor:pointer;position:relative;transition:background .15s, border-color .15s}
 .row .check:checked{background:var(--ink);border-color:var(--ink)}
 .row .check:checked::after{content:"";position:absolute;left:3px;top:0;width:7px;height:10px;border-right:1.4px solid var(--paper);border-bottom:1.4px solid var(--paper);transform:rotate(40deg)}
-.row .del{font-family:var(--fui);font-size:9.5px;letter-spacing:.18em;text-transform:uppercase;color:var(--ink-muted);align-self:center;opacity:0;transition:opacity .15s, color .15s}
-.row:hover .del{opacity:1}
-.row .del:hover{color:var(--rose)}
+.row .del{font-family:var(--fui);font-size:9.5px;letter-spacing:.18em;text-transform:uppercase;color:var(--ink-muted);align-self:center;opacity:.55;transition:opacity .15s, color .15s;cursor:pointer;background:transparent;border:1px solid var(--hairline);border-radius:999px;padding:3px 9px;line-height:1}
+.row:hover .del,.row .del:focus{opacity:1}
+.row .del:hover{color:var(--rose);border-color:var(--rose-soft)}
+@media (hover:none){.row .del{opacity:.85}}
 
 .empty{font-family:var(--fb);font-style:italic;font-weight:300;font-size:13.5px;color:var(--ink-muted);padding:18px 16px;background:var(--paper-soft);border-left:2px solid var(--tan);margin:8px 0 16px}
 .divider{height:1px;background:var(--hairline);margin:28px 0}
@@ -1473,6 +1474,10 @@ const USERS_KEY = 'todoadhd_users';
 const SESSION_KEY = 'todoadhd_session';
 const userDataKey = (username) => `todoadhd_data_${username}`;
 
+/* Admin gating — only this email sees the photo-import feature */
+const ADMIN_EMAIL = 'iinging747@gmail.com';
+function isAdmin(){ return !!currentFbUser && (currentFbUser.email||'').toLowerCase() === ADMIN_EMAIL; }
+
 /* ============ Storage wrapper (window.storage + localStorage fallback) ============ */
 async function sSet(key, value){
   // Try window.storage first, fallback to localStorage on any error
@@ -1796,6 +1801,8 @@ function stickerEmoji(type){ return (stickerDefs[type]||stickerDefs.fallback).em
 function dateAdd(d,n){const x=new Date(d);x.setDate(x.getDate()+n);return x}
 function nextDow(dow,base=nowKST()){let diff=(dow-base.getDay()+7)%7;if(diff===0)diff=7;return dateAdd(base,diff)}
 function thisDow(dow,base=nowKST()){return dateAdd(base,(dow-base.getDay()+7)%7)}
+// "이번주 X요일" — current calendar week's day, may be past (Sun-start week)
+function inThisWeek(dow,base=nowKST()){return dateAdd(base,dow-base.getDay())}
 /* Extract time hint from text (returns 'HH:MM' or null) */
 function extractTime(text){
   // Specific clock times: "오후 3시", "9시 반", "15시 30분"
@@ -1853,8 +1860,8 @@ function resolveDates(text){
   if(/오늘/.test(t) && !dates.length) dates.push(nowKST());
   if(/내일/.test(t)) dates.push(dateAdd(nowKST(), 1));
   if(/모레/.test(t)) dates.push(dateAdd(nowKST(), 2));
-  m = t.match(/다음주\s*([월화수목금토일])요일?/); if(m) dates.push(dateAdd(thisDow(dayMap[m[1]]), 7));
-  m = t.match(/이번주\s*([월화수목금토일])요일?/); if(m) dates.push(thisDow(dayMap[m[1]]));
+  m = t.match(/다음주\s*([월화수목금토일])요일?/); if(m) dates.push(dateAdd(inThisWeek(dayMap[m[1]]), 7));
+  m = t.match(/이번주\s*([월화수목금토일])요일?/); if(m) dates.push(inThisWeek(dayMap[m[1]]));
   m = t.match(/(\d{1,2})월\s*(\d{1,2})일/); if(m) dates.push(new Date(nowKST().getFullYear(), +m[1]-1, +m[2]));
 
   if(!dates.length){
@@ -1882,8 +1889,8 @@ function splitIntents(raw){
   // Don't generically split on 서 — that breaks nouns like 보고서, 기획서, 이력서
   s = s.replace(/(가서|와서|해서|일어나서|만나서|돼서|되어서|갔다\s*와서|다녀와서)\s+(?=[\uAC00-\uD7AF])/g, '$1|');
 
-  // Explicit connectors
-  s = s.replace(/\s*그리고\s*/g, '|');
+  // Explicit connectors (longest first so 그리고나서 wins over 그리고)
+  s = s.replace(/\s*(그리고\s*나서|그러고\s*나서|그리고\s*나면|그러고\s*나면|그리고\s*나|그러고\s*나|그리고서|그러고서|그리고|그러고|또한|그래서|그러면|그럼)\s*/g, '|');
   s = s.replace(/\s+또\s+/g, '|');
   s = s.replace(/[,;]/g, '|');
   s = s.replace(/있고|있으며|해야 하고|해야돼|해야 해|하면 되고/g, '|');
@@ -1893,13 +1900,18 @@ function splitIntents(raw){
 }
 function titleFrom(text){
   let t = text
+    // Strip leading conjunctions first (그리고/그러고/또한/그래서 + 그리고나서 variants)
+    .replace(/^\s*(그리고\s*나서|그러고\s*나서|그리고\s*나면|그러고\s*나면|그리고\s*나|그러고\s*나|그리고서|그러고서|그리고|그러고|또한|그래서|그러면|그럼|또)\s*/, '')
     .replace(/다음주|이번주|오늘|내일|모레|내내|주말|이번\s*주말|다음\s*주말|매주|매일|맨날|평일마다|주마다|[월화수목금토일]요일(?:마다|날)?|이번주까지|이번 주까지|\d{1,2}월\s*\d{1,2}일/g, ' ')
     // Time-of-day periods + specific clock times
     .replace(/(오전|오후|아침|점심|낮|저녁|밤|새벽)\s*(?:\d{1,2}\s*시\s*(?:\d{1,2}\s*분?|반)?)?/g, ' ')
     .replace(/\d{1,2}\s*시\s*(?:\d{1,2}\s*분?|반)?/g, ' ')
-    .replace(/있고|있어|있다|해야돼|해야 해|해야함|해야|까지|마다|좀|그리고/g, ' ')
+    .replace(/있고|있어|있다|해야돼|해야 해|해야함|해야|까지|마다|좀|그리고\s*나서|그러고\s*나서|그리고\s*나|그러고\s*나|그리고|그러고|또한|그래서/g, ' ')
     .replace(/\s+/g, ' ')
     .trim();
+
+  // Strip leftover leading conjunctions (after date keywords removed)
+  t = t.replace(/^\s*(그리고|그러고|또한|또|그래서|그러면|그럼)\s*/, '');
 
   // Clean trailing action connectors
   t = t
@@ -2157,15 +2169,37 @@ function renderAdd(root){
       <div style="height:18px"></div>
       <div class="paper-soft">
         <p class="label-eyebrow">분해 규칙</p>
-        <p style="margin:0 0 8px;font-family:var(--fb);font-weight:300;font-size:13.5px;line-height:1.7;color:var(--ink-soft)">·  한 문장에 여러 일이 있어도 한 행동은 한 카드로 저장</p>
-        <p style="margin:0 0 8px;font-family:var(--fb);font-weight:300;font-size:13.5px;line-height:1.7;color:var(--ink-soft)">·  반복 표현(매주/매일/평일마다)은 4개까지 미리 깔아둠</p>
-        <p style="margin:0 0 8px;font-family:var(--fb);font-weight:300;font-size:13.5px;line-height:1.7;color:var(--ink-soft)">·  "다음주내내" "주말" 같은 기간 표현도 자동 확장</p>
-        <p style="margin:0;font-family:var(--fb);font-weight:300;font-size:13.5px;line-height:1.7;color:var(--ink-soft)">·  음성 인식은 Chrome/Edge/Safari에서 동작 (마이크 권한 필요)</p>
+        <p style="margin:0 0 8px;font-family:var(--fb);font-weight:400;font-size:13.5px;line-height:1.7;color:var(--ink-soft)">·  한 문장에 여러 일이 있어도 한 행동은 한 카드로 저장</p>
+        <p style="margin:0 0 8px;font-family:var(--fb);font-weight:400;font-size:13.5px;line-height:1.7;color:var(--ink-soft)">·  반복 표현(매주/매일/평일마다)은 4개까지 미리 깔아둠</p>
+        <p style="margin:0 0 8px;font-family:var(--fb);font-weight:400;font-size:13.5px;line-height:1.7;color:var(--ink-soft)">·  "다음주내내" "주말" 같은 기간 표현도 자동 확장</p>
+        <p style="margin:0;font-family:var(--fb);font-weight:400;font-size:13.5px;line-height:1.7;color:var(--ink-soft)">·  음성 인식은 Chrome/Edge/Safari에서 동작 (마이크 권한 필요)</p>
       </div>
+      ${isAdmin() ? `
+      <div style="height:18px"></div>
+      <div class="paper" id="adminPanel">
+        <p class="label-eyebrow">관리자 · 사진으로 일정 추가 <span class="right">🔒 본인만</span></p>
+        <p style="margin:6px 0 14px;font-family:var(--fb);font-weight:400;font-size:13.5px;line-height:1.7;color:var(--ink-soft)">공모전 포스터, 일정표 사진을 올리면 AI(Claude)가 일정을 인식해 자동 등록해요.</p>
+        <div class="field">
+          <label>Anthropic API 키 (sk-ant-…)</label>
+          <input class="input" id="adminApiKey" type="password" autocomplete="off" placeholder="첫 사용 시 한 번만 입력하면 브라우저에 저장됩니다" value="${safe(localStorage.getItem('admin_api_key')||'')}"/>
+        </div>
+        <div class="field">
+          <label>일정 이미지 (한 장)</label>
+          <input type="file" id="adminPhotoInput" accept="image/*" style="font-family:var(--fb);font-size:13.5px;color:var(--ink-soft)"/>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:8px">
+          <button class="btn btn-primary" id="adminParseBtn">AI로 일정 추출 →</button>
+          <span id="adminStatus" style="font-family:var(--fb);font-weight:400;font-size:13px;color:var(--ink-soft)"></span>
+        </div>
+      </div>` : ''}
     </div>
   `;
   $('#parseBtn').onclick = parseSchedule;
   setupVoiceInput();
+  if(isAdmin()){
+    const btn = $('#adminParseBtn');
+    if(btn) btn.onclick = adminParsePhoto;
+  }
 }
 
 let voiceRecog = null;
@@ -2300,7 +2334,7 @@ function parseSchedule(){
   });
 
   store.tasks = [...store.tasks, ...made];
-  saveStore();
+  saveStore('tasks');
   if(made[0]){
     selectedDate = new Date(made[0].date);
     cursor = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1);
@@ -2308,6 +2342,136 @@ function parseSchedule(){
   view = 'calendar';
   render();
   toast(`${chunks.length}개 → ${made.length}개 카드`);
+}
+
+/* ===== Admin: photo → AI-extracted schedule (gated by ADMIN_EMAIL) ===== */
+async function adminParsePhoto(){
+  if(!isAdmin()){ return; }
+  const fileEl = document.getElementById('adminPhotoInput');
+  const keyEl  = document.getElementById('adminApiKey');
+  const status = document.getElementById('adminStatus');
+  const btn    = document.getElementById('adminParseBtn');
+  const file   = fileEl && fileEl.files && fileEl.files[0];
+  const apiKey = (keyEl?.value || '').trim();
+
+  const setStatus = (msg, isErr) => {
+    if(!status) return;
+    status.textContent = msg;
+    status.style.color = isErr ? 'var(--rose)' : 'var(--ink-soft)';
+  };
+
+  if(!file){ setStatus('이미지를 먼저 골라주세요.', true); return; }
+  if(!apiKey || !apiKey.startsWith('sk-ant-')){ setStatus('Anthropic API 키(sk-ant-…)를 입력해주세요.', true); return; }
+  try{ localStorage.setItem('admin_api_key', apiKey); }catch(_){}
+
+  btn.disabled = true;
+  setStatus('이미지 분석 중…');
+
+  try{
+    const base64 = await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload  = () => resolve(String(reader.result).split(',')[1]);
+      reader.onerror = () => reject(new Error('이미지 파일을 읽지 못했어요.'));
+      reader.readAsDataURL(file);
+    });
+    const mediaType = file.type || 'image/jpeg';
+    const today = todayKey();
+    const dow = ['일','월','화','수','목','금','토'][nowKST().getDay()];
+
+    const prompt = `이 이미지는 일정표 또는 공모전 안내문이에요. 오늘은 ${today} (${dow}요일)입니다.
+이미지에서 모든 날짜성 일정(공모전 마감, 시상식, 발표, 행사, 신청 시작/마감 등)을 추출해서 아래 형식의 **JSON 배열만** 반환해주세요. 코드블록 표시(\`\`\`)는 쓰지 마세요.
+
+[
+  {"date":"YYYY-MM-DD","time":"HH:MM 또는 null","text":"30자 이내 한국어 제목","priority":1}
+]
+
+규칙:
+- date는 반드시 절대 날짜로 변환 (YYYY-MM-DD)
+- 연도가 안 적혔으면 ${nowKST().getFullYear()}년으로 가정. 단, 오늘 이전 날짜가 나오면 내년으로 처리
+- 마감/제출/시상식/면접/시험 → priority 1
+- 발표/공지/시작 → priority 2
+- 그 외 → priority 3
+- 명확한 시간이 없으면 time은 null
+- 일정이 하나도 없으면 빈 배열 [] 반환`;
+
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 2048,
+        messages: [{
+          role: 'user',
+          content: [
+            { type: 'image', source: { type: 'base64', media_type: mediaType, data: base64 } },
+            { type: 'text', text: prompt }
+          ]
+        }]
+      })
+    });
+
+    if(!resp.ok){
+      const errText = await resp.text();
+      throw new Error(`API 오류 ${resp.status}: ${errText.slice(0,180)}`);
+    }
+    const data = await resp.json();
+    const text = data.content?.[0]?.text || '';
+    const match = text.match(/\[[\s\S]*\]/);
+    if(!match) throw new Error('AI 응답에서 일정을 찾지 못했어요.');
+
+    let events;
+    try{ events = JSON.parse(match[0]); }
+    catch(e){ throw new Error('JSON 파싱 실패: ' + e.message); }
+    if(!Array.isArray(events) || events.length === 0){
+      setStatus('이미지에서 일정을 찾지 못했어요.', true);
+      btn.disabled = false; return;
+    }
+
+    const labels = {
+      1: '🔥 지금 꼭 해야 함',
+      2: '⚡ 15분만 하면 끝남',
+      3: '🌱 가볍게 시작 가능'
+    };
+    const made = events
+      .filter(e => e && e.date && /^\d{4}-\d{2}-\d{2}$/.test(e.date))
+      .map(e => {
+        const level = (e.priority === 1 || e.priority === 2 || e.priority === 3) ? e.priority : 3;
+        const txt = (e.text || '일정').toString().slice(0, 30);
+        return {
+          id: Date.now() + Math.random(),
+          date: e.date,
+          time: e.time || timeFor(0, { level }),
+          text: txt,
+          type: stickerType(txt),
+          done: false,
+          priority: level,
+          priorityLabel: labels[level],
+          reason: '사진에서 AI가 추출함',
+          createdAt: Date.now()
+        };
+      });
+
+    if(made.length === 0){ setStatus('유효한 날짜가 있는 일정이 없어요.', true); btn.disabled = false; return; }
+
+    store.tasks = [...store.tasks, ...made];
+    saveStore('tasks');
+    if(fileEl) fileEl.value = '';
+    setStatus(`${made.length}개 일정을 추가했어요!`);
+    toast(`AI로 ${made.length}개 추출 ✦`);
+
+    selectedDate = new Date(made[0].date);
+    cursor = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1);
+  } catch(err){
+    console.warn('admin parse error', err);
+    setStatus('오류: ' + (err.message || err), true);
+  } finally {
+    if(btn) btn.disabled = false;
+  }
 }
 
 /* POMODORO (ADHD-tailored) */
@@ -5242,6 +5406,7 @@ function renderDrawer(){
           </div>
           ${t.reason?`<p class="why">${safe(t.reason)}</p>`:''}
         </div>
+        <button type="button" class="del" data-del="${t.id}" aria-label="일정 삭제" title="삭제">삭제</button>
         <input type="checkbox" class="check" ${t.done?'checked':''} data-toggle="${t.id}"/>
       </div>`).join('')}</div>`:'<p class="empty">이 날은 비어있어. 일부러 비워둬도 괜찮아.</p>'}
     <div class="add-inline">
@@ -5256,8 +5421,18 @@ function renderDrawer(){
     ${diary.text?`<p style="margin:0 0 8px;font-family:var(--fb);font-weight:300;font-size:14px;color:var(--ink-soft);line-height:1.7">${safe(diary.text)}</p>${diary.mood?`<span class="tag" style="font-family:var(--fui);font-size:9.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-soft);padding:2px 8px;border:1px solid var(--hairline);border-radius:999px">${safe(diary.mood)}</span>`:''}`:'<p class="empty" style="margin:0">아직 기록 없음</p>'}
   `;
   $$('#drawerBody [data-toggle]').forEach(b=>b.onchange=()=>toggleTask(b.dataset.toggle));
+  $$('#drawerBody [data-del]').forEach(b=>b.onclick=()=>deleteTask(b.dataset.del));
   $('#qAdd').onclick=quickAddDrawer;
   $('#qTask').addEventListener('keydown',e=>{if(e.key==='Enter')quickAddDrawer()});
+}
+function deleteTask(id){
+  const t=store.tasks.find(x=>String(x.id)===String(id));
+  if(!t) return;
+  if(!confirm(`"${t.text}" 일정을 지울까요?`)) return;
+  store.tasks=store.tasks.filter(x=>String(x.id)!==String(id));
+  saveStore('tasks');
+  renderDrawer(); render();
+  toast('삭제됨');
 }
 function quickAddDrawer(){
   const text=$('#qTask').value.trim();if(!text)return;
