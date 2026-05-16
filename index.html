@@ -744,11 +744,12 @@ body.dark .select{background-image:url("data:image/svg+xml;utf8,<svg xmlns='http
 }
 .timer-box.break .timer-num{color:var(--olive)}
 .duration-btn{
-  padding:9px 16px;font-size:11px;
-  border-color:var(--hairline);color:var(--ink-soft);
+  padding:12px 22px;font-size:14px;font-weight:600;letter-spacing:.02em;
+  border:1.5px solid var(--ink);color:var(--ink);background:var(--paper-soft);
+  min-width:80px;
 }
 .duration-btn:hover{
-  background:var(--paper-soft);color:var(--ink);
+  background:var(--ink);color:var(--paper);
 }
 .duration-btn.active{
   background:var(--ink);color:var(--paper);border-color:var(--ink);
@@ -1193,9 +1194,9 @@ body.dark .toast{background:var(--ink);color:var(--bg)}
   .btn{padding:11px 18px;font-size:11px}
   .pill{font-size:10px;padding:4px 9px}
   .auth-form .input{font-size:14px;padding:12px 14px}
-  .timer-buttons{gap:6px}
-  .timer-buttons .btn{padding:9px 14px;font-size:10.5px}
-  .duration-btn{padding:8px 12px}
+  .timer-buttons{gap:8px}
+  .timer-buttons .btn{padding:11px 16px;font-size:13px}
+  .duration-btn{padding:11px 16px;font-size:13.5px;min-width:64px}
   .drawer-date{font-size:28px;gap:10px}
   .drawer-date .day-name{font-size:9.5px;padding:3px 7px;letter-spacing:.28em}
   .drawer{padding:0}
@@ -1633,10 +1634,16 @@ function enterGuestMode(){
   if(!banner){
     banner = document.createElement('div');
     banner.id = 'guestBanner';
-    banner.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:40;background:var(--rose);color:#fff;padding:9px 14px;text-align:center;font-family:var(--fb);font-weight:500;font-size:13.5px;display:flex;align-items:center;justify-content:center;gap:12px;flex-wrap:wrap;box-shadow:0 2px 10px rgba(0,0,0,.18);letter-spacing:.01em';
+    const isMobile = window.innerWidth <= 900;
+    banner.style.cssText = `position:fixed;top:${isMobile ? '50px' : '0'};left:0;right:0;z-index:4;background:var(--rose);color:#fff;padding:9px 14px;text-align:center;font-family:var(--fb);font-weight:500;font-size:13.5px;display:flex;align-items:center;justify-content:center;gap:12px;flex-wrap:wrap;box-shadow:0 2px 10px rgba(0,0,0,.18);letter-spacing:.01em`;
     banner.innerHTML = '⚠️ 게스트 모드 · 저장 안 됨 (새로고침 시 사라짐) <button type="button" id="guestExit" style="background:#fff;color:var(--rose);border:0;padding:5px 12px;border-radius:3px;font-weight:600;cursor:pointer;font-family:inherit;font-size:13px">로그인하기 →</button>';
     document.body.appendChild(banner);
-    document.body.style.paddingTop = '38px';
+    document.body.style.paddingTop = isMobile ? '90px' : '38px';
+    window.addEventListener('resize', () => {
+      const m = window.innerWidth <= 900;
+      banner.style.top = m ? '50px' : '0';
+      document.body.style.paddingTop = m ? '90px' : '38px';
+    });
   }
   banner.hidden = false;
   setTimeout(() => {
@@ -1771,8 +1778,6 @@ async function verifyAdminPasskey(input){
 }
 function lockAdmin(){ try{ localStorage.removeItem('admin_passkey_hash'); }catch(_){} }
 function isAdmin(){
-  if(!currentFbUser) return false;
-  if((currentFbUser.email||'').toLowerCase() !== ADMIN_EMAIL) return false;
   try{
     return localStorage.getItem('admin_passkey_hash') === ADMIN_PASSKEY_HASH;
   }catch(_){ return false; }
@@ -3337,11 +3342,18 @@ function stopFocus(){
 /* MOOD */
 function moodToEmoji(mood){
   const map = {
+    // 긍정
     '행복':'😊','설렘':'💗','뿌듯':'✨','평온':'🌿','만족':'🌼',
-    '차분':'🌙','멍함':'😶‍🌫️','복잡':'🌀',
-    '무기력':'😮‍💨','외로움':'🥺','그리움':'🍂',
-    '불안':'😟','짜증':'😤','우울':'☁️','화남':'😡',
-    '과부하':'🥵','지침':'😪'
+    '사랑':'❤️','감사':'🙏','자유':'🕊️','활기':'⚡','자신감':'💪',
+    '따뜻함':'🤗','희망':'🌅','성취감':'🏆','신남':'🎉','벅참':'🌟',
+    // 중립
+    '차분':'🌙','멍함':'😶‍🌫️','복잡':'🌀','호기심':'🤔','집중':'🎯',
+    '졸림':'😴','피곤':'😩','긴장':'😬','망설임':'🤷','심심':'🥱',
+    // 부정
+    '무기력':'😮‍💨','외로움':'🥺','그리움':'🍂','쓸쓸':'🍃',
+    '불안':'😟','짜증':'😤','우울':'☁️','화남':'😡','분노':'🔥',
+    '슬픔':'😢','후회':'😞','부끄러움':'😳','상처':'💔','억울':'😣',
+    '과부하':'🥵','지침':'😪','스트레스':'😖','압박감':'😰','절망':'😭'
   };
   return map[mood] || '';
 }
@@ -3431,7 +3443,14 @@ function moodPatternAdvice(){
 
 function renderMood(root){
   const today = store.diaries.find(d => d.date === todayKey()) || {};
-  const moods = ['행복','설렘','뿌듯','평온','만족','차분','멍함','복잡','무기력','외로움','그리움','불안','짜증','우울','화남','과부하','지침'];
+  const moods = [
+    // 긍정
+    '행복','설렘','뿌듯','평온','만족','사랑','감사','자유','활기','자신감','따뜻함','희망','성취감','신남','벅참',
+    // 중립
+    '차분','멍함','복잡','호기심','집중','졸림','피곤','긴장','망설임','심심',
+    // 부정
+    '무기력','외로움','그리움','쓸쓸','불안','짜증','우울','화남','분노','슬픔','후회','부끄러움','상처','억울','과부하','지침','스트레스','압박감','절망'
+  ];
   const todayMoods = Array.isArray(today.mood) ? today.mood : (today.mood ? [today.mood] : []);
   const pattern = moodPatternAdvice();
 
@@ -6286,10 +6305,9 @@ function renderSettings(root){
 
       <div style="height:18px"></div>
 
-      ${currentFbUser && (currentFbUser.email||'').toLowerCase() === ADMIN_EMAIL ? `
       <div class="paper">
         <p class="label-eyebrow">🔒 관리자 모드</p>
-        <p style="margin:6px 0 12px;font-family:var(--fb);font-weight:400;font-size:13px;line-height:1.7;color:var(--ink-soft)">${isAdmin() ? '잠금 해제됨 ✓ — 일정 추가 화면에서 사진/링크로 AI가 일정을 만들어드려요.' : '본인만 알고 있는 키를 입력하면 사진/링크로 AI가 일정 추출하는 기능이 열려요.'}</p>
+        <p style="margin:6px 0 12px;font-family:var(--fb);font-weight:400;font-size:14px;line-height:1.7;color:var(--ink-soft)">${isAdmin() ? '잠금 해제됨 ✓ — 일정 추가 화면에서 사진/링크로 AI가 일정을 만들어드려요.' : '관리자 키를 입력하면 사진·URL → AI 일정 추출 기능이 일정 추가 화면에 나타납니다.'}</p>
         ${isAdmin() ? `
           <button class="btn btn-ghost" id="adminLock">관리자 모드 잠금</button>
         ` : `
@@ -6304,7 +6322,6 @@ function renderSettings(root){
         `}
       </div>
       <div style="height:18px"></div>
-      ` : ''}
 
       <div class="paper-soft">
         <p class="label-eyebrow">서버 저장 & 구글 연동</p>
