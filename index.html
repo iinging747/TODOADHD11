@@ -1297,7 +1297,7 @@ body.dark .toast{background:var(--ink);color:var(--bg)}
 
 <div id="privacyModal" hidden style="position:fixed;inset:0;z-index:50;background:rgba(45,38,32,.55);display:grid;place-items:center;padding:18px;overflow:auto" data-mode="view">
   <div style="background:var(--paper);max-width:560px;width:100%;border-radius:4px;padding:28px 26px;max-height:88vh;overflow-y:auto;border:1px solid var(--hairline);box-shadow:var(--shadow-page)">
-    <p class="label-eyebrow">개인정보처리방침 <button type="button" class="right" data-privacy-close style="cursor:pointer;font-family:var(--fui);font-size:12px;background:transparent;border:0;color:var(--ink-soft);padding:0;letter-spacing:.18em">닫기 ✕</button></p>
+    <p class="label-eyebrow">개인정보처리방침</p>
     <h2 style="font-family:var(--fd);font-weight:400;font-size:24px;margin:6px 0 14px;color:var(--ink)">정신차려 · TODOADHD</h2>
     <p style="font-family:var(--fb);font-size:12px;color:var(--ink-soft);margin:0 0 16px">시행일: 2026년 5월 16일 · 운영자: iinging747</p>
 
@@ -1537,8 +1537,8 @@ function showPrivacyModal(mode){
   if(actions){
     if(mode === 'consent'){
       actions.innerHTML = `
-        <button type="button" class="btn btn-ghost" data-privacy-decline style="flex:0 0 auto">동의 안 함 (로그아웃)</button>
-        <button type="button" class="btn btn-primary" data-privacy-agree style="flex:1">동의하고 시작하기 →</button>
+        <button type="button" class="btn btn-ghost" data-privacy-decline style="flex:0 0 auto">나중에</button>
+        <button type="button" class="btn btn-primary" data-privacy-agree style="flex:1">동의하고 로그인하기 →</button>
       `;
     } else {
       actions.innerHTML = `<button type="button" class="btn btn-primary" data-privacy-close style="flex:1">닫기</button>`;
@@ -1551,12 +1551,20 @@ function hidePrivacyModal(){
   const modal = document.getElementById('privacyModal');
   if(modal) modal.hidden = true;
 }
+function hasPrivacyConsent(){
+  try{
+    if(localStorage.getItem('privacy_accepted_at')) return true;
+  }catch(_){}
+  return !!(store && store.privacyAcceptedAt);
+}
 async function acceptPrivacy(){
-  if(!store) store = defaultStore();
-  store.privacyAcceptedAt = Date.now();
-  store.privacyVersion = '2026-05-16';
-  try{ localStorage.setItem('privacy_accepted_at', String(store.privacyAcceptedAt)); }catch(_){}
-  saveStore('__meta');
+  const ts = Date.now();
+  try{ localStorage.setItem('privacy_accepted_at', String(ts)); }catch(_){}
+  if(store){
+    store.privacyAcceptedAt = ts;
+    store.privacyVersion = '2026-05-16';
+    if(currentFbUser) saveStore('__meta');
+  }
   hidePrivacyModal();
 }
 
@@ -1570,10 +1578,7 @@ document.addEventListener('click', (e) => {
   if(agreeBtn){ acceptPrivacy(); return; }
   const declineBtn = e.target.closest('[data-privacy-decline]');
   if(declineBtn){
-    if(confirm('동의하지 않으면 서비스를 이용할 수 없어요. 로그아웃할까요?')){
-      hidePrivacyModal();
-      logout();
-    }
+    hidePrivacyModal();
     return;
   }
   // Click on backdrop (only in view mode — consent mode requires explicit action)
@@ -1954,6 +1959,12 @@ fbAuth.onAuthStateChanged(async (user) => {
     currentFbUser = user;
     try{
       await loadStore();
+      // Persist privacy acceptance into Firestore so it's visible from other devices too
+      if(hasPrivacyConsent() && !store.privacyAcceptedAt){
+        store.privacyAcceptedAt = Number(localStorage.getItem('privacy_accepted_at')) || Date.now();
+        store.privacyVersion = '2026-05-16';
+        saveStore('__meta');
+      }
       closeGate();
       if(!appInitialized){
         render();
@@ -1961,10 +1972,6 @@ fbAuth.onAuthStateChanged(async (user) => {
         appInitialized = true;
       } else {
         render();
-      }
-      // First-time consent: show privacy policy if not yet accepted
-      if(!store.privacyAcceptedAt){
-        setTimeout(() => showPrivacyModal('consent'), 300);
       }
     }catch(e){
       console.warn('post-login error', e);
@@ -1978,13 +1985,22 @@ fbAuth.onAuthStateChanged(async (user) => {
     hidePrivacyModal();
     vaultLock();
     openGate();
+    // Show consent modal up-front if user hasn't agreed yet (before login is allowed)
+    if(!hasPrivacyConsent()){
+      setTimeout(() => showPrivacyModal('consent'), 200);
+    }
   }
 });
 
-/* ============ Google sign-in button ============ */
+/* ============ Google sign-in button — privacy consent required first ============ */
 const gBtn = $('#googleSignInBtn');
 if(gBtn){
   gBtn.addEventListener('click', async () => {
+    if(!hasPrivacyConsent()){
+      showAuthError('로그인 전에 개인정보처리방침에 먼저 동의해주세요.');
+      showPrivacyModal('consent');
+      return;
+    }
     hideAuthError();
     gBtn.classList.add('loading');
     try{
