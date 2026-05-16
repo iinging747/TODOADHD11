@@ -1575,10 +1575,33 @@ document.addEventListener('click', (e) => {
   const closeBtn = e.target.closest('[data-privacy-close]');
   if(closeBtn){ hidePrivacyModal(); return; }
   const agreeBtn = e.target.closest('[data-privacy-agree]');
-  if(agreeBtn){ acceptPrivacy(); return; }
+  if(agreeBtn){
+    // Record consent (synchronously) and immediately trigger sign-in within same user gesture
+    const ts = Date.now();
+    try{ localStorage.setItem('privacy_accepted_at', String(ts)); }catch(_){}
+    if(store){
+      store.privacyAcceptedAt = ts;
+      store.privacyVersion = '2026-05-16';
+      if(currentFbUser) saveStore('__meta');
+    }
+    hidePrivacyModal();
+    if(!currentFbUser){
+      const gBtn = document.getElementById('googleSignInBtn');
+      if(gBtn) gBtn.click();
+    }
+    return;
+  }
   const declineBtn = e.target.closest('[data-privacy-decline]');
   if(declineBtn){
     hidePrivacyModal();
+    enterGuestMode();
+    return;
+  }
+  const guestExitBtn = e.target.closest('#guestExit');
+  if(guestExitBtn){
+    if(confirm('로그인 화면으로 돌아갈까요? 지금 입력한 내용은 사라져요.')){
+      location.reload();
+    }
     return;
   }
   // Click on backdrop (only in view mode — consent mode requires explicit action)
@@ -1587,6 +1610,41 @@ document.addEventListener('click', (e) => {
     hidePrivacyModal();
   }
 });
+
+/* ===== Guest mode (no login, no save) ===== */
+let guestMode = false;
+function enterGuestMode(){
+  guestMode = true;
+  currentFbUser = null;
+  store = defaultStore();
+  closeGate();
+  if(!appInitialized){
+    render();
+    appInitialized = true;
+  } else {
+    render();
+  }
+  // Sticky banner at top
+  let banner = document.getElementById('guestBanner');
+  if(!banner){
+    banner = document.createElement('div');
+    banner.id = 'guestBanner';
+    banner.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:40;background:var(--rose);color:#fff;padding:9px 14px;text-align:center;font-family:var(--fb);font-weight:500;font-size:13.5px;display:flex;align-items:center;justify-content:center;gap:12px;flex-wrap:wrap;box-shadow:0 2px 10px rgba(0,0,0,.18);letter-spacing:.01em';
+    banner.innerHTML = '⚠️ 게스트 모드 · 저장 안 됨 (새로고침 시 사라짐) <button type="button" id="guestExit" style="background:#fff;color:var(--rose);border:0;padding:5px 12px;border-radius:3px;font-weight:600;cursor:pointer;font-family:inherit;font-size:13px">로그인하기 →</button>';
+    document.body.appendChild(banner);
+    document.body.style.paddingTop = '38px';
+  }
+  banner.hidden = false;
+  setTimeout(() => {
+    alert('⚠️ 로그인 안 한 상태입니다.\n\n· 모든 기능 둘러보기는 가능합니다\n· 입력한 데이터는 새로고침하거나 창을 닫으면 사라집니다\n· 데이터를 저장하려면 상단 "로그인하기" 버튼을 눌러주세요');
+  }, 200);
+}
+function exitGuestMode(){
+  guestMode = false;
+  const banner = document.getElementById('guestBanner');
+  if(banner){ banner.hidden = true; }
+  document.body.style.paddingTop = '';
+}
 // Sidebar themeBtn wired later when DOM ready (it exists but we wait for cohesion below)
 
 /* ============ Toast (must be early - called from many places) ============ */
