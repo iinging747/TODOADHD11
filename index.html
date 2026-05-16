@@ -39,11 +39,11 @@
   --tan:#DCD1BB;
   --tan-soft:#E8DEC8;
   --tan-deep:#C8BB9E;
-  --ink:#241E18;
-  --ink-soft:#4F4634;
-  --ink-muted:#7A6E58;
-  --hairline:rgba(45,38,32,.20);
-  --hairline-soft:rgba(45,38,32,.10);
+  --ink:#1A140E;
+  --ink-soft:#2F2618;
+  --ink-muted:#564A36;
+  --hairline:rgba(45,38,32,.28);
+  --hairline-soft:rgba(45,38,32,.14);
   --rose:#C49089;
   --rose-soft:#E8C9C4;
   --olive:#8A8260;
@@ -66,11 +66,11 @@ body.dark{
   --tan:#4A4234;
   --tan-soft:#3A3326;
   --tan-deep:#6B5E48;
-  --ink:#F4ECDC;
-  --ink-soft:#D1C6AC;
-  --ink-muted:#A1957A;
-  --hairline:rgba(237,227,208,.18);
-  --hairline-soft:rgba(237,227,208,.09);
+  --ink:#FAF3E2;
+  --ink-soft:#E2D7BC;
+  --ink-muted:#B5A78A;
+  --hairline:rgba(237,227,208,.26);
+  --hairline-soft:rgba(237,227,208,.13);
   --rose:#D6A29B;
   --rose-soft:#4A3530;
   --olive:#B1A87E;
@@ -96,7 +96,7 @@ html,body{margin:0;padding:0}
 }
 body{
   min-height:100vh;
-  font-family:var(--fb);font-weight:300;color:var(--ink);
+  font-family:var(--fb);font-weight:400;color:var(--ink);
   background:
     radial-gradient(120% 80% at 10% 5%, #F7F1E4 0%, transparent 55%),
     radial-gradient(100% 90% at 95% 100%, #E8DEC8 0%, transparent 50%),
@@ -1290,7 +1290,73 @@ body.dark .toast{background:var(--ink);color:var(--bg)}
       🔒 이 다이어리는 <b>너만</b> 볼 수 있어.<br>
       Google 계정으로 안전하게 보호되고, 너만 접근 가능해.
     </p>
+    <p style="margin:14px 0 0;font-family:var(--fui);font-size:10.5px;letter-spacing:.18em;text-transform:uppercase;color:var(--ink-soft);text-align:center">
+      <a href="#" id="openPrivacy" style="color:inherit;text-decoration:underline">개인정보처리방침</a>
+    </p>
   </div>
+  </div>
+</div>
+
+<div id="privacyModal" hidden style="position:fixed;inset:0;z-index:50;background:rgba(45,38,32,.55);display:grid;place-items:center;padding:18px;overflow:auto">
+  <div style="background:var(--paper);max-width:560px;width:100%;border-radius:4px;padding:28px 26px;max-height:88vh;overflow-y:auto;border:1px solid var(--hairline);box-shadow:var(--shadow-page)">
+    <p class="label-eyebrow">개인정보처리방침 <span class="right" style="cursor:pointer;font-family:var(--fui);font-size:12px" id="closePrivacy">닫기 ✕</span></p>
+    <h2 style="font-family:var(--fd);font-weight:400;font-size:24px;margin:6px 0 14px;color:var(--ink)">정신차려 · TODOADHD</h2>
+    <p style="font-family:var(--fb);font-size:12px;color:var(--ink-soft);margin:0 0 16px">시행일: 2026년 5월 16일 · 운영자: iinging747</p>
+
+    <h3 style="font-family:var(--fb);font-weight:600;font-size:14px;margin:14px 0 6px;color:var(--ink)">1. 수집하는 개인정보 항목</h3>
+    <p style="font-family:var(--fb);font-size:13.5px;line-height:1.7;color:var(--ink-soft);margin:0 0 8px">
+      · Google 계정 식별 정보: 이메일 주소, Google UID, 표시 이름, 프로필 사진 URL<br>
+      · 사용자가 직접 입력한 콘텐츠: 일정, 감정 일기, 메모, 가계부 기록, 운동/건강 기록, 위시리스트, 클라이언트 정보 등<br>
+      · 자동 수집: 로그인 시각, 마지막 업데이트 시각
+    </p>
+
+    <h3 style="font-family:var(--fb);font-weight:600;font-size:14px;margin:14px 0 6px;color:var(--ink)">2. 수집 및 이용 목적</h3>
+    <p style="font-family:var(--fb);font-size:13.5px;line-height:1.7;color:var(--ink-soft);margin:0 0 8px">
+      · 본인 식별 및 로그인 처리<br>
+      · 입력한 일정/일기 등을 본인이 다른 기기에서도 동기화하여 사용<br>
+      · 서비스 개선 및 오류 분석 (개인 식별 가능 정보 제외)
+    </p>
+
+    <h3 style="font-family:var(--fb);font-weight:600;font-size:14px;margin:14px 0 6px;color:var(--ink)">3. 보관 및 처리 위치</h3>
+    <p style="font-family:var(--fb);font-size:13.5px;line-height:1.7;color:var(--ink-soft);margin:0 0 8px">
+      · Google Firebase Authentication (인증)<br>
+      · Google Cloud Firestore (콘텐츠 데이터) — 리전: asia-northeast3 (서울) 또는 us-central1<br>
+      · 데이터는 본인의 Google UID로 접근 권한이 제한되어 본인 외 타인은 접근할 수 없습니다
+    </p>
+
+    <h3 style="font-family:var(--fb);font-weight:600;font-size:14px;margin:14px 0 6px;color:var(--ink)">4. 보유 및 이용 기간</h3>
+    <p style="font-family:var(--fb);font-size:13.5px;line-height:1.7;color:var(--ink-soft);margin:0 0 8px">
+      · 회원 탈퇴(계정 삭제) 요청 시까지 보관<br>
+      · 사용자가 설정 페이지의 "내보내기"로 자신의 모든 데이터를 JSON으로 다운로드 가능<br>
+      · 삭제 요청 시 즉시 영구 삭제됩니다 (백업본 제외 30일 이내 완전 파기)
+    </p>
+
+    <h3 style="font-family:var(--fb);font-weight:600;font-size:14px;margin:14px 0 6px;color:var(--ink)">5. 제3자 제공</h3>
+    <p style="font-family:var(--fb);font-size:13.5px;line-height:1.7;color:var(--ink-soft);margin:0 0 8px">
+      · 제3자에게 제공하지 않습니다<br>
+      · 단, 사용자 본인이 명시적으로 활성화한 기능(예: 관리자 모드의 Anthropic API 호출)의 경우, 해당 API 제공자에게 입력한 콘텐츠가 전송될 수 있습니다. 이 경우 사용자가 자신의 API 키를 직접 입력하므로 운영자는 호출 내용을 보관하지 않습니다.
+    </p>
+
+    <h3 style="font-family:var(--fb);font-weight:600;font-size:14px;margin:14px 0 6px;color:var(--ink)">6. 이용자의 권리</h3>
+    <p style="font-family:var(--fb);font-size:13.5px;line-height:1.7;color:var(--ink-soft);margin:0 0 8px">
+      · 개인정보 열람·수정·삭제·처리정지 요구 가능<br>
+      · 설정 페이지에서 데이터 내보내기/불러오기/계정 로그아웃 가능<br>
+      · 완전 삭제 또는 문의: <b>iinging747@gmail.com</b>
+    </p>
+
+    <h3 style="font-family:var(--fb);font-weight:600;font-size:14px;margin:14px 0 6px;color:var(--ink)">7. 안전성 확보 조치</h3>
+    <p style="font-family:var(--fb);font-size:13.5px;line-height:1.7;color:var(--ink-soft);margin:0 0 8px">
+      · 전송 구간 HTTPS 암호화<br>
+      · Firebase 보안 규칙으로 사용자별 데이터 격리<br>
+      · 운영자는 사용자 콘텐츠에 직접 접근하지 않습니다
+    </p>
+
+    <h3 style="font-family:var(--fb);font-weight:600;font-size:14px;margin:14px 0 6px;color:var(--ink)">8. 변경 고지</h3>
+    <p style="font-family:var(--fb);font-size:13.5px;line-height:1.7;color:var(--ink-soft);margin:0 0 14px">
+      방침이 변경되면 본 화면에서 시행일과 함께 공지합니다.
+    </p>
+
+    <button class="btn btn-primary" id="closePrivacyBottom" style="width:100%">닫기</button>
   </div>
 </div>
 
@@ -1456,6 +1522,21 @@ function toggleTheme(){
 applyTheme(getInitialTheme());
 // Theme buttons (gate + sidebar)
 const _gateTheme = $('#gateTheme'); if(_gateTheme) _gateTheme.addEventListener('click', toggleTheme);
+
+/* Privacy policy modal */
+(function setupPrivacy(){
+  const modal = document.getElementById('privacyModal');
+  if(!modal) return;
+  const open = document.getElementById('openPrivacy');
+  const closeTop = document.getElementById('closePrivacy');
+  const closeBot = document.getElementById('closePrivacyBottom');
+  const showModal = (e) => { if(e) e.preventDefault(); modal.hidden = false; };
+  const hideModal = () => { modal.hidden = true; };
+  if(open) open.addEventListener('click', showModal);
+  if(closeTop) closeTop.addEventListener('click', hideModal);
+  if(closeBot) closeBot.addEventListener('click', hideModal);
+  modal.addEventListener('click', e => { if(e.target === modal) hideModal(); });
+})();
 // Sidebar themeBtn wired later when DOM ready (it exists but we wait for cohesion below)
 
 /* ============ Toast (must be early - called from many places) ============ */
@@ -1474,9 +1555,31 @@ const USERS_KEY = 'todoadhd_users';
 const SESSION_KEY = 'todoadhd_session';
 const userDataKey = (username) => `todoadhd_data_${username}`;
 
-/* Admin gating — only this email sees the photo-import feature */
+/* Admin gating — email + SHA-256 hashed passkey (stored in localStorage after unlock) */
 const ADMIN_EMAIL = 'iinging747@gmail.com';
-function isAdmin(){ return !!currentFbUser && (currentFbUser.email||'').toLowerCase() === ADMIN_EMAIL; }
+const ADMIN_PASSKEY_HASH = 'c92095e898444015c0c48fef8ac08e0a925f5de5ad445f2ac3224025dcd124b1';
+
+async function sha256Hex(s){
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s));
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
+}
+async function verifyAdminPasskey(input){
+  if(!input) return false;
+  const h = await sha256Hex(input);
+  if(h === ADMIN_PASSKEY_HASH){
+    try{ localStorage.setItem('admin_passkey_hash', h); }catch(_){}
+    return true;
+  }
+  return false;
+}
+function lockAdmin(){ try{ localStorage.removeItem('admin_passkey_hash'); }catch(_){} }
+function isAdmin(){
+  if(!currentFbUser) return false;
+  if((currentFbUser.email||'').toLowerCase() !== ADMIN_EMAIL) return false;
+  try{
+    return localStorage.getItem('admin_passkey_hash') === ADMIN_PASSKEY_HASH;
+  }catch(_){ return false; }
+}
 
 /* ============ Storage wrapper (window.storage + localStorage fallback) ============ */
 async function sSet(key, value){
@@ -4906,6 +5009,89 @@ function weightAdvice(recent){
   return '꾸준히 기록하는 것 자체가 의미 있어';
 }
 
+/* 건강 종합 조언 (룰 기반) — 운동·물·감정·수면 패턴 종합 */
+function healthAdvice(){
+  const tk = todayKey();
+  const now = nowKST();
+  const weekStart = new Date(now); weekStart.setDate(weekStart.getDate() - weekStart.getDay());
+  const wsK = dkey(weekStart);
+  const last7Start = dateAdd(now, -7);
+  const last7K = dkey(last7Start);
+
+  const exercise = store.health?.exercise || [];
+  const water = store.health?.water || {};
+  const weights = store.health?.weights || [];
+  const moods = (store.diaries||[]);
+  const focusLog = (store.focusLog||[]).filter(f => f.kind !== 'break');
+
+  const last7Ex = exercise.filter(e => e.date >= last7K);
+  const last7Min = last7Ex.reduce((a,e)=>a+(+e.min||0), 0);
+  const last7Days = [...new Set(last7Ex.map(e => e.date))].length;
+  const last7Km = last7Ex.reduce((a,e)=>a+(+e.km||0)+(+e.distance||0)/1000, 0);
+  const todayWater = water[tk] || 0;
+  const last7Water = Object.entries(water).filter(([k]) => k >= last7K).reduce((a,[,v]) => a+(+v||0), 0);
+  const last7Diary = moods.filter(m => m.date >= last7K);
+  const negMoods = ['우울','불안','짜증','외로움','과부하','지침','화남','무기력','복잡'];
+  const negCount = last7Diary.reduce((a,m) => a + (m.mood||[]).filter(x => negMoods.includes(x)).length, 0);
+  const last7Focus = focusLog.filter(f => f.date >= last7K).reduce((a,f)=>a+(+f.min||0), 0);
+
+  const advice = [];
+
+  if(last7Days === 0){
+    advice.push('🚶 최근 7일간 운동 기록이 없어. 일주일에 2~3회만 가볍게 움직여도 컨디션 차이가 크게 나. 오늘 10분만이라도 걸어볼까.');
+  } else if(last7Days >= 5){
+    advice.push(`💪 최근 7일 중 ${last7Days}일 운동 — 꾸준한 페이스 좋아. ${last7Min}분 누적${last7Km>0?`, ${last7Km.toFixed(1)}km`:''}. 무리되지 않게 하루는 회복일로 두는 거 잊지 마.`);
+  } else {
+    advice.push(`🏃 최근 7일 중 ${last7Days}일 운동 (${last7Min}분 누적). 일주일에 3~4회로 늘리면 수면·집중력에도 영향 와.`);
+  }
+
+  if(todayWater < 4){
+    advice.push(`💧 오늘 물 ${todayWater}잔. 8잔 목표라면 ${8-todayWater}잔 더. 컵 하나를 책상 옆에 두는 게 효과적이야.`);
+  } else if(todayWater >= 8){
+    advice.push(`💧 물 ${todayWater}잔 — 충분해 ♡`);
+  }
+
+  if(last7Diary.length === 0){
+    advice.push('📓 일주일 동안 감정 일기 기록이 없어. 한 줄이라도 적어두면 패턴이 보여.');
+  } else if(negCount >= last7Diary.length * 0.6){
+    advice.push(`🌙 최근 일주일 부정적 감정이 자주 보여 (${negCount}회). 충분한 수면(7시간 이상) + 자연광 산책 20분이 가장 빠른 처방이야. 너무 힘들면 전문가 도움도 고려해줘.`);
+  } else if(negCount > 0){
+    advice.push(`💗 가끔 힘든 날도 보이지만 전반적으로 균형 잡혀있어. 작은 회복 습관 챙겨가자.`);
+  } else {
+    advice.push('☀️ 최근 일주일 감정 안정적이야. 이 흐름 유지하는 게 무엇보다 중요해.');
+  }
+
+  if(last7Focus > 0){
+    const dailyAvg = last7Focus / 7;
+    if(dailyAvg >= 90){
+      advice.push(`🎯 일주일 집중 시간 ${last7Focus}분 (하루 평균 ${Math.round(dailyAvg)}분). 너무 몰아쓰지 말고 휴식도 똑같이 챙기자.`);
+    } else if(dailyAvg >= 25){
+      advice.push(`🎯 일주일 집중 시간 ${last7Focus}분 — 균형 잡힌 페이스. 작은 사이클 계속 쌓아가자.`);
+    }
+  }
+
+  if(weights.length >= 2){
+    const sorted = weights.slice().sort((a,b)=>a.date.localeCompare(b.date));
+    const recent = sorted.slice(-5);
+    const change = +(recent[recent.length-1].kg - recent[0].kg);
+    if(Math.abs(change) >= 2){
+      advice.push(`⚖️ 최근 ${recent.length}회 측정 중 ${change > 0 ? '+' : ''}${change.toFixed(1)}kg 변화. 식사·수면 패턴 같이 돌아봐.`);
+    }
+  }
+
+  // 종합 한 줄
+  let summary = '';
+  if(last7Days >= 3 && todayWater >= 4 && negCount < 3){
+    summary = '✦ 전반적으로 건강 관리 잘하고 있어. 지금 페이스 유지가 핵심.';
+  } else if(last7Days < 2 || negCount >= 5){
+    summary = '✦ 회복이 우선이야. 운동·물·수면 중 한 가지만 일주일 정해서 챙겨봐.';
+  } else {
+    summary = '✦ 균형이 살짝 흔들리는 정도. 큰 변화 없이 작은 루틴 하나만 더하면 충분해.';
+  }
+
+  return { advice, summary };
+}
+
 function renderHealth(root){
   const tk = todayKey();
   const water = store.health?.water?.[tk] || 0;
@@ -4918,6 +5104,9 @@ function renderHealth(root){
   const weekStart = nowKST(); weekStart.setDate(weekStart.getDate() - weekStart.getDay());
   const wsK = dkey(weekStart);
   const weekExercise = exercise.filter(e => e.date >= wsK);
+
+  const cachedAdvice = store.health?._adviceCache;
+  const showAdvice = cachedAdvice && (Date.now() - (cachedAdvice.at||0) < 8*3600*1000);
 
   // Fasting status
   let fastDisplay = '';
@@ -4943,6 +5132,26 @@ function renderHealth(root){
   root.innerHTML = `
     <div class="hero"><h1 class="hero-title">HEALTH</h1><span class="hero-script">vitals</span></div>
     <div class="section-wrap">
+
+      <!-- AI 종합 조언 -->
+      <div class="paper">
+        <p class="label-eyebrow">건강 종합 점검 <span class="right">📊 데이터 기반</span></p>
+        ${showAdvice ? `
+          <p style="margin:6px 0 12px;font-family:var(--fb);font-weight:500;font-size:15px;line-height:1.6;color:var(--ink)">${safe(cachedAdvice.summary)}</p>
+          <ul style="margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:8px">
+            ${cachedAdvice.advice.map(a => `<li style="padding:10px 12px;background:var(--paper-soft);border-radius:3px;font-family:var(--fb);font-weight:400;font-size:13.5px;line-height:1.6;color:var(--ink)">${safe(a)}</li>`).join('')}
+          </ul>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">
+            <button class="btn btn-ghost" id="healthAdviceRefresh">새로 점검</button>
+            <span style="align-self:center;font-family:var(--fui);font-size:10.5px;letter-spacing:.16em;color:var(--ink-soft)">최근 점검: ${new Date(cachedAdvice.at).toLocaleString('ko-KR',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'})}</span>
+          </div>
+        ` : `
+          <p style="margin:6px 0 12px;font-family:var(--fb);font-weight:400;font-size:13.5px;line-height:1.6;color:var(--ink-soft)">운동·물·감정·집중·체중 기록을 모아 종합적으로 봐드려요. 8시간마다 갱신 권장.</p>
+          <button class="btn btn-primary" id="healthAdviceRun">건강 조언 받기 →</button>
+        `}
+      </div>
+
+      <div style="height:18px"></div>
 
       <!-- WATER -->
       <div class="paper">
@@ -4974,11 +5183,44 @@ function renderHealth(root){
             </div>`;
           }).join('')}
         </div>
-        <div class="row2">
-          <div class="field"><label>운동 종류</label><input class="input" id="exType" placeholder="예: 헬스 / 요가 / 러닝"/></div>
-          <div class="field"><label>시간 (분)</label><input class="input" id="exMin" type="number" placeholder="60"/></div>
+
+        <div class="field">
+          <label>운동 종류</label>
+          <select class="select" id="exType">
+            <option value="러닝">러닝</option>
+            <option value="걷기">걷기</option>
+            <option value="자전거">자전거</option>
+            <option value="수영">수영</option>
+            <option value="헬스">헬스/웨이트</option>
+            <option value="요가">요가/필라테스/스트레칭</option>
+            <option value="홈트">홈트레이닝</option>
+            <option value="구기">구기/스포츠</option>
+            <option value="등산">등산/하이킹</option>
+            <option value="기타">기타</option>
+          </select>
         </div>
-        <button class="btn btn-primary" id="exAdd">오늘 운동 기록 →</button>
+        <div id="exFields"></div>
+        <button class="btn btn-primary" id="exAdd" style="margin-top:8px">오늘 운동 기록 →</button>
+
+        ${exercise.length ? `
+          <div class="divider"></div>
+          <p class="label-eyebrow">최근 기록 <span class="right">최신 5개</span></p>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            ${exercise.slice(-5).reverse().map((e, idxRev) => {
+              const realIdx = exercise.length - 1 - idxRev;
+              return `<div style="display:flex;justify-content:space-between;align-items:flex-start;padding:8px 0;border-bottom:1px solid var(--hairline-soft)">
+                <div style="flex:1;min-width:0">
+                  <div style="font-family:var(--fb);font-weight:500;font-size:14px;color:var(--ink)">${safe(e.type||'운동')}${e.subtype?` · ${safe(e.subtype)}`:''}</div>
+                  <div style="font-family:var(--fb);font-weight:400;font-size:12.5px;color:var(--ink-soft);margin-top:2px">
+                    ${e.date}${e.min?` · ${e.min}분`:''}${e.km?` · ${e.km}km`:''}${e.distance?` · ${e.distance}m`:''}${e.sets?` · ${e.sets}세트`:''}${e.reps?` × ${e.reps}회`:''}${e.weight?` · ${e.weight}kg`:''}${e.muscle?` · ${safe(e.muscle)}`:''}${e.pace?` · 페이스 ${e.pace}`:''}
+                  </div>
+                  ${e.notes?`<div style="font-family:var(--fb);font-weight:400;font-size:12.5px;color:var(--ink-soft);margin-top:3px;font-style:italic">${safe(e.notes)}</div>`:''}
+                </div>
+                <button class="sup-del" data-exdel="${realIdx}" style="margin-left:8px">삭제</button>
+              </div>`;
+            }).join('')}
+          </div>
+        ` : ''}
       </div>
 
       <!-- FASTING -->
@@ -5183,17 +5425,96 @@ function renderHealth(root){
     saveStore(); render();
   });
 
-  // Exercise add
+  // Health AI advice
+  const runAdvice = () => {
+    const result = healthAdvice();
+    if(!store.health) store.health = {water:{}, exercise:[], fasting:{}, supplements:[], weights:[]};
+    store.health._adviceCache = { ...result, at: Date.now() };
+    saveStore('health'); render();
+  };
+  const adviceRun = $('#healthAdviceRun'); if(adviceRun) adviceRun.onclick = runAdvice;
+  const adviceRef = $('#healthAdviceRefresh'); if(adviceRef) adviceRef.onclick = runAdvice;
+
+  // Exercise — dynamic fields by type
+  function renderExerciseFields(){
+    const box = $('#exFields');
+    if(!box) return;
+    const type = $('#exType').value;
+    const numI = (id, label, placeholder, step) =>
+      `<div class="field"><label>${label}</label><input class="input" id="${id}" type="number" inputmode="decimal" ${step?'step="'+step+'"':''} placeholder="${placeholder}"/></div>`;
+    const txtI = (id, label, placeholder) =>
+      `<div class="field"><label>${label}</label><input class="input" id="${id}" placeholder="${placeholder}"/></div>`;
+    let html = '';
+    switch(type){
+      case '러닝': case '걷기':
+        html = `<div class="row2">${numI('exKm','거리 (km)','예: 5','0.1')}${numI('exMin','시간 (분)','예: 30')}</div>${txtI('exPace','페이스 (선택)','예: 6\'00\"/km')}${txtI('exNotes','메모 (선택)','컨디션·코스·날씨 등')}`;
+        break;
+      case '자전거':
+        html = `<div class="row2">${numI('exKm','거리 (km)','예: 20','0.1')}${numI('exMin','시간 (분)','예: 60')}</div>${txtI('exNotes','메모 (선택)','코스·평속·기어 등')}`;
+        break;
+      case '수영':
+        html = `<div class="row2">${numI('exDistance','거리 (m)','예: 1000')}${numI('exMin','시간 (분)','예: 40')}</div><div class="field"><label>영법</label><select class="select" id="exSubtype"><option>자유형</option><option>평영</option><option>배영</option><option>접영</option><option>혼영/믹스</option></select></div>${txtI('exNotes','메모 (선택)','')}`;
+        break;
+      case '헬스':
+        html = `<div class="field"><label>운동 부위</label><select class="select" id="exMuscle"><option>가슴</option><option>등</option><option>어깨</option><option>팔</option><option>하체</option><option>코어/복부</option><option>전신</option></select></div><div class="row2">${numI('exSets','세트 수','예: 5')}${numI('exReps','회 수/세트','예: 10')}</div><div class="row2">${numI('exWeight','평균 무게 (kg)','예: 40','0.5')}${numI('exMin','시간 (분)','예: 60')}</div>${txtI('exNotes','메모 (선택)','종목·강도 등')}`;
+        break;
+      case '요가':
+        html = `<div class="field"><label>세부</label><select class="select" id="exSubtype"><option>요가</option><option>필라테스</option><option>스트레칭</option></select></div>${numI('exMin','시간 (분)','예: 50')}${txtI('exNotes','메모 (선택)','')}`;
+        break;
+      case '홈트':
+        html = `${numI('exMin','시간 (분)','예: 30')}${txtI('exNotes','메모 (선택)','어떤 루틴/영상')}`;
+        break;
+      case '구기':
+        html = `<div class="field"><label>종목</label><select class="select" id="exSubtype"><option>축구</option><option>농구</option><option>야구</option><option>배드민턴</option><option>테니스</option><option>탁구</option><option>볼링</option><option>기타 구기</option></select></div>${numI('exMin','시간 (분)','예: 90')}${txtI('exNotes','메모 (선택)','')}`;
+        break;
+      case '등산':
+        html = `<div class="row2">${numI('exKm','거리 (km)','예: 8','0.1')}${numI('exMin','시간 (분)','예: 180')}</div>${txtI('exSubtype','코스/산 이름','예: 북한산 백운대')}${txtI('exNotes','메모 (선택)','난이도·날씨 등')}`;
+        break;
+      default:
+        html = `${txtI('exSubtype','구체적 종류 (선택)','예: 클라이밍, 스쿼시...')}${numI('exMin','시간 (분)','예: 45')}${txtI('exNotes','메모 (선택)','')}`;
+    }
+    box.innerHTML = html;
+  }
+  renderExerciseFields();
+  $('#exType').onchange = renderExerciseFields;
+
   $('#exAdd').onclick = () => {
-    const t = $('#exType').value.trim();
-    const m = +$('#exMin').value || 0;
-    if(!t){ toast('운동 종류를 적어줘'); return; }
+    const type = $('#exType').value;
+    if(!type){ toast('운동 종류를 골라줘'); return; }
+    const numOrNull = id => {
+      const el = $('#'+id); if(!el) return null;
+      const v = parseFloat(el.value);
+      return isNaN(v) ? null : v;
+    };
+    const txtOrNull = id => {
+      const el = $('#'+id); if(!el) return null;
+      const v = el.value.trim();
+      return v || null;
+    };
     if(!store.health) store.health = {water:{}, exercise:[], fasting:{}, supplements:[], weights:[]};
     if(!store.health.exercise) store.health.exercise = [];
-    store.health.exercise.push({date: tk, type: t, min: m, at: Date.now()});
-    saveStore(); render();
+    const entry = { date: tk, type, at: Date.now() };
+    const min = numOrNull('exMin'); if(min != null) entry.min = min;
+    const km = numOrNull('exKm'); if(km != null) entry.km = km;
+    const distance = numOrNull('exDistance'); if(distance != null) entry.distance = distance;
+    const sets = numOrNull('exSets'); if(sets != null) entry.sets = sets;
+    const reps = numOrNull('exReps'); if(reps != null) entry.reps = reps;
+    const weight = numOrNull('exWeight'); if(weight != null) entry.weight = weight;
+    const muscle = txtOrNull('exMuscle'); if(muscle) entry.muscle = muscle;
+    const subtype = txtOrNull('exSubtype'); if(subtype) entry.subtype = subtype;
+    const pace = txtOrNull('exPace'); if(pace) entry.pace = pace;
+    const notes = txtOrNull('exNotes'); if(notes) entry.notes = notes;
+    store.health.exercise.push(entry);
+    saveStore('health'); render();
     toast('운동 기록 ♡');
   };
+
+  $$('#main [data-exdel]').forEach(b => b.onclick = () => {
+    const i = +b.dataset.exdel;
+    if(!confirm('이 기록을 지울까요?')) return;
+    store.health.exercise.splice(i, 1);
+    saveStore('health'); render();
+  });
 
   // Fasting
   $('#fastHours').onchange = () => {
@@ -5276,6 +5597,41 @@ function renderHealth(root){
 }
 
 /* ============ REPORT ============ */
+const _praiseLines = [
+  '✨ 진짜 잘했어. 이번 주 목표 달성!',
+  '🎉 해냈다! 너 자신한테 박수.',
+  '🏆 약속한 거 지킨 게 가장 큰 상이야.',
+  '🌟 이번 주 너 진짜 멋졌어.',
+  '🎁 작은 보상 한 가지 골라봐 — 좋아하는 음료, 영화, 산책 뭐든.',
+  '💐 페이스 유지하는 건 의지력 아니라 시스템. 너가 시스템을 만든 거야.',
+  '🍰 오늘은 좀 게으르게 보내도 돼. 자격 있어.',
+  '👑 너 자신 칭찬 한 마디 — 거울 보고 진심으로.'
+];
+
+function getWeekGoals(){
+  const wg = store.goals?.week || {};
+  return {
+    completion: wg.completion ?? null,     // 완료율 %
+    exerciseCount: wg.exerciseCount ?? null,
+    focusMin: wg.focusMin ?? null,
+    diaryDays: wg.diaryDays ?? null
+  };
+}
+
+function checkAchievements(stats){
+  const g = getWeekGoals();
+  const ach = [];
+  if(g.completion != null && stats.weekRate >= g.completion)
+    ach.push({ key:'completion', label:`완료율 ${g.completion}% 달성 (실제 ${stats.weekRate}%)` });
+  if(g.exerciseCount != null && stats.weekExerciseCount >= g.exerciseCount)
+    ach.push({ key:'exercise', label:`운동 ${g.exerciseCount}회 달성 (실제 ${stats.weekExerciseCount}회)` });
+  if(g.focusMin != null && stats.weekFocusMin >= g.focusMin)
+    ach.push({ key:'focus', label:`집중 시간 ${g.focusMin}분 달성 (실제 ${stats.weekFocusMin}분)` });
+  if(g.diaryDays != null && stats.weekDiaryDays >= g.diaryDays)
+    ach.push({ key:'diary', label:`일기 ${g.diaryDays}일 달성 (실제 ${stats.weekDiaryDays}일)` });
+  return ach;
+}
+
 function renderReport(root){
   const tk = todayKey();
   const now = nowKST();
@@ -5293,6 +5649,16 @@ function renderReport(root){
   const weekFocus = (store.focusLog||[]).filter(f => f.date >= wsK && f.kind !== 'break');
   const weekFocusMin = weekFocus.reduce((a,b)=>a+(b.min||0),0);
   const weekExercise = (store.health?.exercise||[]).filter(e => e.date >= wsK);
+
+  const stats = {
+    weekRate,
+    weekExerciseCount: weekExercise.length,
+    weekFocusMin,
+    weekDiaryDays: weekMoods.length
+  };
+  const goals = getWeekGoals();
+  const achievements = checkAchievements(stats);
+  const goalsSet = goals.completion != null || goals.exerciseCount != null || goals.focusMin != null || goals.diaryDays != null;
 
   const weekSpends = (store.spends||[]).filter(s => s.date >= wsK);
   const weekOut = weekSpends.filter(s => (s.kind||'out')==='out').reduce((a,b)=>a+Number(b.amount||0),0);
@@ -5320,9 +5686,56 @@ function renderReport(root){
   else if(weekRate <= 30) insight = '계획이 너무 많았을 수 있어. 다음 주는 절반만 잡아봐';
   else insight = '평균 페이스. 작은 패턴 하나만 바꿔도 다음 주가 달라져';
 
+  // Pick a stable praise line per week
+  const _praiseSeed = wsK.split('-').reduce((a,b)=>a+parseInt(b,10), 0);
+  const praiseLine = _praiseLines[_praiseSeed % _praiseLines.length];
+
   root.innerHTML = `
     <div class="hero"><h1 class="hero-title">REPORT</h1><span class="hero-script">reflect</span></div>
     <div class="section-wrap">
+
+      ${achievements.length ? `
+        <div class="paper" style="border:1px solid var(--rose-soft);background:linear-gradient(180deg, var(--paper) 0%, var(--rose-soft) 220%)">
+          <p class="label-eyebrow" style="color:var(--rose)">🏆 이번 주 목표 달성</p>
+          <p style="margin:6px 0 12px;font-family:var(--fd);font-weight:400;font-size:22px;line-height:1.3;color:var(--ink)">${safe(praiseLine)}</p>
+          <ul style="margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:6px">
+            ${achievements.map(a => `<li style="padding:8px 12px;background:var(--paper-soft);border-radius:3px;font-family:var(--fb);font-weight:500;font-size:13.5px;color:var(--ink)">✓ ${safe(a.label)}</li>`).join('')}
+          </ul>
+        </div>
+        <div style="height:18px"></div>
+      ` : ''}
+
+      <!-- 목표 설정 -->
+      <div class="paper">
+        <p class="label-eyebrow">이번 주 목표 <span class="right">${goalsSet ? '설정됨' : '미설정'}</span></p>
+        <p style="margin:6px 0 14px;font-family:var(--fb);font-weight:400;font-size:13px;line-height:1.6;color:var(--ink-soft)">달성하면 AI가 칭찬해줘요. 빈 칸은 추적 안 함.</p>
+        <div class="row2">
+          <div class="field">
+            <label>완료율 (%) — 현재 ${weekRate}%</label>
+            <input class="input" id="goalCompletion" type="number" min="0" max="100" value="${goals.completion ?? ''}" placeholder="예: 70"/>
+          </div>
+          <div class="field">
+            <label>운동 (회) — 현재 ${weekExercise.length}회</label>
+            <input class="input" id="goalExercise" type="number" min="0" value="${goals.exerciseCount ?? ''}" placeholder="예: 3"/>
+          </div>
+        </div>
+        <div class="row2">
+          <div class="field">
+            <label>집중 시간 (분) — 현재 ${weekFocusMin}분</label>
+            <input class="input" id="goalFocus" type="number" min="0" value="${goals.focusMin ?? ''}" placeholder="예: 300"/>
+          </div>
+          <div class="field">
+            <label>일기 (일) — 현재 ${weekMoods.length}일</label>
+            <input class="input" id="goalDiary" type="number" min="0" max="7" value="${goals.diaryDays ?? ''}" placeholder="예: 5"/>
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn btn-primary" id="goalSave">목표 저장</button>
+          ${goalsSet ? '<button class="btn btn-ghost" id="goalClear">목표 비우기</button>' : ''}
+        </div>
+      </div>
+
+      <div style="height:18px"></div>
 
       <!-- WEEKLY -->
       <div class="paper">
@@ -5415,6 +5828,29 @@ function renderReport(root){
       </div>
     </div>
   `;
+
+  const saveBtn = $('#goalSave');
+  if(saveBtn) saveBtn.onclick = () => {
+    const num = id => { const v = parseFloat($('#'+id).value); return isNaN(v) ? null : v; };
+    store.goals = store.goals || {};
+    store.goals.week = {
+      completion: num('goalCompletion'),
+      exerciseCount: num('goalExercise'),
+      focusMin: num('goalFocus'),
+      diaryDays: num('goalDiary')
+    };
+    saveStore('__meta');
+    toast('목표 저장됨 — 달성하면 알려줄게');
+    render();
+  };
+  const clrBtn = $('#goalClear');
+  if(clrBtn) clrBtn.onclick = () => {
+    if(!confirm('이번 주 목표를 비울까요?')) return;
+    store.goals = store.goals || {};
+    store.goals.week = {};
+    saveStore('__meta');
+    render();
+  };
 }
 
 /* ============ SETTINGS & NOTIFICATIONS ============ */
@@ -5482,9 +5918,29 @@ function renderSettings(root){
 
       <div style="height:18px"></div>
 
+      ${currentFbUser && (currentFbUser.email||'').toLowerCase() === ADMIN_EMAIL ? `
+      <div class="paper">
+        <p class="label-eyebrow">🔒 관리자 모드</p>
+        <p style="margin:6px 0 12px;font-family:var(--fb);font-weight:400;font-size:13px;line-height:1.7;color:var(--ink-soft)">${isAdmin() ? '잠금 해제됨 ✓ — 일정 추가 화면에서 사진/링크로 AI가 일정을 만들어드려요.' : '본인만 알고 있는 키를 입력하면 사진/링크로 AI가 일정 추출하는 기능이 열려요.'}</p>
+        ${isAdmin() ? `
+          <button class="btn btn-ghost" id="adminLock">관리자 모드 잠금</button>
+        ` : `
+          <div class="field">
+            <label>관리자 키</label>
+            <input class="input" id="adminPasskeyInput" type="password" autocomplete="off" placeholder="키 입력"/>
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+            <button class="btn btn-primary" id="adminUnlock">잠금 해제 →</button>
+            <span id="adminUnlockMsg" style="font-family:var(--fb);font-size:13px;color:var(--ink-soft)"></span>
+          </div>
+        `}
+      </div>
+      <div style="height:18px"></div>
+      ` : ''}
+
       <div class="paper-soft">
         <p class="label-eyebrow">서버 저장 & 구글 연동</p>
-        <p style="margin:0;font-family:var(--fb);font-weight:300;font-size:13px;line-height:1.7;color:var(--ink-soft)">현재 데이터는 너의 Claude 계정 + 브라우저에 저장돼. 진짜 서버 저장 + 구글 캘린더 연동은 Firebase 등 백엔드 셋업이 필요해. 별도로 진행할 거면 알려줘</p>
+        <p style="margin:0;font-family:var(--fb);font-weight:400;font-size:13px;line-height:1.7;color:var(--ink-soft)">현재 데이터는 너의 Google 계정 + Firestore에 저장돼. 다른 기기에서도 같은 계정으로 들어오면 그대로 이어져.</p>
       </div>
 
     </div>
@@ -5563,6 +6019,34 @@ function renderSettings(root){
       toast('파일 형식이 잘못됐어');
     }
   };
+
+  const adminUnlockBtn = $('#adminUnlock');
+  if(adminUnlockBtn){
+    adminUnlockBtn.onclick = async () => {
+      const input = ($('#adminPasskeyInput').value || '').trim();
+      const msg = $('#adminUnlockMsg');
+      if(!input){ if(msg){ msg.textContent = '키를 입력해주세요.'; msg.style.color = 'var(--rose)'; } return; }
+      adminUnlockBtn.disabled = true;
+      if(msg){ msg.textContent = '확인 중…'; msg.style.color = 'var(--ink-soft)'; }
+      const ok = await verifyAdminPasskey(input);
+      adminUnlockBtn.disabled = false;
+      if(ok){
+        toast('관리자 모드 잠금 해제 ✦');
+        render();
+      } else {
+        if(msg){ msg.textContent = '키가 맞지 않아요.'; msg.style.color = 'var(--rose)'; }
+      }
+    };
+  }
+  const adminLockBtn = $('#adminLock');
+  if(adminLockBtn){
+    adminLockBtn.onclick = () => {
+      if(!confirm('관리자 모드를 잠글까요? 다시 쓰려면 키를 또 입력해야 해요.')) return;
+      lockAdmin();
+      toast('관리자 모드 잠김');
+      render();
+    };
+  }
 }
 
 
