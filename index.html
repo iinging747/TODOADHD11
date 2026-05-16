@@ -96,7 +96,7 @@ html,body{margin:0;padding:0}
 }
 body{
   min-height:100vh;
-  font-family:var(--fb);font-weight:400;color:var(--ink);
+  font-family:var(--fb);font-weight:400;color:var(--ink);font-size:15.5px;line-height:1.6;
   background:
     radial-gradient(120% 80% at 10% 5%, #F7F1E4 0%, transparent 55%),
     radial-gradient(100% 90% at 95% 100%, #E8DEC8 0%, transparent 50%),
@@ -174,13 +174,13 @@ input,textarea,select{font-family:inherit;color:inherit;background:none;border:0
   margin:0 0 18px;color:var(--ink);
 }
 .gate-subtitle{
-  font-family:var(--fb);font-weight:300;font-size:15.5px;
+  font-family:var(--fb);font-weight:400;font-size:15.5px;
   line-height:1.6;letter-spacing:.005em;color:var(--ink-soft);
   margin:0 0 6px;
 }
 .gate-subtitle b{font-weight:500;color:var(--ink)}
 .gate-lede{
-  font-family:var(--fb);font-weight:300;font-size:14px;line-height:1.75;
+  font-family:var(--fb);font-weight:400;font-size:14.5px;line-height:1.75;
   color:var(--ink-muted);margin:18px 0 36px;letter-spacing:.005em;
 }
 .gate-divider{
@@ -232,7 +232,7 @@ input,textarea,select{font-family:inherit;color:inherit;background:none;border:0
   text-transform:uppercase;color:var(--ink-soft);font-weight:500;margin-bottom:6px;
 }
 .auth-form .field label .hint{
-  font-family:var(--fb);font-size:10.5px;font-weight:300;
+  font-family:var(--fb);font-size:11px;font-weight:500;
   color:var(--ink-muted);letter-spacing:0;text-transform:none;
   margin-left:6px;font-style:italic;
 }
@@ -266,7 +266,7 @@ input,textarea,select{font-family:inherit;color:inherit;background:none;border:0
 
 .auth-foot{
   text-align:center;margin:18px 0 0;
-  font-family:var(--fb);font-size:13px;font-weight:300;color:var(--ink-soft);
+  font-family:var(--fb);font-size:14px;font-weight:400;color:var(--ink-soft);
   letter-spacing:.005em;
 }
 .auth-swap{
@@ -299,7 +299,7 @@ input,textarea,select{font-family:inherit;color:inherit;background:none;border:0
 .rail-script{font-family:var(--fg);font-weight:700;font-size:22px;color:var(--ink);line-height:1;margin-bottom:10px;display:block;letter-spacing:-.02em}
 .rail-title{font-family:var(--fd);font-weight:300;font-size:22px;letter-spacing:.16em;color:var(--ink);line-height:1.2;margin:0}
 .rail-title b{font-weight:400;display:block;font-size:13px;letter-spacing:.22em;color:var(--ink-soft);margin-top:6px;text-transform:uppercase}
-.rail-desc{font-family:var(--fb);font-weight:300;font-size:12px;line-height:1.55;color:var(--ink-muted);margin:10px 0 0}
+.rail-desc{font-family:var(--fb);font-weight:400;font-size:12.5px;line-height:1.55;color:var(--ink-muted);margin:10px 0 0}
 
 .nav-section{display:flex;flex-direction:column;gap:1px}
 .nav-section h4{font-family:var(--fui);font-size:10px;font-weight:500;letter-spacing:.22em;text-transform:uppercase;color:var(--ink-muted);margin:0 0 10px;padding:0 4px}
@@ -375,7 +375,7 @@ input,textarea,select{font-family:inherit;color:inherit;background:none;border:0
 .day.alldone .tab{background:var(--olive-soft)}
 .day.other{background:var(--paper-soft);opacity:.55}
 .day.other .num{color:var(--ink-muted)}
-.day .num{font-family:var(--fui);font-weight:300;font-size:14px;letter-spacing:.06em;color:var(--ink-soft);margin:4px 0 0 28px;line-height:1;font-variant-numeric:tabular-nums}
+.day .num{font-family:var(--fui);font-weight:400;font-size:14.5px;letter-spacing:.06em;color:var(--ink-soft);margin:4px 0 0 28px;line-height:1;font-variant-numeric:tabular-nums}
 .day-mood{
   position:absolute;top:6px;right:8px;
   font-size:15px;line-height:1;
@@ -401,7 +401,7 @@ body.dark .day.selected{background:var(--paper-warm)}
 .brief-strip::before{content:"";position:absolute;top:0;left:32px;width:60px;height:14px;background:var(--tan-soft)}
 .brief-grid{display:grid;grid-template-columns:1fr 1fr;gap:28px;margin-top:8px}
 .brief-block h3{font-family:var(--fui);font-size:10.5px;font-weight:500;letter-spacing:.22em;text-transform:uppercase;color:var(--ink-soft);margin:0 0 12px}
-.brief-text{font-family:var(--fb);font-weight:300;font-size:14px;line-height:1.7;color:var(--ink);margin:0;letter-spacing:.005em}
+.brief-text{font-family:var(--fb);font-weight:400;font-size:14.5px;line-height:1.7;color:var(--ink);margin:0;letter-spacing:.005em}
 .brief-pills{display:flex;flex-wrap:wrap;gap:6px;margin-top:14px}
 
 /* Brief — remaining/completed mini lists */
@@ -413,7 +413,7 @@ body.dark .day.selected{background:var(--paper-warm)}
 }
 .brief-task-label.done-label{color:var(--olive)}
 .brief-task-col li{
-  font-family:var(--fb);font-weight:300;font-size:12.5px;line-height:1.6;
+  font-family:var(--fb);font-weight:400;font-size:14px;line-height:1.6;
   color:var(--ink-soft);letter-spacing:.005em;padding-left:10px;position:relative;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
 }
@@ -445,7 +445,7 @@ body.dark .day.selected{background:var(--paper-warm)}
   50%{box-shadow:0 0 0 6px transparent}
 }
 .voice-status{
-  font-family:var(--fb);font-weight:300;font-size:12px;
+  font-family:var(--fb);font-weight:400;font-size:12.5px;
   color:var(--ink-soft);font-style:italic;letter-spacing:.005em;
   margin-left:4px;
 }
@@ -457,7 +457,7 @@ body.dark .day.selected{background:var(--paper-warm)}
   padding:16px 20px;border-radius:0 2px 2px 0;
 }
 .rt-loading,.rt-err{
-  margin:14px 0 0;font-family:var(--fb);font-weight:300;font-size:13px;
+  margin:14px 0 0;font-family:var(--fb);font-weight:400;font-size:13.5px;
   color:var(--ink-soft);font-style:italic;letter-spacing:.005em;
   padding:12px 14px;background:var(--paper-soft);border-left:2px solid var(--tan);
 }
@@ -494,7 +494,7 @@ body.dark .pill[data-brieftab].active{
 .brief-tasks-single{margin-top:18px;padding-top:18px;border-top:1px solid var(--hairline)}
 .brief-tasks-single ul{list-style:none;margin:0;padding:0}
 .brief-tasks-single li{
-  font-family:var(--fb);font-weight:300;font-size:13px;line-height:1.7;
+  font-family:var(--fb);font-weight:400;font-size:13.5px;line-height:1.7;
   color:var(--ink-soft);letter-spacing:.005em;padding-left:14px;position:relative;
   display:flex;justify-content:space-between;align-items:baseline;gap:12px;
 }
@@ -515,7 +515,7 @@ body.dark .pill[data-brieftab].active{
   color:var(--ink-muted);font-weight:400;flex-shrink:0;
 }
 .brief-empty{
-  margin:0;font-family:var(--fb);font-weight:300;font-size:13px;
+  margin:0;font-family:var(--fb);font-weight:400;font-size:13.5px;
   color:var(--ink-muted);font-style:italic;letter-spacing:.005em;padding-left:0;
 }
 .pill.hot{color:var(--rose);border-color:var(--rose-soft)}
@@ -524,7 +524,7 @@ body.dark .pill[data-brieftab].active{
 .weather-line{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
 .weather-temp{font-family:var(--fd);font-size:26px;font-weight:300;color:var(--ink)}
 .weather-cond{font-family:var(--fui);font-size:10.5px;letter-spacing:.18em;text-transform:uppercase;color:var(--ink-soft)}
-.weather-note{font-family:var(--fb);font-size:13px;color:var(--ink-soft);line-height:1.55;margin-top:6px;font-weight:300}
+.weather-note{font-family:var(--fb);font-size:14px;color:var(--ink-soft);line-height:1.55;margin-top:6px;font-weight:400}
 .weather-btn{margin-top:10px;font-family:var(--fui);font-size:10.5px;letter-spacing:.18em;text-transform:uppercase;color:var(--ink-soft);border-bottom:1px solid var(--hairline);padding-bottom:1px}
 .weather-btn:hover{color:var(--ink)}
 
@@ -534,7 +534,7 @@ body.dark .pill[data-brieftab].active{
 .week-cell.today::before{background:var(--ink)}
 .week-cell .lbl{font-family:var(--fui);font-size:11.5px;letter-spacing:.24em;text-transform:uppercase;color:var(--ink);margin-top:6px;margin-bottom:4px;font-weight:500}
 .week-cell .dt{font-family:var(--fd);font-size:14px;color:var(--ink-muted);letter-spacing:.06em;margin-bottom:14px}
-.week-cell .wmarks{display:flex;flex-direction:column;gap:7px;font-family:var(--fb);font-weight:300;font-size:14px;color:var(--ink-soft);line-height:1.5;flex:1}
+.week-cell .wmarks{display:flex;flex-direction:column;gap:7px;font-family:var(--fb);font-weight:400;font-size:14.5px;color:var(--ink-soft);line-height:1.5;flex:1}
 .week-cell .wmarks .wmk{display:flex;align-items:flex-start;gap:9px}
 .week-cell .wmarks .wmk .dot{width:6px;height:6px;border-radius:50%;background:var(--tan-deep);margin-top:7px;flex-shrink:0}
 .week-cell .wmarks .wmk.done .dot{background:var(--olive)}
@@ -555,7 +555,7 @@ body.dark .pill[data-brieftab].active{
 
 .field{display:flex;flex-direction:column;gap:8px;margin-bottom:18px}
 .field label{font-family:var(--fui);font-size:10.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--ink-soft);font-weight:500}
-.input,.textarea,.select{font-family:var(--fb);font-weight:300;font-size:14.5px;color:var(--ink);background:var(--paper-soft);border:1px solid var(--hairline);border-radius:2px;padding:11px 14px;letter-spacing:.005em;transition:border-color .15s;width:100%}
+.input,.textarea,.select{font-family:var(--fb);font-weight:400;font-size:15px;color:var(--ink);background:var(--paper-soft);border:1px solid var(--hairline);border-radius:2px;padding:11px 14px;letter-spacing:.005em;transition:border-color .15s;width:100%}
 .input:focus,.textarea:focus,.select:focus{border-color:var(--ink-soft)}
 .textarea{min-height:120px;resize:vertical;line-height:1.7}
 .input::placeholder,.textarea::placeholder{color:var(--ink-muted);font-style:italic}
@@ -576,7 +576,7 @@ body.dark .select{background-image:url("data:image/svg+xml;utf8,<svg xmlns='http
 .row .body{min-width:0}
 .row .body .ttl{font-family:var(--fb);font-weight:400;font-size:14.5px;color:var(--ink);margin:0;line-height:1.4;letter-spacing:.005em}
 .row .body .ttl .tm{font-family:var(--fd);font-size:13px;color:var(--rose);margin-right:8px;letter-spacing:.04em}
-.row .body .why{font-family:var(--fb);font-weight:300;font-size:12.5px;color:var(--ink-muted);margin:3px 0 0;line-height:1.5;font-style:italic}
+.row .body .why{font-family:var(--fb);font-weight:400;font-size:14px;color:var(--ink-muted);margin:3px 0 0;line-height:1.5;font-style:italic}
 .row .body .meta{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
 .row .body .meta .tag{font-family:var(--fui);font-size:9.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-soft);padding:2px 8px;border:1px solid var(--hairline);border-radius:999px}
 .row .body .meta .tag.hot{color:var(--rose);border-color:var(--rose-soft)}
@@ -592,7 +592,7 @@ body.dark .select{background-image:url("data:image/svg+xml;utf8,<svg xmlns='http
 .row .del:hover{color:var(--rose);border-color:var(--rose-soft)}
 @media (hover:none){.row .del{opacity:.85}}
 
-.empty{font-family:var(--fb);font-style:italic;font-weight:300;font-size:13.5px;color:var(--ink-muted);padding:18px 16px;background:var(--paper-soft);border-left:2px solid var(--tan);margin:8px 0 16px}
+.empty{font-family:var(--fb);font-style:italic;font-weight:400;font-size:14px;color:var(--ink-muted);padding:18px 16px;background:var(--paper-soft);border-left:2px solid var(--tan);margin:8px 0 16px}
 .divider{height:1px;background:var(--hairline);margin:28px 0}
 
 /* MEMO cards */
@@ -607,7 +607,7 @@ body.dark .select{background-image:url("data:image/svg+xml;utf8,<svg xmlns='http
   text-transform:uppercase;color:var(--ink-muted);margin-bottom:10px;
 }
 .memo-body{
-  font-family:var(--fb);font-weight:300;font-size:14.5px;line-height:1.75;
+  font-family:var(--fb);font-weight:400;font-size:15px;line-height:1.75;
   color:var(--ink);letter-spacing:.005em;white-space:pre-wrap;word-break:break-word;
 }
 .inline-link{
@@ -638,7 +638,7 @@ body.dark .select{background-image:url("data:image/svg+xml;utf8,<svg xmlns='http
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
 }
 .link-summary{
-  font-family:var(--fb);font-weight:300;font-size:12px;
+  font-family:var(--fb);font-weight:400;font-size:12.5px;
   color:var(--ink-soft);font-style:italic;
 }
 .link-arrow{
@@ -654,7 +654,7 @@ body.dark .select{background-image:url("data:image/svg+xml;utf8,<svg xmlns='http
   text-transform:uppercase;color:var(--rose);font-weight:500;margin-bottom:6px;
 }
 .memo-ai-text{
-  font-family:var(--fb);font-weight:300;font-size:13.5px;line-height:1.7;
+  font-family:var(--fb);font-weight:400;font-size:14px;line-height:1.7;
   color:var(--ink);font-style:italic;letter-spacing:.005em;
 }
 .memo-ai-btn{
@@ -698,7 +698,7 @@ body.dark .select{background-image:url("data:image/svg+xml;utf8,<svg xmlns='http
 }
 .work-meta .tag.hot{color:var(--rose);border-color:var(--rose-soft)}
 .work-memo{
-  font-family:var(--fb);font-weight:300;font-size:13px;line-height:1.6;
+  font-family:var(--fb);font-weight:400;font-size:13.5px;line-height:1.6;
   color:var(--ink-soft);margin:0 0 10px;letter-spacing:.005em;white-space:pre-wrap;
 }
 .work-actions{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
@@ -722,7 +722,7 @@ body.dark .select{background-image:url("data:image/svg+xml;utf8,<svg xmlns='http
 }
 .work-advice-list{margin:0;padding:0;list-style:none}
 .work-advice-list li{
-  font-family:var(--fb);font-weight:300;font-size:12.5px;line-height:1.65;
+  font-family:var(--fb);font-weight:400;font-size:14px;line-height:1.65;
   color:var(--ink);letter-spacing:.005em;padding-left:14px;position:relative;
   margin-bottom:4px;
 }
@@ -734,7 +734,7 @@ body.dark .select{background-image:url("data:image/svg+xml;utf8,<svg xmlns='http
 .timer-box{background:var(--paper);border-radius:2px;padding:48px 32px;text-align:center;box-shadow:var(--shadow-page);position:relative}
 .timer-box::before{content:"";position:absolute;top:0;left:32px;width:60px;height:14px;background:var(--tan-soft)}
 .timer-num{font-family:var(--fd);font-weight:300;font-size:120px;line-height:1.1;letter-spacing:.08em;color:var(--ink);margin:8px 0 6px;font-variant-numeric:tabular-nums lining-nums;font-feature-settings:"tnum" 1, "lnum" 1;display:inline-block;padding:0 .04em}
-.timer-sub{font-family:var(--fb);font-weight:300;font-size:14px;color:var(--ink-soft);margin:0 0 24px}
+.timer-sub{font-family:var(--fb);font-weight:400;font-size:14.5px;color:var(--ink-soft);margin:0 0 24px}
 .timer-buttons{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
 
 /* Pomodoro */
@@ -763,7 +763,7 @@ body.dark .duration-btn.active{background:var(--ink);color:var(--bg)}
 .sticker-card .info span{display:block;font-family:var(--fui);font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-muted);margin-top:2px}
 
 .mood-row{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 18px}
-.mood-row button{font-family:var(--fb);font-weight:400;font-size:12.5px;padding:7px 14px;border:1px solid var(--hairline);border-radius:999px;background:var(--paper);color:var(--ink-soft);transition:all .15s;letter-spacing:.005em;display:inline-flex;align-items:center;gap:5px}
+.mood-row button{font-family:var(--fb);font-weight:400;font-size:13.5px;padding:7px 14px;border:1px solid var(--hairline);border-radius:999px;background:var(--paper);color:var(--ink-soft);transition:all .15s;letter-spacing:.005em;display:inline-flex;align-items:center;gap:5px}
 .mood-row button .mood-emoji{font-size:13px;line-height:1;filter:saturate(.9)}
 .mood-row button:hover{border-color:var(--ink-muted);color:var(--ink)}
 .mood-row button.on{background:var(--tan-soft);border-color:var(--tan-deep);color:var(--ink);font-weight:500}
@@ -809,7 +809,7 @@ body.dark .duration-btn.active{background:var(--ink);color:var(--bg)}
 .water-cup.filled{color:var(--ink)}
 .water-cup:hover{transform:translateY(-2px)}
 .water-note{
-  margin:6px 0 0;font-family:var(--fb);font-weight:300;font-size:12.5px;
+  margin:6px 0 0;font-family:var(--fb);font-weight:400;font-size:14px;
   color:var(--ink-soft);font-style:italic;letter-spacing:.005em;
 }
 
@@ -905,7 +905,7 @@ body.dark .duration-btn.active{background:var(--ink);color:var(--bg)}
 .weight-tip{
   margin:0;padding:12px 14px;
   background:var(--paper-soft);border-left:2px solid var(--tan-deep);
-  font-family:var(--fb);font-weight:300;font-size:13px;line-height:1.65;
+  font-family:var(--fb);font-weight:400;font-size:13.5px;line-height:1.65;
   color:var(--ink-soft);font-style:italic;letter-spacing:.005em;
 }
 
@@ -961,11 +961,11 @@ body.dark .duration-btn.active{background:var(--ink);color:var(--bg)}
 .goal-advice.warning .goal-advice-title{color:var(--tan-deep)}
 .goal-advice.over .goal-advice-title{color:var(--rose)}
 .goal-advice-body{
-  font-family:var(--fb);font-weight:300;font-size:13px;line-height:1.65;
+  font-family:var(--fb);font-weight:400;font-size:13.5px;line-height:1.65;
   color:var(--ink-soft);letter-spacing:.005em;
 }
 .goal-empty{
-  margin:0;font-family:var(--fb);font-weight:300;font-size:12.5px;
+  margin:0;font-family:var(--fb);font-weight:400;font-size:14px;
   color:var(--ink-muted);font-style:italic;letter-spacing:.005em;
 }
 .goal-input-row{
@@ -973,7 +973,7 @@ body.dark .duration-btn.active{background:var(--ink);color:var(--bg)}
 }
 .goal-input-row .input{flex:1}
 .goal-input-row .btn{flex-shrink:0;padding:0 16px}
-.sup-info{font-family:var(--fb);font-weight:300;font-size:12.5px;color:var(--ink-soft);line-height:1.55;font-style:italic;letter-spacing:.005em}
+.sup-info{font-family:var(--fb);font-weight:400;font-size:14px;color:var(--ink-soft);line-height:1.55;font-style:italic;letter-spacing:.005em}
 .sup-del{
   font-family:var(--fui);font-size:9.5px;letter-spacing:.18em;
   text-transform:uppercase;color:var(--ink-muted);
@@ -1007,7 +1007,7 @@ body.dark .duration-btn.active{background:var(--ink);color:var(--bg)}
 .report-insight{
   margin:0;padding:14px 16px;
   background:var(--paper-soft);border-left:2px solid var(--rose-soft);
-  font-family:var(--fb);font-weight:300;font-size:13.5px;line-height:1.65;
+  font-family:var(--fb);font-weight:400;font-size:14px;line-height:1.65;
   color:var(--ink);font-style:italic;letter-spacing:.005em;
 }
 
@@ -1025,7 +1025,7 @@ body.dark .duration-btn.active{background:var(--ink);color:var(--bg)}
 }
 .setting-info{flex:1;min-width:0}
 .setting-title{font-family:var(--fb);font-weight:500;font-size:14.5px;color:var(--ink);margin-bottom:4px}
-.setting-desc{font-family:var(--fb);font-weight:300;font-size:12.5px;color:var(--ink-soft);line-height:1.55;letter-spacing:.005em}
+.setting-desc{font-family:var(--fb);font-weight:400;font-size:14px;color:var(--ink-soft);line-height:1.55;letter-spacing:.005em}
 .setting-status{
   margin-top:6px;font-family:var(--fui);font-size:10.5px;
   letter-spacing:.06em;color:var(--ink-muted);
@@ -1094,7 +1094,7 @@ body.dark .duration-btn.active{background:var(--ink);color:var(--bg)}
 }
 .wish-ai-list{margin:0;padding:0;list-style:none}
 .wish-ai-list li{
-  font-family:var(--fb);font-weight:300;font-size:13px;line-height:1.65;
+  font-family:var(--fb);font-weight:400;font-size:13.5px;line-height:1.65;
   color:var(--ink);letter-spacing:.005em;margin-bottom:6px;
 }
 .wish-ai-list li:last-child{margin-bottom:0}
@@ -1225,7 +1225,7 @@ body.dark .toast{background:var(--ink);color:var(--bg)}
   .gate-card{padding:30px 18px 24px;border-radius:6px}
   .gate-title{font-size:38px;margin:0 0 14px}
   .gate-subtitle{font-size:13px}
-  .gate-lede{font-size:12.5px;margin:14px 0 22px}
+  .gate-lede{font-size:13.5px;margin:14px 0 22px}
   .gate-mark{font-size:9px;margin-bottom:18px}
   .gate-divider{margin:22px 0}
   .gate-privacy{font-size:11px;margin-top:18px}
@@ -1301,61 +1301,61 @@ body.dark .toast{background:var(--ink);color:var(--bg)}
     <h2 style="font-family:var(--fd);font-weight:400;font-size:24px;margin:6px 0 14px;color:var(--ink)">정신차려 · TODOADHD</h2>
     <p style="font-family:var(--fb);font-size:12px;color:var(--ink-soft);margin:0 0 16px">시행일: 2026년 5월 16일 · 운영자: iinging747</p>
 
-    <div style="padding:12px 14px;background:var(--paper-soft);border-radius:3px;margin-bottom:18px;border-left:3px solid var(--rose)">
-      <p style="margin:0;font-family:var(--fb);font-weight:600;font-size:14px;color:var(--ink);line-height:1.6">⚠️ 관리자는 절대 여러분의 개인정보를 보지 않습니다.</p>
-      <p style="margin:6px 0 0;font-family:var(--fb);font-weight:400;font-size:13px;color:var(--ink-soft);line-height:1.7">모든 데이터는 본인의 Google 계정 권한으로 격리되어 저장되며, 운영자(관리자)는 어떤 경우에도 사용자가 입력한 콘텐츠(일정·일기·가계부·건강 기록 등)를 열람할 수 없습니다.</p>
+    <div style="padding:18px 18px;background:var(--paper-soft);border-radius:4px;margin-bottom:22px;border:2px solid var(--rose);box-shadow:0 4px 14px -8px rgba(196,144,137,.5)">
+      <p style="margin:0;font-family:var(--fd);font-weight:500;font-size:22px;color:var(--ink);line-height:1.35;letter-spacing:.005em">⚠️ 개발자는 <u>절대로</u> 여러분의 정보를 보지 않습니다.</p>
+      <p style="margin:10px 0 0;font-family:var(--fb);font-weight:500;font-size:14.5px;color:var(--ink);line-height:1.7">모든 데이터는 본인의 Google 계정 권한으로 격리되어 저장되며, 개발자/관리자는 어떤 경우에도 사용자가 입력한 콘텐츠(일정·일기·가계부·건강 기록 등)를 열람할 수 없습니다. 또한 메모장의 비밀 보관함은 본인의 PIN으로 암호화되어 저장되므로 개발자조차 복호화할 수 없습니다.</p>
     </div>
 
     <h3 style="font-family:var(--fb);font-weight:600;font-size:14px;margin:14px 0 6px;color:var(--ink)">1. 수집하는 개인정보 항목</h3>
-    <p style="font-family:var(--fb);font-size:13.5px;line-height:1.7;color:var(--ink-soft);margin:0 0 8px">
+    <p style="font-family:var(--fb);font-size:14.5px;line-height:1.7;color:var(--ink-soft);margin:0 0 8px">
       · Google 계정 식별 정보: 이메일 주소, Google UID, 표시 이름, 프로필 사진 URL<br>
       · 사용자가 직접 입력한 콘텐츠: 일정, 감정 일기, 메모, 가계부 기록, 운동/건강 기록, 위시리스트, 클라이언트 정보 등<br>
       · 자동 수집: 로그인 시각, 마지막 업데이트 시각
     </p>
 
     <h3 style="font-family:var(--fb);font-weight:600;font-size:14px;margin:14px 0 6px;color:var(--ink)">2. 수집 및 이용 목적</h3>
-    <p style="font-family:var(--fb);font-size:13.5px;line-height:1.7;color:var(--ink-soft);margin:0 0 8px">
+    <p style="font-family:var(--fb);font-size:14.5px;line-height:1.7;color:var(--ink-soft);margin:0 0 8px">
       · 본인 식별 및 로그인 처리<br>
       · 입력한 일정/일기 등을 본인이 다른 기기에서도 동기화하여 사용<br>
       · 서비스 개선 및 오류 분석 (개인 식별 가능 정보 제외)
     </p>
 
     <h3 style="font-family:var(--fb);font-weight:600;font-size:14px;margin:14px 0 6px;color:var(--ink)">3. 보관 및 처리 위치</h3>
-    <p style="font-family:var(--fb);font-size:13.5px;line-height:1.7;color:var(--ink-soft);margin:0 0 8px">
+    <p style="font-family:var(--fb);font-size:14.5px;line-height:1.7;color:var(--ink-soft);margin:0 0 8px">
       · Google Firebase Authentication (인증)<br>
       · Google Cloud Firestore (콘텐츠 데이터) — 리전: asia-northeast3 (서울) 또는 us-central1<br>
       · 데이터는 본인의 Google UID로 접근 권한이 제한되어 본인 외 타인(운영자 포함)은 접근할 수 없습니다
     </p>
 
     <h3 style="font-family:var(--fb);font-weight:600;font-size:14px;margin:14px 0 6px;color:var(--ink)">4. 보유 및 이용 기간</h3>
-    <p style="font-family:var(--fb);font-size:13.5px;line-height:1.7;color:var(--ink-soft);margin:0 0 8px">
+    <p style="font-family:var(--fb);font-size:14.5px;line-height:1.7;color:var(--ink-soft);margin:0 0 8px">
       · 회원 탈퇴(계정 삭제) 요청 시까지 보관<br>
       · 사용자가 설정 페이지의 "내보내기"로 자신의 모든 데이터를 JSON으로 다운로드 가능<br>
       · 삭제 요청 시 즉시 영구 삭제됩니다 (백업본 제외 30일 이내 완전 파기)
     </p>
 
     <h3 style="font-family:var(--fb);font-weight:600;font-size:14px;margin:14px 0 6px;color:var(--ink)">5. 제3자 제공</h3>
-    <p style="font-family:var(--fb);font-size:13.5px;line-height:1.7;color:var(--ink-soft);margin:0 0 8px">
+    <p style="font-family:var(--fb);font-size:14.5px;line-height:1.7;color:var(--ink-soft);margin:0 0 8px">
       · 제3자에게 제공하지 않습니다<br>
       · 단, 사용자 본인이 명시적으로 활성화한 기능(예: 관리자 모드의 Anthropic API 호출)의 경우, 해당 API 제공자에게 입력한 콘텐츠가 전송될 수 있습니다. 이 경우 사용자가 자신의 API 키를 직접 입력하므로 운영자는 호출 내용을 보관하지 않습니다.
     </p>
 
     <h3 style="font-family:var(--fb);font-weight:600;font-size:14px;margin:14px 0 6px;color:var(--ink)">6. 이용자의 권리</h3>
-    <p style="font-family:var(--fb);font-size:13.5px;line-height:1.7;color:var(--ink-soft);margin:0 0 8px">
+    <p style="font-family:var(--fb);font-size:14.5px;line-height:1.7;color:var(--ink-soft);margin:0 0 8px">
       · 개인정보 열람·수정·삭제·처리정지 요구 가능<br>
       · 설정 페이지에서 데이터 내보내기/불러오기/계정 로그아웃 가능<br>
       · 완전 삭제 또는 문의: <b>iinging747@gmail.com</b>
     </p>
 
     <h3 style="font-family:var(--fb);font-weight:600;font-size:14px;margin:14px 0 6px;color:var(--ink)">7. 안전성 확보 조치</h3>
-    <p style="font-family:var(--fb);font-size:13.5px;line-height:1.7;color:var(--ink-soft);margin:0 0 8px">
+    <p style="font-family:var(--fb);font-size:14.5px;line-height:1.7;color:var(--ink-soft);margin:0 0 8px">
       · 전송 구간 HTTPS 암호화<br>
       · Firebase 보안 규칙으로 사용자별 데이터 격리<br>
       · 운영자는 사용자 콘텐츠에 직접 접근하지 않습니다
     </p>
 
     <h3 style="font-family:var(--fb);font-weight:600;font-size:14px;margin:14px 0 6px;color:var(--ink)">8. 변경 고지</h3>
-    <p style="font-family:var(--fb);font-size:13.5px;line-height:1.7;color:var(--ink-soft);margin:0 0 14px">
+    <p style="font-family:var(--fb);font-size:14.5px;line-height:1.7;color:var(--ink-soft);margin:0 0 14px">
       방침이 변경되면 본 화면에서 시행일과 함께 공지합니다.
     </p>
 
@@ -1607,6 +1607,91 @@ const ADMIN_PASSKEY_HASH = 'c92095e898444015c0c48fef8ac08e0a925f5de5ad445f2ac322
 async function sha256Hex(s){
   const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s));
   return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
+}
+
+/* ===== Secret Vault (PIN-encrypted memo) =====
+   Uses PBKDF2-derived AES-GCM key. Plaintext + key live ONLY in memory.
+   Encrypted blob is stored in store.vault. Even DB admin can't decrypt without PIN. */
+const _vaultHex = {
+  toHex: bytes => Array.from(bytes).map(b => b.toString(16).padStart(2,'0')).join(''),
+  fromHex: hex => { const out = new Uint8Array(hex.length/2); for(let i=0;i<out.length;i++) out[i] = parseInt(hex.substr(i*2,2),16); return out; }
+};
+let _vaultKey = null;     // in-memory CryptoKey
+let _vaultPlain = '';     // in-memory plaintext
+
+async function vaultDeriveKey(pin, saltHex){
+  const baseKey = await crypto.subtle.importKey(
+    'raw', new TextEncoder().encode(pin), 'PBKDF2', false, ['deriveKey']
+  );
+  return crypto.subtle.deriveKey(
+    { name:'PBKDF2', salt: _vaultHex.fromHex(saltHex), iterations: 120000, hash: 'SHA-256' },
+    baseKey,
+    { name:'AES-GCM', length: 256 },
+    false,
+    ['encrypt', 'decrypt']
+  );
+}
+async function vaultEncrypt(key, plaintext){
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const ct = new Uint8Array(await crypto.subtle.encrypt({ name:'AES-GCM', iv }, key, new TextEncoder().encode(plaintext)));
+  return _vaultHex.toHex(iv) + ':' + _vaultHex.toHex(ct);
+}
+async function vaultDecrypt(key, blob){
+  const [ivHex, ctHex] = (blob||'').split(':');
+  if(!ivHex || !ctHex) throw new Error('손상된 데이터');
+  const pt = await crypto.subtle.decrypt({ name:'AES-GCM', iv: _vaultHex.fromHex(ivHex) }, key, _vaultHex.fromHex(ctHex));
+  return new TextDecoder().decode(pt);
+}
+const VAULT_MAGIC = 'OK_TODOADHD_VAULT_v1';
+async function vaultSetup(pin){
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  const saltHex = _vaultHex.toHex(salt);
+  const key = await vaultDeriveKey(pin, saltHex);
+  const verify = await vaultEncrypt(key, VAULT_MAGIC);
+  const cipher = await vaultEncrypt(key, '');
+  store.vault = { setup: true, salt: saltHex, verify, cipher, updatedAt: Date.now() };
+  saveStore('__meta');
+  _vaultKey = key;
+  _vaultPlain = '';
+}
+async function vaultUnlock(pin){
+  if(!store.vault?.setup) return false;
+  try{
+    const key = await vaultDeriveKey(pin, store.vault.salt);
+    const v = await vaultDecrypt(key, store.vault.verify);
+    if(v !== VAULT_MAGIC) return false;
+    _vaultKey = key;
+    _vaultPlain = await vaultDecrypt(key, store.vault.cipher);
+    return true;
+  } catch(_){ return false; }
+}
+function vaultLock(){ _vaultKey = null; _vaultPlain = ''; }
+async function vaultSave(plaintext){
+  if(!_vaultKey || !store.vault) return false;
+  store.vault.cipher = await vaultEncrypt(_vaultKey, plaintext || '');
+  store.vault.updatedAt = Date.now();
+  _vaultPlain = plaintext || '';
+  saveStore('__meta');
+  return true;
+}
+async function vaultChangePin(oldPin, newPin){
+  const okUnlock = await vaultUnlock(oldPin);
+  if(!okUnlock) return false;
+  const currentPlain = _vaultPlain;
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  const saltHex = _vaultHex.toHex(salt);
+  const key = await vaultDeriveKey(newPin, saltHex);
+  const verify = await vaultEncrypt(key, VAULT_MAGIC);
+  const cipher = await vaultEncrypt(key, currentPlain);
+  store.vault = { setup: true, salt: saltHex, verify, cipher, updatedAt: Date.now() };
+  saveStore('__meta');
+  _vaultKey = key;
+  return true;
+}
+function vaultDestroy(){
+  delete store.vault;
+  _vaultKey = null; _vaultPlain = '';
+  saveStore('__meta');
 }
 async function verifyAdminPasskey(input){
   if(!input) return false;
@@ -1891,6 +1976,7 @@ fbAuth.onAuthStateChanged(async (user) => {
     store = defaultStore();
     appInitialized = false;
     hidePrivacyModal();
+    vaultLock();
     openGate();
   }
 });
@@ -2393,16 +2479,16 @@ function renderAdd(root){
       <div style="height:18px"></div>
       <div class="paper-soft">
         <p class="label-eyebrow">분해 규칙</p>
-        <p style="margin:0 0 8px;font-family:var(--fb);font-weight:400;font-size:13.5px;line-height:1.7;color:var(--ink-soft)">·  한 문장에 여러 일이 있어도 한 행동은 한 카드로 저장</p>
-        <p style="margin:0 0 8px;font-family:var(--fb);font-weight:400;font-size:13.5px;line-height:1.7;color:var(--ink-soft)">·  "매일/매주/평일마다"는 기본 한 달치, "한 달/이번 달/3주" 같이 기간 말하면 그만큼</p>
-        <p style="margin:0 0 8px;font-family:var(--fb);font-weight:400;font-size:13.5px;line-height:1.7;color:var(--ink-soft)">·  "다음주내내" "주말" 같은 기간 표현도 자동 확장</p>
-        <p style="margin:0;font-family:var(--fb);font-weight:400;font-size:13.5px;line-height:1.7;color:var(--ink-soft)">·  음성 인식은 Chrome/Edge/Safari에서 동작 (마이크 권한 필요)</p>
+        <p style="margin:0 0 8px;font-family:var(--fb);font-weight:400;font-size:14.5px;line-height:1.7;color:var(--ink-soft)">·  한 문장에 여러 일이 있어도 한 행동은 한 카드로 저장</p>
+        <p style="margin:0 0 8px;font-family:var(--fb);font-weight:400;font-size:14.5px;line-height:1.7;color:var(--ink-soft)">·  "매일/매주/평일마다"는 기본 한 달치, "한 달/이번 달/3주" 같이 기간 말하면 그만큼</p>
+        <p style="margin:0 0 8px;font-family:var(--fb);font-weight:400;font-size:14.5px;line-height:1.7;color:var(--ink-soft)">·  "다음주내내" "주말" 같은 기간 표현도 자동 확장</p>
+        <p style="margin:0;font-family:var(--fb);font-weight:400;font-size:14.5px;line-height:1.7;color:var(--ink-soft)">·  음성 인식은 Chrome/Edge/Safari에서 동작 (마이크 권한 필요)</p>
       </div>
       ${isAdmin() ? `
       <div style="height:18px"></div>
       <div class="paper" id="adminPanel">
         <p class="label-eyebrow">관리자 · AI 일정 추출 <span class="right">🔒 본인만</span></p>
-        <p style="margin:6px 0 14px;font-family:var(--fb);font-weight:400;font-size:13.5px;line-height:1.7;color:var(--ink-soft)">사진(공모전 포스터 등) 또는 링크(공식 사이트 URL)에서 AI(Claude)가 일정을 추출해줘요. 링크는 한 번 보여드린 다음에 등록할지 물어볼게요.</p>
+        <p style="margin:6px 0 14px;font-family:var(--fb);font-weight:400;font-size:14.5px;line-height:1.7;color:var(--ink-soft)">사진(공모전 포스터 등) 또는 링크(공식 사이트 URL)에서 AI(Claude)가 일정을 추출해줘요. 링크는 한 번 보여드린 다음에 등록할지 물어볼게요.</p>
         <div class="field">
           <label>Anthropic API 키 (sk-ant-…)</label>
           <input class="input" id="adminApiKey" type="password" autocomplete="off" placeholder="첫 사용 시 한 번만 입력하면 브라우저에 저장됩니다" value="${safe(localStorage.getItem('admin_api_key')||'')}"/>
@@ -3010,7 +3096,7 @@ function renderFocus(root){
             <button class="btn btn-primary duration-btn" data-dur="25">25분</button>
             <button class="btn btn-primary duration-btn" data-dur="45">45분</button>
           </div>
-          <p style="margin:14px 0 0;font-family:var(--fb);font-weight:300;font-size:12px;color:var(--ink-muted);font-style:italic;text-align:center">버튼 누르면 바로 카운트 시작</p>
+          <p style="margin:14px 0 0;font-family:var(--fb);font-weight:400;font-size:12.5px;color:var(--ink-muted);font-style:italic;text-align:center">버튼 누르면 바로 카운트 시작</p>
           <button class="btn btn-ghost" id="fStart" hidden></button>
         ` : `
           <div class="timer-buttons">
@@ -3023,25 +3109,25 @@ function renderFocus(root){
       <div class="paper-soft">
         <p class="label-eyebrow">오늘 사이클 <span class="right">${todayCycles}회 · ${todayMin}분</span></p>
         ${todayCycles ? `
-          <p style="margin:0;font-family:var(--fb);font-weight:300;font-size:13.5px;color:var(--ink-soft);line-height:1.7">${todayCycles >= 4 ? '오늘 충분히 잘했어. 쉬어도 돼' : todayCycles >= 2 ? '두 번째 사이클부터 진짜야. 조금만 더' : '시동 걸었네. 한 번 더 가보자'}</p>
+          <p style="margin:0;font-family:var(--fb);font-weight:400;font-size:14px;color:var(--ink-soft);line-height:1.7">${todayCycles >= 4 ? '오늘 충분히 잘했어. 쉬어도 돼' : todayCycles >= 2 ? '두 번째 사이클부터 진짜야. 조금만 더' : '시동 걸었네. 한 번 더 가보자'}</p>
         ` : `
-          <p style="margin:0;font-family:var(--fb);font-weight:300;font-size:13.5px;color:var(--ink-muted);font-style:italic">아직 시작 안 했네. 5분 시동만 해도 OK</p>
+          <p style="margin:0;font-family:var(--fb);font-weight:400;font-size:14px;color:var(--ink-muted);font-style:italic">아직 시작 안 했네. 5분 시동만 해도 OK</p>
         `}
       </div>
 
       <div style="height:14px"></div>
       <div class="paper-soft">
         <p class="label-eyebrow">이번 주 <span class="right">${weekLog.filter(f=>f.kind!=='break').length}회 · ${weekMin}분</span></p>
-        <p style="margin:0;font-family:var(--fb);font-weight:300;font-size:13px;color:var(--ink-soft);line-height:1.65">완벽한 25분 말고, 짧게라도 자주 — ADHD 뇌엔 이게 더 잘 맞아</p>
+        <p style="margin:0;font-family:var(--fb);font-weight:400;font-size:13.5px;color:var(--ink-soft);line-height:1.65">완벽한 25분 말고, 짧게라도 자주 — ADHD 뇌엔 이게 더 잘 맞아</p>
       </div>
 
       <div style="height:24px"></div>
       <div class="paper-soft">
         <p class="label-eyebrow">사용 팁 (ADHD 친화)</p>
-        <p style="margin:0 0 8px;font-family:var(--fb);font-weight:300;font-size:13px;color:var(--ink-soft);line-height:1.65">·  타이머 시작 = 시작 의식이야. 클릭 자체가 뇌한테 신호 보냄</p>
-        <p style="margin:0 0 8px;font-family:var(--fb);font-weight:300;font-size:13px;color:var(--ink-soft);line-height:1.65">·  딴 일 떠오르면 종이에 적어두고 계속. 끝나고 처리</p>
-        <p style="margin:0 0 8px;font-family:var(--fb);font-weight:300;font-size:13px;color:var(--ink-soft);line-height:1.65">·  쉬는 시간엔 폰 보지 말고 진짜로 일어나. 도파민 절약</p>
-        <p style="margin:0;font-family:var(--fb);font-weight:300;font-size:13px;color:var(--ink-soft);line-height:1.65">·  몰입 잘되면 그냥 계속. 굳이 멈추지 마</p>
+        <p style="margin:0 0 8px;font-family:var(--fb);font-weight:400;font-size:13.5px;color:var(--ink-soft);line-height:1.65">·  타이머 시작 = 시작 의식이야. 클릭 자체가 뇌한테 신호 보냄</p>
+        <p style="margin:0 0 8px;font-family:var(--fb);font-weight:400;font-size:13.5px;color:var(--ink-soft);line-height:1.65">·  딴 일 떠오르면 종이에 적어두고 계속. 끝나고 처리</p>
+        <p style="margin:0 0 8px;font-family:var(--fb);font-weight:400;font-size:13.5px;color:var(--ink-soft);line-height:1.65">·  쉬는 시간엔 폰 보지 말고 진짜로 일어나. 도파민 절약</p>
+        <p style="margin:0;font-family:var(--fb);font-weight:400;font-size:13.5px;color:var(--ink-soft);line-height:1.65">·  몰입 잘되면 그냥 계속. 굳이 멈추지 마</p>
       </div>
     </div>
   `;
@@ -3288,14 +3374,14 @@ function renderMood(root){
       <div style="height:18px"></div>
       <div class="paper-soft">
         <p class="label-eyebrow">오늘의 코멘트</p>
-        <p style="margin:0;font-family:var(--fb);font-weight:300;font-size:14px;color:var(--ink-soft);line-height:1.7;font-style:italic" id="diaryHint">${safe(diaryComment(today.text||''))}</p>
+        <p style="margin:0;font-family:var(--fb);font-weight:400;font-size:14.5px;color:var(--ink-soft);line-height:1.7;font-style:italic" id="diaryHint">${safe(diaryComment(today.text||''))}</p>
       </div>
 
       ${pattern ? `
         <div style="height:14px"></div>
         <div class="paper-soft" style="border-left:2px solid var(--rose-soft)">
           <p class="label-eyebrow" style="color:var(--rose)">최근 2주 패턴 분석</p>
-          ${pattern.map(a => `<p style="margin:0 0 8px;font-family:var(--fb);font-weight:300;font-size:13.5px;line-height:1.7;color:var(--ink);letter-spacing:.005em">·  ${a.replace(/\*\*(.+?)\*\*/g,'<b style="color:var(--ink);font-weight:500">$1</b>')}</p>`).join('')}
+          ${pattern.map(a => `<p style="margin:0 0 8px;font-family:var(--fb);font-weight:400;font-size:14px;line-height:1.7;color:var(--ink);letter-spacing:.005em">·  ${a.replace(/\*\*(.+?)\*\*/g,'<b style="color:var(--ink);font-weight:500">$1</b>')}</p>`).join('')}
         </div>
       ` : ''}
     </div>
@@ -3414,9 +3500,75 @@ function memoComment(text){
 
 function renderMemo(root){
   const memos = (store.memos||[]).slice().sort((a,b)=>(b.savedAt||0)-(a.savedAt||0));
+  const hasVault = !!store.vault?.setup;
+  const unlocked = !!_vaultKey;
+  const vaultUpdatedAt = store.vault?.updatedAt ? new Date(store.vault.updatedAt) : null;
+
+  let vaultSection = '';
+  if(!hasVault){
+    vaultSection = `
+      <div class="paper" style="border-left:3px solid var(--rose)">
+        <p class="label-eyebrow">🔐 비밀 보관함 <span class="right">PIN 잠금 · 암호화 저장</span></p>
+        <p style="margin:6px 0 14px;font-family:var(--fb);font-weight:500;font-size:14px;color:var(--ink);line-height:1.65">진짜 중요한 정보(비밀번호, 계좌번호, 개인 메모 등)를 PIN으로 암호화해서 저장해요. 개발자도 못 봐요.</p>
+        <div style="padding:10px 12px;background:var(--paper-soft);border-radius:3px;margin-bottom:14px">
+          <p style="margin:0;font-family:var(--fb);font-weight:500;font-size:13.5px;color:var(--ink);line-height:1.6">⚠️ PIN을 잊어버리면 내용을 <b>영구히 복구할 수 없어요</b>. 안전한 곳에 따로 적어두세요.</p>
+        </div>
+        <div class="row2">
+          <div class="field">
+            <label>PIN (4자리 이상 권장)</label>
+            <input class="input" id="vaultNewPin" type="password" autocomplete="new-password" placeholder="숫자/문자 조합 가능"/>
+          </div>
+          <div class="field">
+            <label>PIN 한 번 더</label>
+            <input class="input" id="vaultNewPin2" type="password" autocomplete="new-password" placeholder=""/>
+          </div>
+        </div>
+        <button class="btn btn-primary" id="vaultSetupBtn">보관함 만들기 →</button>
+        <p id="vaultSetupMsg" style="margin:10px 0 0;font-family:var(--fb);font-size:13px;color:var(--ink-soft);min-height:1em"></p>
+      </div>
+      <div style="height:18px"></div>
+    `;
+  } else if(!unlocked){
+    vaultSection = `
+      <div class="paper" style="border-left:3px solid var(--rose)">
+        <p class="label-eyebrow">🔐 비밀 보관함 <span class="right">${vaultUpdatedAt ? '최근 저장 '+vaultUpdatedAt.toLocaleDateString('ko-KR') : '잠김'}</span></p>
+        <p style="margin:6px 0 14px;font-family:var(--fb);font-weight:500;font-size:14px;color:var(--ink);line-height:1.65">PIN을 입력해서 잠금을 풀어주세요. 화면을 떠나거나 새로고침하면 다시 잠겨요.</p>
+        <div class="field">
+          <label>PIN</label>
+          <input class="input" id="vaultPin" type="password" autocomplete="current-password" placeholder="PIN 입력"/>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+          <button class="btn btn-primary" id="vaultUnlockBtn">잠금 해제 →</button>
+          <button class="btn btn-ghost" id="vaultResetBtn" style="margin-left:auto">초기화</button>
+        </div>
+        <p id="vaultUnlockMsg" style="margin:10px 0 0;font-family:var(--fb);font-size:13px;color:var(--ink-soft);min-height:1em"></p>
+      </div>
+      <div style="height:18px"></div>
+    `;
+  } else {
+    vaultSection = `
+      <div class="paper" style="border-left:3px solid var(--olive);background:linear-gradient(180deg, var(--paper) 0%, var(--paper-warm) 220%)">
+        <p class="label-eyebrow">🔓 비밀 보관함 <span class="right" style="color:var(--olive)">잠금 해제됨 ✓</span></p>
+        <p style="margin:6px 0 14px;font-family:var(--fb);font-weight:500;font-size:14px;color:var(--ink);line-height:1.65">내용은 PIN으로 암호화되어 저장돼요. 페이지 나가면 자동으로 잠겨요.</p>
+        <div class="field">
+          <label>중요한 정보</label>
+          <textarea class="textarea" id="vaultText" placeholder="비밀번호, 계좌번호, 진짜 중요한 메모…" style="min-height:200px;font-family:var(--fb)">${safe(_vaultPlain)}</textarea>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+          <button class="btn btn-primary" id="vaultSaveBtn">저장</button>
+          <button class="btn btn-ghost" id="vaultLockBtn">잠그기 🔒</button>
+          <button class="btn btn-ghost" id="vaultChangeBtn" style="margin-left:auto">PIN 변경</button>
+        </div>
+        <p id="vaultSaveMsg" style="margin:10px 0 0;font-family:var(--fb);font-size:13px;color:var(--ink-soft);min-height:1em"></p>
+      </div>
+      <div style="height:18px"></div>
+    `;
+  }
+
   root.innerHTML=`
     <div class="hero"><h1 class="hero-title">MEMO</h1><span class="hero-script">thoughts</span></div>
     <div class="section-wrap">
+      ${vaultSection}
       <div class="paper">
         <p class="label-eyebrow">새 메모 <span class="right">머릿속 정리용</span></p>
         <div class="field">
@@ -3429,9 +3581,9 @@ function renderMemo(root){
       <div style="height:18px"></div>
       <div class="paper-soft">
         <p class="label-eyebrow">사용 팁</p>
-        <p style="margin:0 0 8px;font-family:var(--fb);font-weight:300;font-size:13.5px;color:var(--ink-soft);line-height:1.7">·  완성된 문장으로 안 적어도 돼. 단어만 흩뿌려놔도 충분</p>
-        <p style="margin:0 0 8px;font-family:var(--fb);font-weight:300;font-size:13.5px;color:var(--ink-soft);line-height:1.7">·  저장 후 'AI 첨언 받기' 누르면 키워드 기반 코멘트가 붙어</p>
-        <p style="margin:0;font-family:var(--fb);font-weight:300;font-size:13.5px;color:var(--ink-soft);line-height:1.7">·  과거 메모는 삭제 안 돼. 누적되어야 패턴이 보임</p>
+        <p style="margin:0 0 8px;font-family:var(--fb);font-weight:400;font-size:14px;color:var(--ink-soft);line-height:1.7">·  완성된 문장으로 안 적어도 돼. 단어만 흩뿌려놔도 충분</p>
+        <p style="margin:0 0 8px;font-family:var(--fb);font-weight:400;font-size:14px;color:var(--ink-soft);line-height:1.7">·  저장 후 'AI 첨언 받기' 누르면 키워드 기반 코멘트가 붙어</p>
+        <p style="margin:0;font-family:var(--fb);font-weight:400;font-size:14px;color:var(--ink-soft);line-height:1.7">·  과거 메모는 삭제 안 돼. 누적되어야 패턴이 보임</p>
       </div>
 
       ${memos.length?`
@@ -3485,6 +3637,90 @@ function renderMemo(root){
     saveStore();
     render();
   });
+
+  // ===== Vault handlers =====
+  const setMsg = (id, msg, isErr) => {
+    const el = document.getElementById(id);
+    if(!el) return;
+    el.textContent = msg || '';
+    el.style.color = isErr ? 'var(--rose)' : 'var(--ink-soft)';
+  };
+
+  const setupBtn = $('#vaultSetupBtn');
+  if(setupBtn) setupBtn.onclick = async () => {
+    const p1 = ($('#vaultNewPin').value || '').trim();
+    const p2 = ($('#vaultNewPin2').value || '').trim();
+    if(p1.length < 4){ setMsg('vaultSetupMsg', 'PIN은 4자 이상으로 정해주세요.', true); return; }
+    if(p1 !== p2){ setMsg('vaultSetupMsg', '두 PIN이 일치하지 않아요.', true); return; }
+    setupBtn.disabled = true;
+    setMsg('vaultSetupMsg', '암호화 키 생성 중…');
+    try{
+      await vaultSetup(p1);
+      toast('비밀 보관함 만들어졌어 ♡');
+      render();
+    } catch(e){
+      setMsg('vaultSetupMsg', '오류: ' + (e.message||e), true);
+      setupBtn.disabled = false;
+    }
+  };
+
+  const unlockBtn = $('#vaultUnlockBtn');
+  if(unlockBtn) unlockBtn.onclick = async () => {
+    const pin = ($('#vaultPin').value || '').trim();
+    if(!pin){ setMsg('vaultUnlockMsg', 'PIN을 입력해주세요.', true); return; }
+    unlockBtn.disabled = true;
+    setMsg('vaultUnlockMsg', '확인 중…');
+    const ok = await vaultUnlock(pin);
+    unlockBtn.disabled = false;
+    if(ok){
+      toast('잠금 해제 ✦');
+      render();
+    } else {
+      setMsg('vaultUnlockMsg', 'PIN이 맞지 않아요.', true);
+    }
+  };
+  const pinInput = $('#vaultPin');
+  if(pinInput) pinInput.addEventListener('keydown', e => { if(e.key === 'Enter') unlockBtn?.click(); });
+
+  const resetBtn = $('#vaultResetBtn');
+  if(resetBtn) resetBtn.onclick = () => {
+    if(!confirm('보관함을 초기화하면 저장된 내용을 영원히 복구할 수 없어요. 진짜 초기화할까요?')) return;
+    if(!confirm('한 번 더 확인 — 정말 모두 삭제하고 다시 시작하시겠어요?')) return;
+    vaultDestroy();
+    toast('보관함 초기화됨');
+    render();
+  };
+
+  const saveBtn = $('#vaultSaveBtn');
+  if(saveBtn) saveBtn.onclick = async () => {
+    const text = $('#vaultText').value;
+    saveBtn.disabled = true;
+    setMsg('vaultSaveMsg', '암호화 후 저장 중…');
+    const ok = await vaultSave(text);
+    saveBtn.disabled = false;
+    setMsg('vaultSaveMsg', ok ? `저장됨 (${new Date().toLocaleTimeString('ko-KR')})` : '저장 실패', !ok);
+    if(ok) toast('보관함 저장 ♡');
+  };
+
+  const lockBtn = $('#vaultLockBtn');
+  if(lockBtn) lockBtn.onclick = () => {
+    vaultLock();
+    toast('보관함 잠금 🔒');
+    render();
+  };
+
+  const changeBtn = $('#vaultChangeBtn');
+  if(changeBtn) changeBtn.onclick = async () => {
+    const oldPin = prompt('현재 PIN을 입력해주세요');
+    if(!oldPin) return;
+    const newPin = prompt('새 PIN (4자 이상)');
+    if(!newPin || newPin.length < 4){ toast('PIN은 4자 이상이어야 해요'); return; }
+    const newPin2 = prompt('새 PIN 한 번 더');
+    if(newPin !== newPin2){ toast('PIN이 일치하지 않아요'); return; }
+    const ok = await vaultChangePin(oldPin, newPin);
+    if(ok){ toast('PIN 변경됨 ✦'); render(); }
+    else { toast('현재 PIN이 맞지 않아요'); }
+  };
 }
 
 /* ============ Work advice — context-aware AI tips ============ */
@@ -4108,9 +4344,9 @@ function renderMoney(root){
       <div style="height:18px"></div>
       <div class="paper-soft">
         <p class="label-eyebrow">습관 가이드</p>
-        <p style="margin:0 0 8px;font-family:var(--fb);font-weight:300;font-size:13.5px;color:var(--ink-soft);line-height:1.7">·  충동 지출은 24시간 보류</p>
-        <p style="margin:0 0 8px;font-family:var(--fb);font-weight:300;font-size:13.5px;color:var(--ink-soft);line-height:1.7">·  수입 들어오면 일정 비율 자동 저축으로</p>
-        <p style="margin:0;font-family:var(--fb);font-weight:300;font-size:13.5px;color:var(--ink-soft);line-height:1.7">·  손 안 닿는 통장에 비상금 두기</p>
+        <p style="margin:0 0 8px;font-family:var(--fb);font-weight:400;font-size:14px;color:var(--ink-soft);line-height:1.7">·  충동 지출은 24시간 보류</p>
+        <p style="margin:0 0 8px;font-family:var(--fb);font-weight:400;font-size:14px;color:var(--ink-soft);line-height:1.7">·  수입 들어오면 일정 비율 자동 저축으로</p>
+        <p style="margin:0;font-family:var(--fb);font-weight:400;font-size:14px;color:var(--ink-soft);line-height:1.7">·  손 안 닿는 통장에 비상금 두기</p>
       </div>
     </div>
   `;
@@ -4379,9 +4615,9 @@ function renderInvest(root){
       <div style="height:18px"></div>
       <div class="paper-soft">
         <p class="label-eyebrow">복기 가이드</p>
-        <p style="margin:0 0 8px;font-family:var(--fb);font-weight:300;font-size:13.5px;color:var(--ink-soft);line-height:1.7">·  수익보다 손실 복기가 훨씬 중요해</p>
-        <p style="margin:0 0 8px;font-family:var(--fb);font-weight:300;font-size:13.5px;color:var(--ink-soft);line-height:1.7">·  손절 못한 이유 솔직하게 적어두기</p>
-        <p style="margin:0;font-family:var(--fb);font-weight:300;font-size:13.5px;color:var(--ink-soft);line-height:1.7">·  반복되는 감정 패턴이 너의 실제 매매 스타일</p>
+        <p style="margin:0 0 8px;font-family:var(--fb);font-weight:400;font-size:14px;color:var(--ink-soft);line-height:1.7">·  수익보다 손실 복기가 훨씬 중요해</p>
+        <p style="margin:0 0 8px;font-family:var(--fb);font-weight:400;font-size:14px;color:var(--ink-soft);line-height:1.7">·  손절 못한 이유 솔직하게 적어두기</p>
+        <p style="margin:0;font-family:var(--fb);font-weight:400;font-size:14px;color:var(--ink-soft);line-height:1.7">·  반복되는 감정 패턴이 너의 실제 매매 스타일</p>
       </div>
     </div>
   `;
@@ -4490,7 +4726,7 @@ function renderRoute(root){
             </select>
           </div>
         </div>
-        <p style="margin:-6px 0 14px;font-family:var(--fb);font-weight:300;font-size:12px;color:var(--ink-muted);font-style:italic">한국 내에서는 카카오맵·네이버지도가 환승 정보 더 정확해. 해외는 구글</p>
+        <p style="margin:-6px 0 14px;font-family:var(--fb);font-weight:400;font-size:12.5px;color:var(--ink-muted);font-style:italic">한국 내에서는 카카오맵·네이버지도가 환승 정보 더 정확해. 해외는 구글</p>
         <div style="display:flex;gap:8px;flex-wrap:wrap">
           <button class="btn btn-primary" id="rtCalc">⏱ 시간 계산하기</button>
           <button class="btn btn-ghost" id="rtKakao">카카오맵 ↗</button>
@@ -4520,10 +4756,10 @@ function renderRoute(root){
       <div style="height:18px"></div>
       <div class="paper-soft">
         <p class="label-eyebrow">옵션 차이</p>
-        <p style="margin:0 0 8px;font-family:var(--fb);font-weight:300;font-size:13px;color:var(--ink-soft);line-height:1.65">·  <b>추천</b> — 시간/환승/비용 균형 잡힌 경로</p>
-        <p style="margin:0 0 8px;font-family:var(--fb);font-weight:300;font-size:13px;color:var(--ink-soft);line-height:1.65">·  <b>최소 환승</b> — 갈아타기 적게, 좀 더 걸어도 됨</p>
-        <p style="margin:0 0 8px;font-family:var(--fb);font-weight:300;font-size:13px;color:var(--ink-soft);line-height:1.65">·  <b>최단 시간</b> — 환승 많아도 빨리 도착</p>
-        <p style="margin:0;font-family:var(--fb);font-weight:300;font-size:13px;color:var(--ink-soft);line-height:1.65">·  <b>최저 비용</b> — 무료 환승 최대 활용</p>
+        <p style="margin:0 0 8px;font-family:var(--fb);font-weight:400;font-size:13.5px;color:var(--ink-soft);line-height:1.65">·  <b>추천</b> — 시간/환승/비용 균형 잡힌 경로</p>
+        <p style="margin:0 0 8px;font-family:var(--fb);font-weight:400;font-size:13.5px;color:var(--ink-soft);line-height:1.65">·  <b>최소 환승</b> — 갈아타기 적게, 좀 더 걸어도 됨</p>
+        <p style="margin:0 0 8px;font-family:var(--fb);font-weight:400;font-size:13.5px;color:var(--ink-soft);line-height:1.65">·  <b>최단 시간</b> — 환승 많아도 빨리 도착</p>
+        <p style="margin:0;font-family:var(--fb);font-weight:400;font-size:13.5px;color:var(--ink-soft);line-height:1.65">·  <b>최저 비용</b> — 무료 환승 최대 활용</p>
       </div>
     </div>
   `;
@@ -5261,10 +5497,10 @@ function renderHealth(root){
               return `<div style="display:flex;justify-content:space-between;align-items:flex-start;padding:8px 0;border-bottom:1px solid var(--hairline-soft)">
                 <div style="flex:1;min-width:0">
                   <div style="font-family:var(--fb);font-weight:500;font-size:14px;color:var(--ink)">${safe(e.type||'운동')}${e.subtype?` · ${safe(e.subtype)}`:''}</div>
-                  <div style="font-family:var(--fb);font-weight:400;font-size:12.5px;color:var(--ink-soft);margin-top:2px">
+                  <div style="font-family:var(--fb);font-weight:400;font-size:13.5px;color:var(--ink-soft);margin-top:2px">
                     ${e.date}${e.min?` · ${e.min}분`:''}${e.km?` · ${e.km}km`:''}${e.distance?` · ${e.distance}m`:''}${e.sets?` · ${e.sets}세트`:''}${e.reps?` × ${e.reps}회`:''}${e.weight?` · ${e.weight}kg`:''}${e.muscle?` · ${safe(e.muscle)}`:''}${e.pace?` · 페이스 ${e.pace}`:''}
                   </div>
-                  ${e.notes?`<div style="font-family:var(--fb);font-weight:400;font-size:12.5px;color:var(--ink-soft);margin-top:3px;font-style:italic">${safe(e.notes)}</div>`:''}
+                  ${e.notes?`<div style="font-family:var(--fb);font-weight:400;font-size:13.5px;color:var(--ink-soft);margin-top:3px;font-style:italic">${safe(e.notes)}</div>`:''}
                 </div>
                 <button class="sup-del" data-exdel="${realIdx}" style="margin-left:8px">삭제</button>
               </div>`;
@@ -5956,7 +6192,7 @@ function renderSettings(root){
 
       <div class="paper-soft">
         <p class="label-eyebrow">데이터 백업 / 내보내기</p>
-        <p style="margin:0 0 12px;font-family:var(--fb);font-weight:300;font-size:13px;line-height:1.7;color:var(--ink-soft)">너의 다이어리를 JSON 파일로 저장 / 불러오기. 다른 기기로 옮기거나 백업용으로</p>
+        <p style="margin:0 0 12px;font-family:var(--fb);font-weight:400;font-size:14px;line-height:1.7;color:var(--ink-soft)">너의 다이어리를 JSON 파일로 저장 / 불러오기. 다른 기기로 옮기거나 백업용으로</p>
         <div style="display:flex;gap:8px;flex-wrap:wrap">
           <button class="btn btn-primary" id="exportData">내보내기 (JSON 다운로드)</button>
           <label class="btn btn-ghost" style="cursor:pointer">
@@ -6382,10 +6618,10 @@ function renderDrawer(){
     </div>
     <div class="divider"></div>
     <p class="label-eyebrow">AI 우선순위</p>
-    <p style="margin:0 0 18px;font-family:var(--fb);font-weight:300;font-size:14px;color:var(--ink);font-style:italic;line-height:1.6">${hot?safe(hot.text)+' · '+safe(hot.priorityLabel):'급한 불은 없어. 가벼운 것부터 잡아도 돼.'}</p>
+    <p style="margin:0 0 18px;font-family:var(--fb);font-weight:400;font-size:14.5px;color:var(--ink);font-style:italic;line-height:1.6">${hot?safe(hot.text)+' · '+safe(hot.priorityLabel):'급한 불은 없어. 가벼운 것부터 잡아도 돼.'}</p>
     <div class="divider"></div>
     <p class="label-eyebrow">감정 일기</p>
-    ${diary.text?`<p style="margin:0 0 8px;font-family:var(--fb);font-weight:300;font-size:14px;color:var(--ink-soft);line-height:1.7">${safe(diary.text)}</p>${diary.mood?`<span class="tag" style="font-family:var(--fui);font-size:9.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-soft);padding:2px 8px;border:1px solid var(--hairline);border-radius:999px">${safe(diary.mood)}</span>`:''}`:'<p class="empty" style="margin:0">아직 기록 없음</p>'}
+    ${diary.text?`<p style="margin:0 0 8px;font-family:var(--fb);font-weight:400;font-size:14.5px;color:var(--ink-soft);line-height:1.7">${safe(diary.text)}</p>${diary.mood?`<span class="tag" style="font-family:var(--fui);font-size:9.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-soft);padding:2px 8px;border:1px solid var(--hairline);border-radius:999px">${safe(diary.mood)}</span>`:''}`:'<p class="empty" style="margin:0">아직 기록 없음</p>'}
   `;
   $$('#drawerBody [data-toggle]').forEach(b=>b.onchange=()=>toggleTask(b.dataset.toggle));
   $$('#drawerBody [data-del]').forEach(b=>b.onclick=()=>deleteTask(b.dataset.del));
