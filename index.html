@@ -1295,7 +1295,7 @@ body.dark .toast{background:var(--ink);color:var(--bg)}
   </div>
 </div>
 
-<div id="privacyModal" hidden style="position:fixed;inset:0;z-index:50;background:rgba(45,38,32,.55);display:grid;place-items:center;padding:18px;overflow:auto" data-mode="view">
+<div id="privacyModal" hidden style="position:fixed;inset:0;z-index:50;background:rgba(45,38,32,.55);display:none;place-items:center;padding:18px;overflow:auto" data-mode="view">
   <div style="background:var(--paper);max-width:560px;width:100%;border-radius:4px;padding:28px 26px;max-height:88vh;overflow-y:auto;border:1px solid var(--hairline);box-shadow:var(--shadow-page)">
     <p class="label-eyebrow">개인정보처리방침</p>
     <h2 style="font-family:var(--fd);font-weight:400;font-size:24px;margin:6px 0 14px;color:var(--ink)">정신차려 · TODOADHD</h2>
@@ -1545,11 +1545,15 @@ function showPrivacyModal(mode){
     }
   }
   modal.hidden = false;
+  modal.style.display = 'grid';
   modal.scrollTop = 0;
 }
 function hidePrivacyModal(){
   const modal = document.getElementById('privacyModal');
-  if(modal) modal.hidden = true;
+  if(modal){
+    modal.hidden = true;
+    modal.style.display = 'none';
+  }
 }
 function hasPrivacyConsent(){
   try{
@@ -2045,7 +2049,11 @@ fbAuth.onAuthStateChanged(async (user) => {
     openGate();
     // Show consent modal up-front if user hasn't agreed yet (before login is allowed)
     if(!hasPrivacyConsent()){
-      setTimeout(() => showPrivacyModal('consent'), 200);
+      setTimeout(() => {
+        // Guard: don't show if user has since logged in or already accepted
+        if(currentFbUser || hasPrivacyConsent()) return;
+        showPrivacyModal('consent');
+      }, 200);
     }
   }
 });
