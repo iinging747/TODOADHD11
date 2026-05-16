@@ -2129,10 +2129,30 @@ function nextDow(dow,base=nowKST()){let diff=(dow-base.getDay()+7)%7;if(diff===0
 function thisDow(dow,base=nowKST()){return dateAdd(base,(dow-base.getDay()+7)%7)}
 // "이번주 X요일" — current calendar week's day, may be past (Sun-start week)
 function inThisWeek(dow,base=nowKST()){return dateAdd(base,dow-base.getDay())}
+/* Korean number maps */
+const _KR_HOURS = {한:1,두:2,세:3,네:4,다섯:5,여섯:6,일곱:7,여덟:8,아홉:9,열:10,열한:11,열두:12};
+const _KR_DAYS  = {하루:1,이틀:2,사흘:3,나흘:4,닷새:5,엿새:6,이레:7,여드레:8,아흐레:9,열흘:10};
+const _KR_NUM   = {한:1,두:2,세:3,네:4,다섯:5,여섯:6,일곱:7,여덟:8,아홉:9,열:10};
+
 /* Extract time hint from text (returns 'HH:MM' or null) */
 function extractTime(text){
-  // Specific clock times: "오후 3시", "9시 반", "15시 30분"
-  let m = text.match(/(오전|오후|아침|저녁|밤|새벽)?\s*(\d{1,2})\s*시(?:\s*(\d{1,2})\s*분?|\s*반)?/);
+  if(!text) return null;
+  // Fixed-name times
+  if(/정오/.test(text)) return '12:00';
+  if(/자정|밤\s*12\s*시/.test(text)) return '00:00';
+  // Normalize Korean hour words to digits ("두 시 반" → "2 시 반"), but NOT "X 시간"
+  let tn = text;
+  Object.keys(_KR_HOURS).sort((a,b)=>b.length-a.length).forEach(kr => {
+    tn = tn.replace(new RegExp(kr+'(?=\\s*시(?!간))', 'g'), _KR_HOURS[kr]);
+  });
+  // HH:MM digit form
+  let m = tn.match(/(\d{1,2}):(\d{2})/);
+  if(m){
+    const h = +m[1], mm = +m[2];
+    if(h <= 23 && mm < 60) return `${pad(h)}:${pad(mm)}`;
+  }
+  // Specific clock with period
+  m = tn.match(/(오전|오후|아침|저녁|밤|새벽|낮)?\s*(\d{1,2})\s*시(?!간)(?:\s*(\d{1,2})\s*분?|\s*반)?/);
   if(m){
     let h = +m[2];
     const half = /반/.test(m[0]);
@@ -2140,16 +2160,20 @@ function extractTime(text){
     const period = m[1];
     if(period && /오후|저녁|밤/.test(period) && h < 12) h += 12;
     if(period === '오전' && h === 12) h = 0;
+    if(period === '낮' && h < 12 && h !== 12) h += 12;
+    if(period === '새벽' && h === 12) h = 0;
     if(h >= 0 && h <= 23 && mins >= 0 && mins < 60){
       return `${pad(h)}:${pad(mins)}`;
     }
   }
   // Period only — rough defaults
-  if(/새벽/.test(text)) return '06:00';
+  if(/이른\s*아침|새벽\s*일찍/.test(text)) return '06:30';
+  if(/늦은\s*밤|밤늦/.test(text)) return '23:00';
+  if(/새벽/.test(text)) return '05:30';
   if(/아침|오전/.test(text)) return '09:30';
-  if(/점심|낮(?!에는|이|은)/.test(text)) return '13:00';
+  if(/점심|낮(?!에는|이|은)/.test(text)) return '12:30';
   if(/오후/.test(text)) return '15:00';
-  if(/저녁/.test(text)) return '19:00';
+  if(/저녁|해질/.test(text)) return '19:00';
   if(/밤/.test(text)) return '21:30';
   return null;
 }
@@ -2159,48 +2183,181 @@ function resolveDates(text){
   const dayMap = {일:0, 월:1, 화:2, 수:3, 목:4, 금:5, 토:6};
   let recurrence = null, dates = [], m;
 
-  m = t.match(/매주\s*([월화수목금토일])요일|([월화수목금토일])요일마다|주마다\s*([월화수목금토일])?/);
-  if(/매일|맨날/.test(t)) recurrence = {type:'daily', label:'매일'};
-  if(/평일마다/.test(t)) recurrence = {type:'weekday', label:'평일마다'};
-  if(m){ const ch = m[1]||m[2]||m[3]||'토'; recurrence = {type:'weekly', day:dayMap[ch], label:'매주 '+ch+'요일'}; }
+  const today = nowKST();
+  const todayMid = new Date(today); todayMid.setHours(0,0,0,0);
+  const year = today.getFullYear();
+  const monthIdx = today.getMonth();
 
-  // Range patterns
+  // ===== Recurrence =====
+  m = t.match(/매주\s*([월화수목금토일])요일|([월화수목금토일])요일마다|주마다\s*([월화수목금토일])?/);
+  if(m){ const ch = m[1]||m[2]||m[3]||'토'; recurrence = {type:'weekly', day:dayMap[ch], label:'매주 '+ch+'요일'}; }
+  if(/매일|맨날|매번|날마다/.test(t)) recurrence = {type:'daily', label:'매일'};
+  if(/평일\s*마다|평일에만/.test(t)) recurrence = {type:'weekday', label:'평일마다'};
+  if(/주말\s*마다/.test(t)) recurrence = {type:'weekend', label:'주말마다'};
+  if(/매달|매월|달마다/.test(t)) recurrence = {type:'monthly', label:'매월'};
+
+  // ===== Relative single days =====
+  if(/오늘|금일|당일/.test(t)) dates.push(new Date(today));
+  if(/내일|낼\b|명일/.test(t)) dates.push(dateAdd(today, 1));
+  if(/모레|모래/.test(t)) dates.push(dateAdd(today, 2));
+  if(/글피(?!\s*글피)/.test(t)) dates.push(dateAdd(today, 3));
+  if(/그글피|글피글피/.test(t)) dates.push(dateAdd(today, 4));
+  if(/어제\b/.test(t)) dates.push(dateAdd(today, -1));
+  if(/그제|그저께|엊그제/.test(t)) dates.push(dateAdd(today, -2));
+
+  // ===== X일/주/달 뒤 (digit + Korean number forms) =====
+  // 한국어 일수: 하루 ~ 열흘
+  Object.entries(_KR_DAYS).forEach(([kr,n]) => {
+    if(new RegExp(kr+'\\s*(?:뒤|후|있다가|지나(?:서|면)?)').test(t)){
+      dates.push(dateAdd(today, n));
+    }
+  });
+  // 숫자 + 일 뒤
+  const reXDays = /(\d+)\s*일\s*(?:뒤|후|있다가|지나(?:서|면)?)/g;
+  let xm;
+  while((xm = reXDays.exec(t)) !== null) dates.push(dateAdd(today, +xm[1]));
+  // 한 주 뒤, 두 주 뒤
+  Object.entries(_KR_NUM).forEach(([kr,n]) => {
+    if(new RegExp(kr+'\\s*주\\s*(?:뒤|후|있다가)').test(t)){
+      dates.push(dateAdd(today, n * 7));
+    }
+  });
+  const reXWeeks = /(\d+)\s*주\s*(?:뒤|후|있다가)/g;
+  while((xm = reXWeeks.exec(t)) !== null) dates.push(dateAdd(today, +xm[1] * 7));
+  // 한 달 뒤, 두 달 뒤
+  Object.entries(_KR_NUM).forEach(([kr,n]) => {
+    if(new RegExp(kr+'\\s*(?:달|개월)\\s*(?:뒤|후|있다가)').test(t)){
+      const d = new Date(today); d.setMonth(d.getMonth() + n);
+      dates.push(d);
+    }
+  });
+  const reXMonths = /(\d+)\s*(?:달|개월)\s*(?:뒤|후|있다가)/g;
+  while((xm = reXMonths.exec(t)) !== null){
+    const d = new Date(today); d.setMonth(d.getMonth() + +xm[1]);
+    dates.push(d);
+  }
+  // X시간 뒤 / X분 뒤 (treat as today)
+  if(/\d+\s*(?:시간|분)\s*(?:뒤|후|있다가)/.test(t) && !dates.length) dates.push(new Date(today));
+  if(/(?:한|두|세|네)\s*시간\s*(?:뒤|후)/.test(t) && !dates.length) dates.push(new Date(today));
+  // 곧 / 조만간 / 얼른
+  if(/(?:곧|조만간|얼른|빨리)/.test(t) && !dates.length) dates.push(new Date(today));
+
+  // ===== 다다음주, 다음주, 이번주 + X요일 — scan with mutated text to avoid overlap =====
+  let scan = t;
+  m = scan.match(/다다음주\s*([월화수목금토일])요일?/);
+  if(m){ dates.push(dateAdd(inThisWeek(dayMap[m[1]]), 14)); scan = scan.replace(m[0], ' '); }
+  m = scan.match(/다음주\s*([월화수목금토일])요일?/);
+  if(m){ dates.push(dateAdd(inThisWeek(dayMap[m[1]]), 7)); scan = scan.replace(m[0], ' '); }
+  m = scan.match(/이번주\s*([월화수목금토일])요일?/);
+  if(m){ dates.push(inThisWeek(dayMap[m[1]])); scan = scan.replace(m[0], ' '); }
+
+  // ===== 다다음주/다음주 (요일 없이) =====
+  if(!dates.length){
+    if(/다다음주/.test(t)) dates.push(dateAdd(inThisWeek(1), 14));
+    else if(/다음주(?!\s*[월화수목금토일])/.test(t)) dates.push(dateAdd(inThisWeek(1), 7));
+  }
+
+  // ===== 다다음달, 다음달, 이번달 + X일 =====
+  m = t.match(/다다음달\s*(\d{1,2})\s*일/);
+  if(m) dates.push(new Date(year, monthIdx + 2, +m[1]));
+  m = t.match(/다음달\s*(\d{1,2})\s*일|다음\s*달\s*(\d{1,2})\s*일/);
+  if(m) dates.push(new Date(year, monthIdx + 1, +(m[1]||m[2])));
+  m = t.match(/이번달\s*(\d{1,2})\s*일|이번\s*달\s*(\d{1,2})\s*일/);
+  if(m){ const d = +(m[1]||m[2]); if(d >= 1 && d <= 31) dates.push(new Date(year, monthIdx, d)); }
+
+  // ===== 다다음달/다음달 (날짜 없이) =====
+  if(!dates.length){
+    if(/다다음달/.test(t)) dates.push(new Date(year, monthIdx + 2, 1));
+    else if(/다음달(?!\s*\d)/.test(t)) dates.push(new Date(year, monthIdx + 1, 1));
+  }
+
+  // ===== Range: 내내 =====
   if(/다음주\s*내내|다음주내내/.test(t)){
     const nextMon = dateAdd(thisDow(1), 7);
     for(let i = 0; i < 7; i++) dates.push(dateAdd(nextMon, i));
   }
   else if(/이번주\s*내내|이번주내내/.test(t)){
-    const today = nowKST();
     const restOfWeek = 7 - today.getDay();
     for(let i = 0; i < restOfWeek; i++) dates.push(dateAdd(today, i));
   }
-  else if(/이번\s*주말|이번주말/.test(t) || (/주말/.test(t) && !/다음/.test(t))){
+  else if(/이번\s*주말|이번주말/.test(t) || (/주말(?!\s*마다)/.test(t) && !/다음/.test(t) && !/주말마다/.test(t))){
     dates.push(thisDow(6));
-    dates.push(thisDow(0) > nowKST() ? thisDow(0) : dateAdd(thisDow(0), 7));
+    dates.push(thisDow(0) > today ? thisDow(0) : dateAdd(thisDow(0), 7));
   }
   else if(/다음\s*주말|다음주말/.test(t)){
     dates.push(dateAdd(thisDow(6), 7));
     dates.push(dateAdd(thisDow(0), 7));
   }
 
-  if(/오늘/.test(t) && !dates.length) dates.push(nowKST());
-  if(/내일/.test(t)) dates.push(dateAdd(nowKST(), 1));
-  if(/모레/.test(t)) dates.push(dateAdd(nowKST(), 2));
-  m = t.match(/다음주\s*([월화수목금토일])요일?/); if(m) dates.push(dateAdd(inThisWeek(dayMap[m[1]]), 7));
-  m = t.match(/이번주\s*([월화수목금토일])요일?/); if(m) dates.push(inThisWeek(dayMap[m[1]]));
-  m = t.match(/(\d{1,2})월\s*(\d{1,2})일/); if(m) dates.push(new Date(nowKST().getFullYear(), +m[1]-1, +m[2]));
+  // ===== Range: 부터 ~ 까지 (월~금, 5월 15일~20일) =====
+  m = t.match(/([월화수목금토일])요일?\s*부터\s*([월화수목금토일])요일?\s*까지/);
+  if(m){
+    const start = dayMap[m[1]], end = dayMap[m[2]];
+    let d = end >= start ? end - start : 7 - start + end;
+    for(let i = 0; i <= d; i++) dates.push(inThisWeek((start + i) % 7));
+  }
+  m = t.match(/(\d{1,2})월\s*(\d{1,2})일\s*부터\s*(?:(\d{1,2})월\s*)?(\d{1,2})일\s*까지/);
+  if(m){
+    const mStart = +m[1] - 1, dStart = +m[2];
+    const mEnd = m[3] ? +m[3]-1 : mStart;
+    const dEnd = +m[4];
+    const start = new Date(year, mStart, dStart);
+    const end = new Date(year, mEnd, dEnd);
+    if(end >= start){
+      let cur = new Date(start);
+      while(cur <= end){ dates.push(new Date(cur)); cur = dateAdd(cur, 1); }
+    }
+  }
 
+  // ===== Specific date forms =====
+  // YYYY.MM.DD or YYYY-MM-DD
+  m = t.match(/(\d{4})[.\-\/년]\s*(\d{1,2})[.\-\/월]\s*(\d{1,2})/);
+  if(m) dates.push(new Date(+m[1], +m[2]-1, +m[3]));
+  // M월 D일 (year-aware: past dates assumed next year)
+  m = t.match(/(\d{1,2})월\s*(\d{1,2})일/);
+  if(m && !dates.some(d => d.getMonth() === +m[1]-1 && d.getDate() === +m[2])){
+    let d = new Date(year, +m[1]-1, +m[2]);
+    if(d < todayMid) d.setFullYear(year + 1);
+    dates.push(d);
+  }
+  // M/D (date with slash)
+  m = t.match(/(?:^|[^0-9])(\d{1,2})\/(\d{1,2})(?!\d)/);
+  if(m && !/시\s*\d/.test(t)){
+    const mm = +m[1] - 1, dd = +m[2];
+    if(mm >= 0 && mm < 12 && dd >= 1 && dd <= 31){
+      let d = new Date(year, mm, dd);
+      if(d < todayMid) d.setFullYear(year + 1);
+      dates.push(d);
+    }
+  }
+
+  // ===== Bare day-of-week =====
   if(!dates.length){
-    m = t.match(/([월화수목금토일])요일?(?:날|에)?/);
+    m = t.match(/(?:오는|돌아오는|이번\s*)?([월화수목금토일])요일?(?:날|에)?/);
     if(m && !/매주|마다/.test(t)) dates.push(thisDow(dayMap[m[1]]));
   }
 
-  // Track whether we found ANY explicit date keyword
   const hadKeyword = dates.length > 0 || !!recurrence;
 
-  if(/이번주까지|이번 주까지/.test(t) && !dates.length) dates.push(thisDow(5));
-  if(recurrence && !dates.length) dates.push(recurrence.type === 'weekly' ? nextDow(recurrence.day) : nowKST());
+  // ===== Deadlines: 까지 =====
+  if(/이번주까지|이번 주까지|이번주\s*안에|주중에/.test(t) && !dates.length) dates.push(thisDow(5));
+  if(/이번달까지|이번 달까지|이달\s*안에/.test(t) && !dates.length){
+    dates.push(new Date(year, monthIdx + 1, 0)); // 이달 말일
+  }
+  if(/오늘까지|오늘\s*안에/.test(t) && !dates.length) dates.push(new Date(today));
+
+  if(recurrence && !dates.length){
+    dates.push(recurrence.type === 'weekly' ? nextDow(recurrence.day) : new Date(today));
+  }
   if(!dates.length) dates.push(new Date(selectedDate));
+
+  // Dedupe by date string
+  const seen = new Set();
+  dates = dates.filter(d => {
+    const k = dkey(d);
+    if(seen.has(k)) return false;
+    seen.add(k); return true;
+  });
 
   return {dates, recurrence, hadKeyword};
 }
@@ -2260,19 +2417,46 @@ function splitIntents(raw){
   return s.split('|').map(x => x.trim()).filter(Boolean);
 }
 function titleFrom(text){
-  let t = text
-    // Strip leading conjunctions first (그리고/그러고/또한/그래서 + 그리고나서 variants)
-    .replace(/^\s*(그리고\s*나서|그러고\s*나서|그리고\s*나면|그러고\s*나면|그리고\s*나|그러고\s*나|그리고서|그러고서|그리고|그러고|또한|그래서|그러면|그럼|또)\s*/, '')
-    .replace(/다음주|이번주|오늘|내일|모레|내내|주말|이번\s*주말|다음\s*주말|매주|매일|맨날|평일마다|주마다|[월화수목금토일]요일(?:마다|날)?|이번주까지|이번 주까지|\d{1,2}월\s*\d{1,2}일/g, ' ')
-    // Time-of-day periods + specific clock times
+  let t = text;
+  // 1) Strip leading fillers/interjections REPEATEDLY ("아 참 음 그리고 ...")
+  const fillerRe = /^\s*(?:아|어|음|어휴|아휴|참|참고로|근데|그래서|그러면|그럼|사실|일단|일단은|먼저|혹시|있잖아|있지|있지말이야|그|저)\s+/;
+  while(fillerRe.test(t)) t = t.replace(fillerRe, '');
+  // 2) Strip leading conjunctions REPEATEDLY
+  const conjRe = /^\s*(?:그리고\s*나서|그러고\s*나서|그리고\s*나면|그러고\s*나면|그리고\s*나|그러고\s*나|그리고서|그러고서|그리고|그러고|또한|그래서|그러면|그럼|또)\s*/;
+  while(conjRe.test(t)) t = t.replace(conjRe, '');
+  t = t
+    // 3) Date keywords (extended) — including "다음달 X일" combos to strip the bare day too
+    .replace(/(?:다다음달|다음달|이번달|다음\s*달|이번\s*달|이달)\s*\d{1,2}\s*일/g, ' ')
+    .replace(/다다음주|다다음달|다음주|이번주|이번달|다음달|이달|오늘|금일|내일|낼\b|명일|모레|모래|글피|그글피|어제|그제|그저께|엊그제|내내|주말|이번\s*주말|다음\s*주말|매주|매일|맨날|매번|날마다|평일\s*마다|주말\s*마다|매달|매월|달마다|평일에만|평일마다|주마다|[월화수목금토일]요일(?:마다|날)?|이번주까지|이번 주까지|이번달까지|이번 달까지|이달\s*안에|오늘까지|오늘\s*안에|이번주\s*안에|주중에|\d{4}[.\-\/]\d{1,2}[.\-\/]\d{1,2}|\d{1,2}월\s*\d{1,2}일|\d{1,2}\/\d{1,2}/g, ' ')
+    // 4) Korean day-count words ("이틀 뒤", "사흘 후")
+    .replace(/(?:하루|이틀|사흘|나흘|닷새|엿새|이레|여드레|아흐레|열흘)\s*(?:뒤|후|있다가|지나(?:서|면)?)/g, ' ')
+    // 5) Digit offsets ("3일 뒤", "5주 후", "2달 뒤", "한 달 후")
+    .replace(/\d+\s*(?:일|주|달|개월|시간|분)\s*(?:뒤|후|있다가|지나(?:서|면)?)/g, ' ')
+    .replace(/(?:한|두|세|네|다섯)\s*(?:주|달|개월|시간)\s*(?:뒤|후|있다가)/g, ' ')
+    // 6) Vague time words
+    .replace(/곧|조만간|얼른|빨리/g, ' ')
+    // 7) Specific times (fixed names + 정오/자정)
+    .replace(/정오|자정|이른\s*아침|늦은\s*밤|밤늦/g, ' ')
+    // 8) Period + numeric clock
     .replace(/(오전|오후|아침|점심|낮|저녁|밤|새벽)\s*(?:\d{1,2}\s*시\s*(?:\d{1,2}\s*분?|반)?)?/g, ' ')
-    .replace(/\d{1,2}\s*시\s*(?:\d{1,2}\s*분?|반)?/g, ' ')
-    .replace(/있고|있어|있다|해야돼|해야 해|해야함|해야|까지|마다|좀|그리고\s*나서|그러고\s*나서|그리고\s*나|그러고\s*나|그리고|그러고|또한|그래서/g, ' ')
+    // 9) Korean-hour words ("두 시", "다섯 시 반") — exclude "X 시간"
+    .replace(/(?:한|두|세|네|다섯|여섯|일곱|여덟|아홉|열|열한|열두)\s*시(?!간)(?:\s*(?:\d{1,2}\s*분?|반))?/g, ' ')
+    .replace(/\d{1,2}\s*시(?!간)\s*(?:\d{1,2}\s*분?|반)?/g, ' ')
+    .replace(/\d{1,2}:\d{2}/g, ' ')
+    // X시간 → strip entire phrase (handled as 'duration', not a clock time)
+    .replace(/\d+\s*시간/g, ' ')
+    .replace(/(?:한|두|세|네|다섯)\s*시간/g, ' ')
+    // 10) Range markers ("부터", "까지", "동안")
+    .replace(/부터|까지|동안|사이/g, ' ')
+    // 11) Korean action filler words
+    .replace(/있고|있어|있다|있는데|해야돼|해야 해|해야함|해야|마다|좀|그리고\s*나서|그러고\s*나서|그리고\s*나|그러고\s*나|그리고|그러고|또한|그래서|예정|계획|일정/g, ' ')
+    // 12) Polite endings ("~합니다", "~해요", "~할거예요")
+    .replace(/(?:합니다|해요|할거예요|할 거예요|할게요|할 게요|할\s*거야|할거야|이에요|예요|입니다)$/g, '')
     .replace(/\s+/g, ' ')
     .trim();
 
-  // Strip leftover leading conjunctions (after date keywords removed)
-  t = t.replace(/^\s*(그리고|그러고|또한|또|그래서|그러면|그럼)\s*/, '');
+  // Strip any leftover leading conjunction/particle
+  t = t.replace(/^\s*(그리고|그러고|또한|또|그래서|그러면|그럼|에|는|을|를|이|가|와|과|도|만|에서|에게|로|으로)\s*/, '');
 
   // Clean trailing action connectors
   t = t
@@ -2287,7 +2471,10 @@ function titleFrom(text){
 
   t = t.replace(/\s+/g, ' ').trim();
 
-  if(/기획서|보고서/.test(text) && /내|제출/.test(text)) t = t.replace(/내.*/, '').trim() + ' 제출';
+  if(/기획서|보고서/.test(text) && /내|제출/.test(text)){
+    t = t.replace(/내.*/, '').trim();
+    if(!/제출/.test(t)) t = t + ' 제출';
+  }
   if(!t || t === '뭐' || t === '뭐기' || t === '머' || t === '머기') t = '할 일';
   return t.slice(0, 30);
 }
