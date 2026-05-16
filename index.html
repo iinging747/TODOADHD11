@@ -1288,20 +1288,23 @@ body.dark .toast{background:var(--ink);color:var(--bg)}
 
     <p class="gate-privacy">
       🔒 이 다이어리는 <b>너만</b> 볼 수 있어.<br>
-      Google 계정으로 안전하게 보호되고, 너만 접근 가능해.
-    </p>
-    <p style="margin:14px 0 0;font-family:var(--fui);font-size:10.5px;letter-spacing:.18em;text-transform:uppercase;color:var(--ink-soft);text-align:center">
-      <a href="#" id="openPrivacy" style="color:inherit;text-decoration:underline">개인정보처리방침</a>
+      Google 계정으로 안전하게 보호되고, 너만 접근 가능해.<br>
+      <span style="display:block;margin-top:8px;font-size:11.5px;color:var(--ink-muted)">로그인 후 개인정보처리방침에 동의를 받습니다.</span>
     </p>
   </div>
   </div>
 </div>
 
-<div id="privacyModal" hidden style="position:fixed;inset:0;z-index:50;background:rgba(45,38,32,.55);display:grid;place-items:center;padding:18px;overflow:auto">
+<div id="privacyModal" hidden style="position:fixed;inset:0;z-index:50;background:rgba(45,38,32,.55);display:grid;place-items:center;padding:18px;overflow:auto" data-mode="view">
   <div style="background:var(--paper);max-width:560px;width:100%;border-radius:4px;padding:28px 26px;max-height:88vh;overflow-y:auto;border:1px solid var(--hairline);box-shadow:var(--shadow-page)">
-    <p class="label-eyebrow">개인정보처리방침 <span class="right" style="cursor:pointer;font-family:var(--fui);font-size:12px" id="closePrivacy">닫기 ✕</span></p>
+    <p class="label-eyebrow">개인정보처리방침 <button type="button" class="right" data-privacy-close style="cursor:pointer;font-family:var(--fui);font-size:12px;background:transparent;border:0;color:var(--ink-soft);padding:0;letter-spacing:.18em">닫기 ✕</button></p>
     <h2 style="font-family:var(--fd);font-weight:400;font-size:24px;margin:6px 0 14px;color:var(--ink)">정신차려 · TODOADHD</h2>
     <p style="font-family:var(--fb);font-size:12px;color:var(--ink-soft);margin:0 0 16px">시행일: 2026년 5월 16일 · 운영자: iinging747</p>
+
+    <div style="padding:12px 14px;background:var(--paper-soft);border-radius:3px;margin-bottom:18px;border-left:3px solid var(--rose)">
+      <p style="margin:0;font-family:var(--fb);font-weight:600;font-size:14px;color:var(--ink);line-height:1.6">⚠️ 관리자는 절대 여러분의 개인정보를 보지 않습니다.</p>
+      <p style="margin:6px 0 0;font-family:var(--fb);font-weight:400;font-size:13px;color:var(--ink-soft);line-height:1.7">모든 데이터는 본인의 Google 계정 권한으로 격리되어 저장되며, 운영자(관리자)는 어떤 경우에도 사용자가 입력한 콘텐츠(일정·일기·가계부·건강 기록 등)를 열람할 수 없습니다.</p>
+    </div>
 
     <h3 style="font-family:var(--fb);font-weight:600;font-size:14px;margin:14px 0 6px;color:var(--ink)">1. 수집하는 개인정보 항목</h3>
     <p style="font-family:var(--fb);font-size:13.5px;line-height:1.7;color:var(--ink-soft);margin:0 0 8px">
@@ -1321,7 +1324,7 @@ body.dark .toast{background:var(--ink);color:var(--bg)}
     <p style="font-family:var(--fb);font-size:13.5px;line-height:1.7;color:var(--ink-soft);margin:0 0 8px">
       · Google Firebase Authentication (인증)<br>
       · Google Cloud Firestore (콘텐츠 데이터) — 리전: asia-northeast3 (서울) 또는 us-central1<br>
-      · 데이터는 본인의 Google UID로 접근 권한이 제한되어 본인 외 타인은 접근할 수 없습니다
+      · 데이터는 본인의 Google UID로 접근 권한이 제한되어 본인 외 타인(운영자 포함)은 접근할 수 없습니다
     </p>
 
     <h3 style="font-family:var(--fb);font-weight:600;font-size:14px;margin:14px 0 6px;color:var(--ink)">4. 보유 및 이용 기간</h3>
@@ -1356,7 +1359,9 @@ body.dark .toast{background:var(--ink);color:var(--bg)}
       방침이 변경되면 본 화면에서 시행일과 함께 공지합니다.
     </p>
 
-    <button class="btn btn-primary" id="closePrivacyBottom" style="width:100%">닫기</button>
+    <div id="privacyActions" style="display:flex;gap:8px;flex-wrap:wrap">
+      <button type="button" class="btn btn-primary" data-privacy-close style="flex:1">닫기</button>
+    </div>
   </div>
 </div>
 
@@ -1523,20 +1528,60 @@ applyTheme(getInitialTheme());
 // Theme buttons (gate + sidebar)
 const _gateTheme = $('#gateTheme'); if(_gateTheme) _gateTheme.addEventListener('click', toggleTheme);
 
-/* Privacy policy modal */
-(function setupPrivacy(){
+/* Privacy policy modal — supports 'view' (close-only) and 'consent' (must agree) modes */
+function showPrivacyModal(mode){
   const modal = document.getElementById('privacyModal');
   if(!modal) return;
-  const open = document.getElementById('openPrivacy');
-  const closeTop = document.getElementById('closePrivacy');
-  const closeBot = document.getElementById('closePrivacyBottom');
-  const showModal = (e) => { if(e) e.preventDefault(); modal.hidden = false; };
-  const hideModal = () => { modal.hidden = true; };
-  if(open) open.addEventListener('click', showModal);
-  if(closeTop) closeTop.addEventListener('click', hideModal);
-  if(closeBot) closeBot.addEventListener('click', hideModal);
-  modal.addEventListener('click', e => { if(e.target === modal) hideModal(); });
-})();
+  modal.dataset.mode = mode || 'view';
+  const actions = document.getElementById('privacyActions');
+  if(actions){
+    if(mode === 'consent'){
+      actions.innerHTML = `
+        <button type="button" class="btn btn-ghost" data-privacy-decline style="flex:0 0 auto">동의 안 함 (로그아웃)</button>
+        <button type="button" class="btn btn-primary" data-privacy-agree style="flex:1">동의하고 시작하기 →</button>
+      `;
+    } else {
+      actions.innerHTML = `<button type="button" class="btn btn-primary" data-privacy-close style="flex:1">닫기</button>`;
+    }
+  }
+  modal.hidden = false;
+  modal.scrollTop = 0;
+}
+function hidePrivacyModal(){
+  const modal = document.getElementById('privacyModal');
+  if(modal) modal.hidden = true;
+}
+async function acceptPrivacy(){
+  if(!store) store = defaultStore();
+  store.privacyAcceptedAt = Date.now();
+  store.privacyVersion = '2026-05-16';
+  try{ localStorage.setItem('privacy_accepted_at', String(store.privacyAcceptedAt)); }catch(_){}
+  saveStore('__meta');
+  hidePrivacyModal();
+}
+
+/* Event delegation — works even if elements are re-rendered */
+document.addEventListener('click', (e) => {
+  const trigger = e.target.closest('#openPrivacy');
+  if(trigger){ e.preventDefault(); showPrivacyModal('view'); return; }
+  const closeBtn = e.target.closest('[data-privacy-close]');
+  if(closeBtn){ hidePrivacyModal(); return; }
+  const agreeBtn = e.target.closest('[data-privacy-agree]');
+  if(agreeBtn){ acceptPrivacy(); return; }
+  const declineBtn = e.target.closest('[data-privacy-decline]');
+  if(declineBtn){
+    if(confirm('동의하지 않으면 서비스를 이용할 수 없어요. 로그아웃할까요?')){
+      hidePrivacyModal();
+      logout();
+    }
+    return;
+  }
+  // Click on backdrop (only in view mode — consent mode requires explicit action)
+  const modal = document.getElementById('privacyModal');
+  if(modal && !modal.hidden && e.target === modal && modal.dataset.mode !== 'consent'){
+    hidePrivacyModal();
+  }
+});
 // Sidebar themeBtn wired later when DOM ready (it exists but we wait for cohesion below)
 
 /* ============ Toast (must be early - called from many places) ============ */
@@ -1832,6 +1877,10 @@ fbAuth.onAuthStateChanged(async (user) => {
       } else {
         render();
       }
+      // First-time consent: show privacy policy if not yet accepted
+      if(!store.privacyAcceptedAt){
+        setTimeout(() => showPrivacyModal('consent'), 300);
+      }
     }catch(e){
       console.warn('post-login error', e);
       showAuthError('데이터 불러오기 중 오류가 발생했어. 새로고침 해줘.');
@@ -1841,6 +1890,7 @@ fbAuth.onAuthStateChanged(async (user) => {
     currentAccessToken = null;
     store = defaultStore();
     appInitialized = false;
+    hidePrivacyModal();
     openGate();
   }
 });
@@ -5941,6 +5991,14 @@ function renderSettings(root){
       <div class="paper-soft">
         <p class="label-eyebrow">서버 저장 & 구글 연동</p>
         <p style="margin:0;font-family:var(--fb);font-weight:400;font-size:13px;line-height:1.7;color:var(--ink-soft)">현재 데이터는 너의 Google 계정 + Firestore에 저장돼. 다른 기기에서도 같은 계정으로 들어오면 그대로 이어져.</p>
+      </div>
+
+      <div style="height:18px"></div>
+
+      <div class="paper-soft">
+        <p class="label-eyebrow">법적 고지</p>
+        <p style="margin:0 0 10px;font-family:var(--fb);font-weight:400;font-size:13px;line-height:1.7;color:var(--ink-soft)">${store.privacyAcceptedAt ? `처리방침 동의일: ${new Date(store.privacyAcceptedAt).toLocaleDateString('ko-KR')}` : '아직 동의 기록 없음'}</p>
+        <button type="button" class="btn btn-ghost" id="openPrivacy">개인정보처리방침 보기</button>
       </div>
 
     </div>
