@@ -7733,17 +7733,28 @@ function renderHealth(root){
 }
 
 /* ============ REPORT ============ */
-/* ===== Level system — growth tree theme ===== */
+/* ===== Level system — 20-stage growth tree theme (long-term retention) ===== */
 const LEVELS = [
-  { key:'seed',     name:'콩알',     min:0,    desc:'작은 시작, 그게 전부야' },
-  { key:'sprout',   name:'새싹',     min:15,   desc:'첫 잎이 났어' },
-  { key:'leaf',     name:'초록잎',   min:40,   desc:'잎이 단단해지고 있어' },
-  { key:'sunleaf',  name:'햇살잎',   min:90,   desc:'햇빛을 듬뿍 받고 있어' },
-  { key:'softtree', name:'말랑나무', min:180,  desc:'부드러운 첫 나무가 됐어' },
-  { key:'pufftree', name:'몽실나무', min:360,  desc:'풍성한 나뭇잎이 자랐어' },
-  { key:'flower',   name:'반짝꽃',   min:660,  desc:'꽃이 피기 시작했어' },
-  { key:'fruit',    name:'열매요정', min:1100, desc:'열매가 익어가고 있어' },
-  { key:'keeper',   name:'숲지기',   min:2000, desc:'온전한 숲을 지키는 사람' }
+  { key:'seed',      name:'콩알',       min:0,     desc:'작은 시작, 그게 전부야' },
+  { key:'drop',      name:'물방울',     min:8,     desc:'씨앗에 첫 물이 닿았어' },
+  { key:'sprout',    name:'새싹',       min:20,    desc:'첫 잎이 났어' },
+  { key:'cotyledon', name:'떡잎',       min:40,    desc:'잎 두 장이 단단해졌어' },
+  { key:'leaf',      name:'초록잎',     min:75,    desc:'잎이 두툼해지고 있어' },
+  { key:'stem',      name:'여린줄기',   min:120,   desc:'줄기가 길어졌어' },
+  { key:'sunleaf',   name:'햇살잎',     min:200,   desc:'햇빛을 듬뿍 받고 있어' },
+  { key:'dewbud',    name:'이슬꽃',     min:320,   desc:'봉오리에 이슬이 맺혔어' },
+  { key:'softtree',  name:'말랑나무',   min:500,   desc:'부드러운 첫 나무' },
+  { key:'spring',    name:'봄나무',     min:750,   desc:'꽃이 핀 작은 나무' },
+  { key:'pufftree',  name:'몽실나무',   min:1100,  desc:'풍성한 나뭇잎이 자랐어' },
+  { key:'flower',    name:'반짝꽃',     min:1500,  desc:'꽃이 만개했어' },
+  { key:'moontree',  name:'달빛나무',   min:2100,  desc:'밤하늘 아래 자라' },
+  { key:'fruit',     name:'열매요정',   min:2800,  desc:'열매가 익어가고 있어' },
+  { key:'keeper',    name:'숲지기',     min:3700,  desc:'온전한 숲을 지키는 사람' },
+  { key:'mystic',    name:'신비나무',   min:4800,  desc:'신비한 빛이 깃들었어' },
+  { key:'starwind',  name:'별바람나무', min:6200,  desc:'별가루가 흩날려' },
+  { key:'aurora',    name:'오로라숲',   min:8000,  desc:'오로라가 숲을 감싸' },
+  { key:'rainbow',   name:'무지개숲',   min:10500, desc:'무지개가 떴어' },
+  { key:'eternal',   name:'영원의숲',   min:14000, desc:'시간을 초월한 숲의 정령' }
 ];
 
 function calcPoints(){
@@ -7793,6 +7804,19 @@ function levelSvg(key, size){
       <circle cx="44" cy="48" r="1" fill="#7A6E58" opacity=".5"/>
     </svg>`,
 
+    'drop': `<svg viewBox="0 0 64 64" width="${s}" height="${s}" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <radialGradient id="dropSeedG" cx="40%" cy="35%"><stop offset="0%" stop-color="#E8C49B"/><stop offset="100%" stop-color="#B58755"/></radialGradient>
+        <radialGradient id="dropG" cx="40%" cy="40%"><stop offset="0%" stop-color="#E8F5FA"/><stop offset="100%" stop-color="#6BA8C8"/></radialGradient>
+      </defs>
+      <ellipse cx="32" cy="58" rx="14" ry="3" fill="#3D2914" opacity=".18"/>
+      <ellipse cx="32" cy="44" rx="12" ry="14" fill="url(#dropSeedG)"/>
+      <path d="M 32 12 Q 24 28 32 38 Q 40 28 32 12 Z" fill="url(#dropG)"/>
+      <ellipse cx="29" cy="22" rx="2" ry="4" fill="#FFFFFF" opacity=".75"/>
+      <circle cx="18" cy="50" r="1" fill="#6BA8C8" opacity=".5"/>
+      <circle cx="46" cy="48" r="1.2" fill="#6BA8C8" opacity=".5"/>
+    </svg>`,
+
     'sprout': `<svg viewBox="0 0 64 64" width="${s}" height="${s}" xmlns="http://www.w3.org/2000/svg">
       <ellipse cx="32" cy="58" rx="18" ry="3" fill="#3D2914" opacity=".18"/>
       <path d="M 22 58 Q 32 56 42 58 L 40 56 L 24 56 Z" fill="#8B6F47" opacity=".7"/>
@@ -7804,6 +7828,18 @@ function levelSvg(key, size){
       <circle cx="32" cy="22" r="2.5" fill="#A8D278"/>
     </svg>`,
 
+    'cotyledon': `<svg viewBox="0 0 64 64" width="${s}" height="${s}" xmlns="http://www.w3.org/2000/svg">
+      <ellipse cx="32" cy="58" rx="18" ry="3" fill="#3D2914" opacity=".18"/>
+      <path d="M 20 58 Q 32 55 44 58 L 41 55 L 23 55 Z" fill="#7A5F37" opacity=".7"/>
+      <path d="M 32 56 Q 32 36 32 22" stroke="#4A7028" stroke-width="2.8" fill="none" stroke-linecap="round"/>
+      <ellipse cx="18" cy="30" rx="12" ry="7" fill="#7AB058" transform="rotate(-30 18 30)"/>
+      <ellipse cx="18" cy="30" rx="8" ry="3.5" fill="#9AC678" transform="rotate(-30 18 30)" opacity=".7"/>
+      <ellipse cx="46" cy="26" rx="12" ry="7" fill="#8AC068" transform="rotate(30 46 26)"/>
+      <ellipse cx="46" cy="26" rx="8" ry="3.5" fill="#A8D078" transform="rotate(30 46 26)" opacity=".7"/>
+      <ellipse cx="32" cy="20" rx="7" ry="5" fill="#A8D078"/>
+      <ellipse cx="30" cy="18" rx="3" ry="2.5" fill="#C8E098" opacity=".7"/>
+    </svg>`,
+
     'leaf': `<svg viewBox="0 0 64 64" width="${s}" height="${s}" xmlns="http://www.w3.org/2000/svg">
       <ellipse cx="32" cy="60" rx="14" ry="2" fill="#3D2914" opacity=".15"/>
       <path d="M 32 60 Q 32 44 32 32" stroke="#4A6E2F" stroke-width="2.5" fill="none" stroke-linecap="round"/>
@@ -7812,6 +7848,17 @@ function levelSvg(key, size){
       <path d="M 16 30 Q 32 28 48 26" stroke="#4A6E2F" stroke-width="1.2" fill="none" opacity=".5"/>
       <path d="M 22 22 Q 28 24 34 22" stroke="#4A6E2F" stroke-width=".8" fill="none" opacity=".4"/>
       <path d="M 30 32 Q 36 30 42 32" stroke="#4A6E2F" stroke-width=".8" fill="none" opacity=".4"/>
+    </svg>`,
+
+    'stem': `<svg viewBox="0 0 64 64" width="${s}" height="${s}" xmlns="http://www.w3.org/2000/svg">
+      <ellipse cx="32" cy="60" rx="14" ry="2.5" fill="#3D2914" opacity=".15"/>
+      <path d="M 32 58 Q 32 36 30 14" stroke="#4A6E2F" stroke-width="3" fill="none" stroke-linecap="round"/>
+      <ellipse cx="22" cy="42" rx="10" ry="5" fill="#7AB058" transform="rotate(-25 22 42)"/>
+      <ellipse cx="42" cy="34" rx="9" ry="5" fill="#8AC068" transform="rotate(28 42 34)"/>
+      <ellipse cx="22" cy="22" rx="8" ry="4" fill="#7AB058" transform="rotate(-30 22 22)"/>
+      <ellipse cx="38" cy="48" rx="6" ry="4" fill="#7AB058" transform="rotate(18 38 48)"/>
+      <circle cx="30" cy="14" r="3.5" fill="#9AC868"/>
+      <circle cx="30" cy="14" r="1.5" fill="#C8E098" opacity=".7"/>
     </svg>`,
 
     'sunleaf': `<svg viewBox="0 0 64 64" width="${s}" height="${s}" xmlns="http://www.w3.org/2000/svg">
@@ -7831,6 +7878,20 @@ function levelSvg(key, size){
       <path d="M 16 38 Q 32 36 48 34" stroke="#7A9038" stroke-width="1.2" fill="none" opacity=".5"/>
     </svg>`,
 
+    'dewbud': `<svg viewBox="0 0 64 64" width="${s}" height="${s}" xmlns="http://www.w3.org/2000/svg">
+      <defs><radialGradient id="budG"><stop offset="0%" stop-color="#FFE0E8"/><stop offset="100%" stop-color="#F4A8B8"/></radialGradient></defs>
+      <ellipse cx="32" cy="60" rx="14" ry="2" fill="#3D2914" opacity=".15"/>
+      <rect x="30" y="34" width="4" height="24" rx="1.5" fill="#5C8A3C"/>
+      <ellipse cx="22" cy="46" rx="9" ry="4" fill="#5C8A3C" transform="rotate(-25 22 46)"/>
+      <ellipse cx="42" cy="42" rx="7" ry="3.5" fill="#7AB058" transform="rotate(25 42 42)"/>
+      <ellipse cx="32" cy="22" rx="9" ry="13" fill="url(#budG)"/>
+      <path d="M 26 22 Q 32 18 38 22 Q 38 14 32 12 Q 26 14 26 22 Z" fill="#5C8A3C" opacity=".5"/>
+      <circle cx="40" cy="18" r="2.2" fill="#D8F0FA" opacity=".9"/>
+      <circle cx="40" cy="18" r="1" fill="#FFFFFF" opacity=".8"/>
+      <circle cx="22" cy="26" r="1.6" fill="#D8F0FA" opacity=".85"/>
+      <circle cx="32" cy="14" r="1.2" fill="#FFFFFF" opacity=".7"/>
+    </svg>`,
+
     'softtree': `<svg viewBox="0 0 64 64" width="${s}" height="${s}" xmlns="http://www.w3.org/2000/svg">
       <ellipse cx="32" cy="60" rx="16" ry="2.5" fill="#3D2914" opacity=".15"/>
       <rect x="28" y="38" width="8" height="20" rx="3" fill="#8B6F47"/>
@@ -7842,6 +7903,29 @@ function levelSvg(key, size){
       <circle cx="40" cy="36" r="9" fill="#7AB058"/>
       <circle cx="20" cy="22" r="4" fill="#A8D078" opacity=".5"/>
       <circle cx="40" cy="14" r="3" fill="#A8D078" opacity=".5"/>
+    </svg>`,
+
+    'spring': `<svg viewBox="0 0 64 64" width="${s}" height="${s}" xmlns="http://www.w3.org/2000/svg">
+      <ellipse cx="32" cy="60" rx="17" ry="2.5" fill="#3D2914" opacity=".15"/>
+      <rect x="28" y="40" width="8" height="20" rx="3" fill="#8B6F47"/>
+      <circle cx="22" cy="28" r="11" fill="#9AC868"/>
+      <circle cx="36" cy="20" r="13" fill="#A8D078"/>
+      <circle cx="44" cy="30" r="10" fill="#9AC868"/>
+      <circle cx="28" cy="36" r="11" fill="#A8D078"/>
+      <circle cx="40" cy="36" r="9" fill="#9AC868"/>
+      <g fill="#F8A8B8">
+        <circle cx="20" cy="22" r="2.8"/>
+        <circle cx="40" cy="14" r="2.8"/>
+        <circle cx="44" cy="32" r="2.4"/>
+        <circle cx="14" cy="34" r="2.4"/>
+        <circle cx="36" cy="40" r="2.4"/>
+        <circle cx="28" cy="24" r="2"/>
+      </g>
+      <g fill="#FFE0E5" opacity=".8">
+        <circle cx="20" cy="22" r="1"/>
+        <circle cx="40" cy="14" r="1"/>
+        <circle cx="44" cy="32" r=".8"/>
+      </g>
     </svg>`,
 
     'pufftree': `<svg viewBox="0 0 64 64" width="${s}" height="${s}" xmlns="http://www.w3.org/2000/svg">
@@ -7857,6 +7941,29 @@ function levelSvg(key, size){
       <circle cx="14" cy="28" r="3" fill="#C8E098" opacity=".6"/>
       <circle cx="50" cy="38" r="3" fill="#C8E098" opacity=".6"/>
       <circle cx="32" cy="14" r="3" fill="#C8E098" opacity=".7"/>
+    </svg>`,
+
+    'moontree': `<svg viewBox="0 0 64 64" width="${s}" height="${s}" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <radialGradient id="moonG"><stop offset="0%" stop-color="#FFFAF0"/><stop offset="100%" stop-color="#E0D8C0"/></radialGradient>
+        <linearGradient id="moonNightG" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#2A3050" stop-opacity=".15"/><stop offset="100%" stop-color="#2A3050" stop-opacity="0"/></linearGradient>
+      </defs>
+      <ellipse cx="32" cy="60" rx="18" ry="2.5" fill="#000" opacity=".25"/>
+      <rect x="0" y="0" width="64" height="40" fill="url(#moonNightG)"/>
+      <circle cx="50" cy="14" r="7" fill="url(#moonG)"/>
+      <circle cx="47" cy="12" r="1.5" fill="#A8A090" opacity=".4"/>
+      <circle cx="52" cy="16" r="1" fill="#A8A090" opacity=".3"/>
+      <rect x="28" y="40" width="8" height="20" rx="3" fill="#5C4220"/>
+      <circle cx="20" cy="32" r="12" fill="#4A6E5C"/>
+      <circle cx="32" cy="22" r="14" fill="#5BA070"/>
+      <circle cx="44" cy="32" r="12" fill="#4A6E5C"/>
+      <g fill="#FFE898" opacity=".85">
+        <circle cx="10" cy="16" r="1"/>
+        <circle cx="14" cy="42" r=".8"/>
+        <circle cx="56" cy="38" r="1"/>
+        <circle cx="44" cy="14" r=".8"/>
+        <circle cx="22" cy="6" r=".9"/>
+      </g>
     </svg>`,
 
     'flower': `<svg viewBox="0 0 64 64" width="${s}" height="${s}" xmlns="http://www.w3.org/2000/svg">
@@ -7929,6 +8036,145 @@ function levelSvg(key, size){
         <path d="M 54 16 L 55 18 L 57 18.5 L 55 19 L 54 21 L 53 19 L 51 18.5 L 53 18 Z"/>
         <path d="M 50 44 L 51 46 L 53 46.5 L 51 47 L 50 49 L 49 47 L 47 46.5 L 49 46 Z"/>
         <path d="M 8 38 L 9 40 L 11 40.5 L 9 41 L 8 43 L 7 41 L 5 40.5 L 7 40 Z" opacity=".7"/>
+      </g>
+    </svg>`,
+
+    'mystic': `<svg viewBox="0 0 64 64" width="${s}" height="${s}" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <radialGradient id="mysticG"><stop offset="0%" stop-color="#E8C8FF"/><stop offset="50%" stop-color="#A878E0"/><stop offset="100%" stop-color="#5830A0"/></radialGradient>
+        <radialGradient id="mysticGlow" cx="50%" cy="50%"><stop offset="0%" stop-color="#FFF" stop-opacity=".6"/><stop offset="100%" stop-color="#FFF" stop-opacity="0"/></radialGradient>
+      </defs>
+      <ellipse cx="32" cy="60" rx="22" ry="3" fill="#1A0838" opacity=".3"/>
+      <circle cx="32" cy="26" r="28" fill="url(#mysticGlow)"/>
+      <rect x="27" y="40" width="10" height="20" rx="4" fill="#3A2050"/>
+      <circle cx="32" cy="22" r="20" fill="url(#mysticG)"/>
+      <circle cx="18" cy="30" r="11" fill="#8060C0" opacity=".85"/>
+      <circle cx="46" cy="30" r="11" fill="#8060C0" opacity=".85"/>
+      <circle cx="32" cy="12" r="11" fill="#C8A0E8" opacity=".9"/>
+      <g fill="#FFFFFF" opacity=".95">
+        <circle cx="32" cy="14" r="1.8"/>
+        <circle cx="20" cy="22" r="1.2"/>
+        <circle cx="44" cy="26" r="1.4"/>
+        <circle cx="14" cy="36" r=".9"/>
+        <circle cx="50" cy="38" r=".9"/>
+        <circle cx="38" cy="34" r="1.2"/>
+        <circle cx="26" cy="32" r="1"/>
+      </g>
+      <g fill="#FFE898" opacity=".8">
+        <path d="M 8 16 L 9 18 L 11 18 L 9 19 L 8 21 L 7 19 L 5 18 L 7 18 Z"/>
+        <path d="M 54 14 L 55 16 L 57 16 L 55 17 L 54 19 L 53 17 L 51 16 L 53 16 Z"/>
+      </g>
+    </svg>`,
+
+    'starwind': `<svg viewBox="0 0 64 64" width="${s}" height="${s}" xmlns="http://www.w3.org/2000/svg">
+      <defs><linearGradient id="nightG" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#1E2848"/><stop offset="100%" stop-color="#1E2848" stop-opacity="0"/></linearGradient></defs>
+      <ellipse cx="32" cy="60" rx="22" ry="3" fill="#000" opacity=".25"/>
+      <rect x="0" y="0" width="64" height="36" fill="url(#nightG)" opacity=".25"/>
+      <rect x="27" y="42" width="10" height="18" rx="4" fill="#4A3018"/>
+      <circle cx="32" cy="22" r="18" fill="#3A6028"/>
+      <circle cx="16" cy="32" r="10" fill="#5BA040"/>
+      <circle cx="48" cy="32" r="10" fill="#5BA040"/>
+      <circle cx="32" cy="12" r="11" fill="#7AB058"/>
+      <!-- 별바람: 흩날리는 별 트레일 -->
+      <g fill="#FFE898">
+        <path d="M 6 12 L 7.5 15 L 11 15 L 8 17 L 9.5 21 L 6 18.5 L 2.5 21 L 4 17 L 1 15 L 4.5 15 Z" opacity=".95"/>
+        <path d="M 52 8 L 53 10 L 55 10 L 53 11 L 52 13 L 51 11 L 49 10 L 51 10 Z"/>
+        <path d="M 58 26 L 59 28 L 61 28 L 59 29 L 58 31 L 57 29 L 55 28 L 57 28 Z"/>
+        <path d="M 14 46 L 15 48 L 17 48 L 15 49 L 14 51 L 13 49 L 11 48 L 13 48 Z" opacity=".7"/>
+        <path d="M 52 50 L 53 52 L 55 52 L 53 53 L 52 55 L 51 53 L 49 52 L 51 52 Z" opacity=".7"/>
+        <circle cx="44" cy="6" r="1.2"/>
+        <circle cx="22" cy="8" r="1.4"/>
+        <circle cx="10" cy="24" r=".9" opacity=".8"/>
+        <circle cx="60" cy="42" r="1" opacity=".7"/>
+      </g>
+      <!-- 바람 트레일 -->
+      <path d="M 10 18 Q 18 16 24 18" stroke="#FFFAE0" stroke-width=".8" fill="none" opacity=".5"/>
+      <path d="M 40 12 Q 48 10 54 14" stroke="#FFFAE0" stroke-width=".8" fill="none" opacity=".5"/>
+    </svg>`,
+
+    'aurora': `<svg viewBox="0 0 64 64" width="${s}" height="${s}" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="auroraG" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#A8F0D0" stop-opacity=".85"/>
+          <stop offset="35%" stop-color="#7BD8E8" stop-opacity=".85"/>
+          <stop offset="70%" stop-color="#B098E8" stop-opacity=".85"/>
+          <stop offset="100%" stop-color="#E89BB8" stop-opacity=".75"/>
+        </linearGradient>
+      </defs>
+      <ellipse cx="32" cy="60" rx="24" ry="3" fill="#000" opacity=".28"/>
+      <!-- 오로라 띠 -->
+      <path d="M 2 6 Q 16 14 32 8 Q 48 2 62 12 L 62 26 Q 48 22 32 28 Q 16 34 2 26 Z" fill="url(#auroraG)"/>
+      <path d="M 2 12 Q 16 20 32 14 Q 48 8 62 18 L 62 22 Q 48 28 32 22 Q 16 18 2 24 Z" fill="url(#auroraG)" opacity=".5"/>
+      <rect x="26" y="42" width="12" height="18" rx="4" fill="#2A1A0A"/>
+      <circle cx="14" cy="38" r="11" fill="#3A6038"/>
+      <circle cx="50" cy="38" r="11" fill="#3A6038"/>
+      <circle cx="32" cy="30" r="14" fill="#4A7848"/>
+      <circle cx="24" cy="32" r="6" fill="#5BA058" opacity=".7"/>
+      <circle cx="40" cy="34" r="6" fill="#5BA058" opacity=".7"/>
+      <g fill="#FFFFFF" opacity=".9">
+        <circle cx="48" cy="18" r="1.3"/>
+        <circle cx="14" cy="20" r="1.1"/>
+        <circle cx="38" cy="12" r=".9"/>
+        <circle cx="56" cy="32" r=".8"/>
+        <circle cx="8" cy="34" r=".9"/>
+      </g>
+    </svg>`,
+
+    'rainbow': `<svg viewBox="0 0 64 64" width="${s}" height="${s}" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="rainG" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%"   stop-color="#F08888"/>
+          <stop offset="18%"  stop-color="#F4B060"/>
+          <stop offset="36%"  stop-color="#F4D154"/>
+          <stop offset="54%"  stop-color="#7AC058"/>
+          <stop offset="72%"  stop-color="#5BA0E0"/>
+          <stop offset="100%" stop-color="#B080E0"/>
+        </linearGradient>
+        <radialGradient id="rainShine" cx="50%" cy="50%"><stop offset="0%" stop-color="#FFF" stop-opacity=".4"/><stop offset="100%" stop-color="#FFF" stop-opacity="0"/></radialGradient>
+      </defs>
+      <ellipse cx="32" cy="60" rx="24" ry="3" fill="#000" opacity=".22"/>
+      <circle cx="32" cy="32" r="32" fill="url(#rainShine)"/>
+      <!-- 무지개 -->
+      <path d="M 4 24 Q 32 -8 60 24" fill="none" stroke="url(#rainG)" stroke-width="6" stroke-linecap="round" opacity=".9"/>
+      <rect x="27" y="40" width="10" height="20" rx="4" fill="#6B4F2F"/>
+      <circle cx="32" cy="34" r="16" fill="#5BA040"/>
+      <circle cx="18" cy="40" r="11" fill="#7AB058"/>
+      <circle cx="46" cy="40" r="11" fill="#7AB058"/>
+      <circle cx="32" cy="26" r="10" fill="#8AC068" opacity=".8"/>
+      <g fill="#FFE898" opacity=".9">
+        <circle cx="10" cy="30" r="1.2"/>
+        <circle cx="54" cy="30" r="1.2"/>
+      </g>
+    </svg>`,
+
+    'eternal': `<svg viewBox="0 0 64 64" width="${s}" height="${s}" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <radialGradient id="eternalGlow" cx="50%" cy="40%"><stop offset="0%" stop-color="#FFF8D0" stop-opacity=".55"/><stop offset="100%" stop-color="#FFF8D0" stop-opacity="0"/></radialGradient>
+        <radialGradient id="eternalStar"><stop offset="0%" stop-color="#FFFAE0"/><stop offset="60%" stop-color="#F4D154"/><stop offset="100%" stop-color="#B8801C"/></radialGradient>
+      </defs>
+      <ellipse cx="32" cy="60" rx="26" ry="3.5" fill="#000" opacity=".32"/>
+      <circle cx="32" cy="22" r="32" fill="url(#eternalGlow)"/>
+      <rect x="24" y="38" width="16" height="22" rx="5" fill="#3A2010"/>
+      <ellipse cx="32" cy="58" rx="11" ry="2.5" fill="#1A0E04" opacity=".5"/>
+      <!-- 거대 나무 -->
+      <circle cx="32" cy="22" r="24" fill="#2E5020"/>
+      <circle cx="10" cy="32" r="14" fill="#3A6028"/>
+      <circle cx="54" cy="32" r="14" fill="#3A6028"/>
+      <circle cx="32" cy="8" r="15" fill="#4A7838"/>
+      <circle cx="20" cy="18" r="9" fill="#5BA040" opacity=".7"/>
+      <circle cx="44" cy="18" r="9" fill="#5BA040" opacity=".7"/>
+      <!-- 영원의 별 -->
+      <path d="M 32 2 L 35 11 L 44 11 L 37 16 L 39.5 25 L 32 19.5 L 24.5 25 L 27 16 L 20 11 L 29 11 Z" fill="url(#eternalStar)" stroke="#E8A820" stroke-width=".6"/>
+      <circle cx="32" cy="13" r="2.5" fill="#FFFAE0"/>
+      <g fill="#FFFFFF" opacity=".95">
+        <circle cx="8" cy="14" r="1.5"/>
+        <circle cx="56" cy="16" r="1.5"/>
+        <circle cx="50" cy="48" r="1.2"/>
+        <circle cx="14" cy="46" r="1.2"/>
+        <circle cx="46" cy="6" r=".9"/>
+        <circle cx="6" cy="30" r=".9"/>
+        <circle cx="60" cy="36" r="1"/>
+        <circle cx="18" cy="6" r=".9"/>
       </g>
     </svg>`
   };
