@@ -2491,6 +2491,10 @@ function parseDuration(text){
 
 function splitIntents(raw){
   let s = raw.replace(/\n+/g, '|');
+  // Sentence-ending period: split when followed by space + content (NOT inside dates like 2026.5.21.)
+  s = s.replace(/\.(?=\s+[가-힣A-Za-z])/g, '|');
+  // Relative-to-deadline marker
+  s = s.replace(/\s+(그\s*전에|그전에|그\s*이전에|미리)\s+/g, '|$1 ');
 
   // Insert | after Korean text ending in 고 (action sequence: ~하고, ~먹고, ~보고)
   // Negative lookahead: avoid splitting "~하고 싶다", "~하고 있다" 등 보조용언
@@ -2511,8 +2515,11 @@ function splitIntents(raw){
 }
 function titleFrom(text){
   let t = text;
+  // 0) Strip leading punctuation/whitespace residue ("." after date stripping)
+  t = t.replace(/^[\s.,;:()!?\-—~]+/, '');
   // 1) Strip leading fillers/interjections REPEATEDLY ("아 참 음 그리고 ...")
-  const fillerRe = /^\s*(?:아|어|음|어휴|아휴|참|참고로|근데|그래서|그러면|그럼|사실|일단|일단은|먼저|혹시|있잖아|있지|있지말이야|그|저)\s+/;
+  //    NOTE: bare "그" excluded — it would break "그 전에" / "그 다음에" parsing
+  const fillerRe = /^\s*(?:아|어|음|어휴|아휴|참|참고로|근데|그래서|그러면|그럼|사실|일단|일단은|먼저|혹시|있잖아|있지|있지말이야|저)\s+/;
   while(fillerRe.test(t)) t = t.replace(fillerRe, '');
   // 2) Strip leading conjunctions REPEATEDLY
   const conjRe = /^\s*(?:그리고\s*나서|그러고\s*나서|그리고\s*나면|그러고\s*나면|그리고\s*나|그러고\s*나|그리고서|그러고서|그리고|그러고|또한|그래서|그러면|그럼|또)\s*/;
@@ -2541,6 +2548,16 @@ function titleFrom(text){
     .replace(/(?:한|두|세|네|다섯)\s*시간/g, ' ')
     // 10) Range markers ("부터", "까지", "동안")
     .replace(/부터|까지|동안|사이/g, ' ')
+    // Strip parenthesized weekday markers like "(목)", "(월)"
+    .replace(/\([월화수목금토일]\)/g, ' ')
+    .replace(/\(\s*(?:월요일|화요일|수요일|목요일|금요일|토요일|일요일)\s*\)/g, ' ')
+    // "그 전에" / "그전에" / "그 이전에" / "미리" — including bare "전에" at start
+    .replace(/(?:^|\s)그\s*전에(?=\s|$)/g, ' ')
+    .replace(/(?:^|\s)그전에(?=\s|$)/g, ' ')
+    .replace(/(?:^|\s)그\s*이전에(?=\s|$)/g, ' ')
+    .replace(/(?:^|\s)미리(?=\s|$)/g, ' ')
+    // leftover "전에" at start (after "그" got stripped elsewhere)
+    .replace(/^\s*전에\s+/, '')
     // 11) Korean action filler words
     .replace(/있고|있어|있다|있는데|해야돼|해야 해|해야함|해야|마다|좀|그리고\s*나서|그러고\s*나서|그리고\s*나|그러고\s*나|그리고|그러고|또한|그래서|예정|계획|일정/g, ' ')
     // 12) Polite endings ("~합니다", "~해요", "~할거예요")
@@ -2561,6 +2578,9 @@ function titleFrom(text){
 
   // Remove leading particles
   t = t.replace(/^(에|는|을|를|이|가|와|과|도|만|에서|에게|로|으로)\s+/, '');
+
+  // Final cleanup — strip any leading/trailing punctuation residue
+  t = t.replace(/^[\s.,;:()!?\-—~·]+/, '').replace(/[\s.,;:()!?\-—~·]+$/, '');
 
   t = t.replace(/\s+/g, ' ').trim();
 
@@ -3234,12 +3254,13 @@ function isBrainDump(raw){
   if(!raw) return false;
   if(isChatPaste(raw)) return false;
   const lines = raw.split('\n').filter(l => l.trim());
-  const sentences = raw.split(/[.!?。]/).filter(s => s.trim());
-  if(raw.length >= 80) return true;
+  // Sentence end = punctuation followed by space/EOL/Korean — NOT "."between digits ("2026.5.21")
+  const sentences = raw.split(/[!?。]|\.(?=\s|$|[가-힣A-Za-z])/).filter(s => s.trim());
+  if(raw.length >= 100) return true;
   if(lines.length >= 3) return true;
-  if(sentences.length >= 4) return true;
-  // Many short bursts joined with spaces
-  if(/(ㅋ{2,}|ㅎ{2,}|ㅠ{2,}|아\s|음\s|와\s|어\s)/.test(raw) && raw.length > 30) return true;
+  if(sentences.length >= 5) return true;
+  // Many short bursts joined with laugh/noise
+  if(/(ㅋ{2,}|ㅎ{2,}|ㅠ{2,})/.test(raw) && raw.length > 40) return true;
   return false;
 }
 
@@ -3492,11 +3513,14 @@ function parseSchedule(){
     const type = stickerType(piece + ' ' + title);
     const timeHint = extractTime(piece);
 
-    // Determine dates: explicit > inherited > default
+    // Determine dates: explicit > "그 전에" (lastDate - 1) > inherited > default
     let dates;
+    const isBeforeDeadline = /그\s*전에|그전에|그\s*이전에|미리/.test(piece);
     if(r.hadKeyword){
       dates = r.dates;
-      lastDate = dates[0]; // remember first for inheritance
+      lastDate = dates[0];
+    } else if(isBeforeDeadline && lastDate){
+      dates = [dateAdd(lastDate, -1)];   // before-deadline: day before
     } else if(lastDate && !r.recurrence){
       dates = [lastDate];
     } else {
@@ -6889,6 +6913,64 @@ function caloriesBurned(entry){
   if(!entry || !entry.min) return 0;
   return Math.round(metFor(entry.type, entry.subtype) * userWeightKg() * (entry.min / 60));
 }
+/* Body fat % classification — gender-specific (ACE/ACSM/대한비만학회 reference) */
+function classifyBodyFat(pct, sex){
+  if(pct == null || isNaN(pct)) return null;
+  const isM = sex === 'male';
+  if(isM){
+    if(pct < 6)  return { tag:'필수 지방',   color:'var(--indigo)',  hint:'생리적 필수 한계 — 더 낮으면 위험' };
+    if(pct < 14) return { tag:'운동선수',   color:'var(--olive)',   hint:'운동선수 수준' };
+    if(pct < 18) return { tag:'건강·피트', color:'var(--olive)',   hint:'근육 잘 보이는 건강 구간' };
+    if(pct < 25) return { tag:'평균',       color:'#A89B85',        hint:'평균 범위 — 무난' };
+    if(pct < 30) return { tag:'과체지방',   color:'#C49A3A',        hint:'근력 운동 + 식이 조절 권장' };
+    return         { tag:'고체지방',       color:'var(--rose)',    hint:'장기적 감량 필요' };
+  } else {
+    if(pct < 14) return { tag:'필수 지방',   color:'var(--indigo)',  hint:'생리 기능에 필요한 최저' };
+    if(pct < 21) return { tag:'운동선수',   color:'var(--olive)',   hint:'운동선수 수준' };
+    if(pct < 25) return { tag:'건강·피트', color:'var(--olive)',   hint:'건강 구간' };
+    if(pct < 32) return { tag:'평균',       color:'#A89B85',        hint:'평균 범위 — 무난' };
+    if(pct < 38) return { tag:'과체지방',   color:'#C49A3A',        hint:'균형 식단 + 근력 운동 권장' };
+    return         { tag:'고체지방',       color:'var(--rose)',    hint:'장기적 감량 필요' };
+  }
+}
+
+/* Gender-specific summary tips (combine BMI bucket + fat bucket + sex) */
+function genderHealthTips(sex, bmiBucket, fatBucket){
+  const tips = [];
+  const isM = sex === 'male';
+  if(isM){
+    if(bmiBucket === '비만' || bmiBucket === '과체중'){
+      tips.push('🏋️ 남성 감량 — 근력 운동 유지하면서 칼로리 적자. 유산소만 하면 근육 빠짐');
+    } else if(bmiBucket === '저체중'){
+      tips.push('🍚 남성 저체중 — 단백질(체중×1.5g) + 복합탄수화물 + 근력 운동');
+    } else {
+      tips.push('💪 정상 구간 — 근력 + 단백질로 체성분 다듬기');
+    }
+    if(fatBucket === '과체지방' || fatBucket === '고체지방'){
+      tips.push('근력 운동 비중 늘리면 같은 체중에서 체지방률 빨리 내려가');
+    } else if(fatBucket === '운동선수' || fatBucket === '필수 지방'){
+      tips.push('너무 낮으면 호르몬·면역에 영향. 12% 이하 장기 유지는 비추');
+    }
+  } else {
+    if(bmiBucket === '비만' || bmiBucket === '과체중'){
+      tips.push('🌸 여성 감량 — 극단 단식보다 단백질 + 근력 운동 우선. 호르몬에 부담 적게');
+    } else if(bmiBucket === '저체중'){
+      tips.push('🍃 여성 저체중 — 생리 불순·골밀도 영향 가능. 영양·근육 모두 챙기기');
+    } else {
+      tips.push('✨ 정상 구간 — 근력 운동 추가하면 체성분 더 좋아져');
+    }
+    if(fatBucket === '필수 지방' || (fatBucket === '운동선수' && bmiBucket === '저체중')){
+      tips.push('체지방률 17% 이하 장기 유지는 생리 불순·골밀도 감소 위험. 무리 X');
+    }
+    if(fatBucket === '과체지방' || fatBucket === '고체지방'){
+      tips.push('스쿼트·데드리프트 같은 큰 근육 운동이 체지방 빠지는 데 효과적');
+    }
+    // Cycle variance reminder (always shown for female)
+    tips.push('🩸 생리 주기 영향 — 배란기·생리 전엔 1~2kg 자연 변동 정상. 같은 시점 비교가 정확');
+  }
+  return tips;
+}
+
 function bmrKcal(){
   const s = store.settings || {};
   const kg = userWeightKg();
@@ -7468,6 +7550,8 @@ function renderHealth(root){
           ${(() => {
             const cm = +(store.settings?.bodyHeight) || 0;
             const targetKg = +(store.settings?.targetWeight) || 0;
+            const sex = store.settings?.sex || 'female';
+            const sexLabel = sex === 'male' ? '남성' : '여성';
             if(!latest) return '';
             const bmi = cm > 0 ? (latest.kg / ((cm/100) * (cm/100))) : null;
             const bmiBucket = bmi == null ? null
@@ -7475,6 +7559,7 @@ function renderHealth(root){
               : bmi < 23   ? { tag:'정상',   color:'var(--olive)', advice:'지금 페이스 유지' }
               : bmi < 25   ? { tag:'과체중', color:'#C49A3A',      advice:'정상 구간까지 약간만' }
                             : { tag:'비만',   color:'var(--rose)', advice:'장기적으로 천천히 감량 권장' };
+            const fatInfo = classifyBodyFat(latest.bodyFat, sex);
             const normalMaxKg = cm > 0 ? +(22.9 * (cm/100) * (cm/100)).toFixed(1) : null;
             const normalMinKg = cm > 0 ? +(18.5 * (cm/100) * (cm/100)).toFixed(1) : null;
             const idealKg = cm > 0 ? +(21 * (cm/100) * (cm/100)).toFixed(1) : null;
@@ -7482,8 +7567,13 @@ function renderHealth(root){
               : bmi != null && bmi < 18.5 ? +(normalMinKg - latest.kg).toFixed(1)
               : 0;
             const toTarget = targetKg > 0 ? +(latest.kg - targetKg).toFixed(1) : 0;
+            const tips = bmiBucket ? genderHealthTips(sex, bmiBucket.tag, fatInfo?.tag) : [];
+            // Body fat reference range for the current sex
+            const fatRangeText = sex === 'male'
+              ? '남성 권장: 운동선수 6~14% · 건강 14~18% · 평균 18~25%'
+              : '여성 권장: 운동선수 14~21% · 건강 21~25% · 평균 25~32%';
             return `
-              <p class="label-eyebrow" style="font-size:11px;margin-top:8px">📐 체성분 분석 ${cm > 0 ? '' : '· <span style="color:var(--rose)">아래 신체 정보에 키 입력 필요</span>'}</p>
+              <p class="label-eyebrow" style="font-size:11px;margin-top:8px">📐 체성분 분석 <span class="right">${safe(sexLabel)} 기준${cm > 0 ? '' : ' · <span style="color:var(--rose)">키 입력 필요</span>'}</span></p>
               <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(110px, 1fr));gap:10px;margin:8px 0 14px">
                 <div style="padding:10px;background:var(--paper-soft);border-radius:3px;text-align:center">
                   <div style="font-family:var(--fui);font-size:10.5px;letter-spacing:.16em;color:var(--ink-muted);text-transform:uppercase">BMI</div>
@@ -7492,19 +7582,19 @@ function renderHealth(root){
                 </div>
                 <div style="padding:10px;background:var(--paper-soft);border-radius:3px;text-align:center">
                   <div style="font-family:var(--fui);font-size:10.5px;letter-spacing:.16em;color:var(--ink-muted);text-transform:uppercase">체지방률</div>
-                  <div style="font-family:var(--fd);font-weight:500;font-size:22px;color:var(--ink)">${latest.bodyFat != null ? latest.bodyFat + '%' : '—'}</div>
-                  <div style="font-family:var(--fui);font-size:10px;letter-spacing:.12em;color:var(--ink-muted);text-transform:uppercase">${latest.bodyFat != null ? 'recorded' : '미기록'}</div>
+                  <div style="font-family:var(--fd);font-weight:500;font-size:22px;color:${fatInfo?fatInfo.color:'var(--ink-muted)'}">${latest.bodyFat != null ? latest.bodyFat + '%' : '—'}</div>
+                  <div style="font-family:var(--fui);font-size:10px;letter-spacing:.12em;color:${fatInfo?fatInfo.color:'var(--ink-muted)'};text-transform:uppercase">${fatInfo?fatInfo.tag:'미기록'}</div>
                 </div>
                 <div style="padding:10px;background:var(--paper-soft);border-radius:3px;text-align:center">
                   <div style="font-family:var(--fui);font-size:10.5px;letter-spacing:.16em;color:var(--ink-muted);text-transform:uppercase">근육량</div>
                   <div style="font-family:var(--fd);font-weight:500;font-size:22px;color:var(--ink)">${latest.muscle != null ? latest.muscle + 'kg' : '—'}</div>
-                  <div style="font-family:var(--fui);font-size:10px;letter-spacing:.12em;color:var(--ink-muted);text-transform:uppercase">${latest.muscle != null ? 'recorded' : '미기록'}</div>
+                  <div style="font-family:var(--fui);font-size:10px;letter-spacing:.12em;color:var(--ink-muted);text-transform:uppercase">${latest.muscle != null ? '기록됨' : '미기록'}</div>
                 </div>
               </div>
               ${bmiBucket ? `
                 <div style="padding:12px 14px;background:var(--paper);border-left:3px solid ${bmiBucket.color};border-radius:3px;margin-bottom:10px">
                   <div style="font-family:var(--fb);font-weight:500;font-size:14.5px;color:var(--ink);line-height:1.55">
-                    ${safe(bmiBucket.tag)} 구간 · ${safe(bmiBucket.advice)}
+                    BMI ${safe(bmiBucket.tag)} · ${fatInfo ? '체지방 ' + safe(fatInfo.tag) + ' · ' : ''}${safe(bmiBucket.advice)}
                   </div>
                   ${cm > 0 ? `
                     <div style="font-family:var(--fb);font-weight:400;font-size:13.5px;color:var(--ink-soft);line-height:1.7;margin-top:6px">
@@ -7513,7 +7603,14 @@ function renderHealth(root){
                       ${targetKg > 0 ? ` · 목표(${targetKg}kg)까지 <b style="color:${toTarget>=0?'var(--rose)':'var(--olive)'}">${toTarget >= 0 ? `−${toTarget}kg` : `+${Math.abs(toTarget)}kg`}</b>` : ''}
                     </div>
                   ` : ''}
+                  ${fatInfo ? `<div style="font-family:var(--fb);font-weight:400;font-size:13px;color:var(--ink-soft);line-height:1.65;margin-top:8px;font-style:italic">${safe(fatInfo.hint)} · <span style="color:var(--ink-muted)">${safe(fatRangeText)}</span></div>` : ''}
                 </div>
+                ${tips.length ? `
+                  <div style="padding:12px 14px;background:var(--paper-soft);border-radius:3px;margin-bottom:10px">
+                    <div style="font-family:var(--fui);font-size:11px;letter-spacing:.18em;color:var(--ink-soft);text-transform:uppercase;margin-bottom:8px">${safe(sexLabel)} 맞춤 조언</div>
+                    ${tips.map(t => `<div style="font-family:var(--fb);font-weight:400;font-size:13.5px;color:var(--ink);line-height:1.65;margin-bottom:6px">·  ${safe(t)}</div>`).join('')}
+                  </div>
+                ` : ''}
               ` : ''}
               <div class="row2" style="margin-top:6px">
                 <div class="field">
