@@ -1307,6 +1307,44 @@ body.dark .toast{background:var(--ink);color:var(--bg)}
   </div>
 </div>
 
+<div id="apiKeyGuideModal" hidden style="position:fixed;inset:0;z-index:55;background:rgba(45,38,32,.6);display:none;place-items:center;padding:18px;overflow:auto">
+  <div style="background:var(--paper);background-image:var(--paper-grain-strong);max-width:560px;width:100%;border-radius:4px;padding:28px 26px;max-height:88vh;overflow-y:auto;border:1px solid var(--hairline);box-shadow:var(--shadow-page)">
+    <p class="label-eyebrow">📘 Anthropic API 키 발급 가이드</p>
+    <h2 style="font-family:var(--fd);font-weight:400;font-size:26px;margin:6px 0 4px;color:var(--ink)">한 번만 받으면 끝</h2>
+    <p style="font-family:var(--fb);font-size:13.5px;color:var(--ink-soft);margin:0 0 18px;line-height:1.65">사진·링크·대화에서 AI가 일정 추출하려면 Anthropic Claude API 키가 필요해요. 무료로 받을 수 있고 사용량만큼만 (몇 십원 단위) 과금돼요.</p>
+
+    <ol style="padding-left:22px;margin:0 0 16px;font-family:var(--fb);font-size:14.5px;line-height:1.85;color:var(--ink)">
+      <li><b>console.anthropic.com</b> 접속<br>
+        <a href="https://console.anthropic.com" target="_blank" rel="noopener" style="font-size:13px;color:var(--rose);text-decoration:underline">https://console.anthropic.com</a></li>
+      <li>Google 또는 이메일로 <b>회원가입</b> (무료, 1분이면 끝)</li>
+      <li>로그인 후 → 왼쪽 메뉴에서 <b>"API Keys"</b> 클릭</li>
+      <li><b>"Create Key"</b> 버튼 클릭</li>
+      <li>키 이름 입력 (예: "정신차려 다이어리") → 생성</li>
+      <li><b style="color:var(--rose)">⚠ sk-ant- 로 시작하는 키 복사</b> — 이 화면 한 번만 보여줘요. 안 보이면 다시 만들어야 함</li>
+      <li>이 앱에 돌아와서 <b>"Anthropic API 키"</b> 칸에 붙여넣기 → 자동 저장</li>
+    </ol>
+
+    <div style="padding:12px 14px;background:var(--paper-soft);border-radius:3px;margin-bottom:14px;border-left:3px solid var(--rose)">
+      <p style="margin:0 0 6px;font-family:var(--fb);font-weight:600;font-size:14px;color:var(--ink)">💸 비용</p>
+      <p style="margin:0;font-family:var(--fb);font-weight:400;font-size:13.5px;color:var(--ink-soft);line-height:1.7">
+        가입 시 <b style="color:var(--ink)">무료 크레딧 $5</b> 정도 제공돼요.<br>
+        일정 추출 한 번 = 대략 <b style="color:var(--ink)">0.01~0.02 달러</b> (1~30원). $5으로 수백 번 가능.<br>
+        다 쓰면 신용카드 등록 (사용량만큼만 자동 결제). 매월 사용량 한도도 설정 가능.
+      </p>
+    </div>
+
+    <div style="padding:12px 14px;background:var(--paper-soft);border-radius:3px;margin-bottom:14px">
+      <p style="margin:0 0 6px;font-family:var(--fb);font-weight:600;font-size:14px;color:var(--ink)">🔒 보안</p>
+      <p style="margin:0;font-family:var(--fb);font-weight:400;font-size:13.5px;color:var(--ink-soft);line-height:1.7">
+        키는 본인 브라우저(localStorage)에만 저장돼요 — 서버에 안 올라감.<br>
+        혹시 키가 유출됐다 싶으면 console.anthropic.com에서 그 키 삭제하고 새로 발급.
+      </p>
+    </div>
+
+    <button type="button" class="btn btn-primary" id="closeApiKeyGuide" style="width:100%">알겠어요</button>
+  </div>
+</div>
+
 <div id="privacyModal" hidden style="position:fixed;inset:0;z-index:50;background:rgba(45,38,32,.55);display:none;place-items:center;padding:18px;overflow:auto" data-mode="view">
   <div style="background:var(--paper);max-width:560px;width:100%;border-radius:4px;padding:28px 26px;max-height:88vh;overflow-y:auto;border:1px solid var(--hairline);box-shadow:var(--shadow-page)">
     <p class="label-eyebrow">개인정보처리방침</p>
@@ -1571,6 +1609,18 @@ function hidePrivacyModal(){
     modal.hidden = true;
     modal.style.display = 'none';
   }
+}
+
+function showApiKeyGuide(){
+  const m = document.getElementById('apiKeyGuideModal');
+  if(!m) return;
+  m.hidden = false;
+  m.style.display = 'grid';
+  m.scrollTop = 0;
+  const close = document.getElementById('closeApiKeyGuide');
+  if(close) close.onclick = () => { m.hidden = true; m.style.display = 'none'; };
+  // Backdrop close
+  m.onclick = (e) => { if(e.target === m){ m.hidden = true; m.style.display = 'none'; } };
 }
 function hasPrivacyConsent(){
   try{
@@ -2913,17 +2963,12 @@ function renderAdd(root){
       <div style="height:18px"></div>
       <div class="paper" id="adminPanel">
         <p class="label-eyebrow">관리자 · AI 일정 추출 <span class="right">🔒 본인만</span></p>
-        <p style="margin:6px 0 14px;font-family:var(--fb);font-weight:400;font-size:14.5px;line-height:1.7;color:var(--ink-soft)">사진·링크·대화에서 AI(Claude)가 일정을 자동으로 추출해줘요. <b style="color:var(--ink)">관리자 키만 풀려있으면 끝</b> — 추가 입력 불필요.</p>
-        <input type="hidden" id="adminApiKey" value="${safe(localStorage.getItem('admin_api_key')||'')}"/>
-        <details style="margin:0 0 14px">
-          <summary style="cursor:pointer;font-family:var(--fui);font-size:10.5px;letter-spacing:.16em;color:var(--ink-muted);text-transform:uppercase;padding:4px 0;list-style:none">⚙ 고급 — 직접 API 키 입력 (서버 환경변수 없을 때만)</summary>
-          <div class="field" style="margin-top:10px">
-            <label>Anthropic API 키 (sk-ant-…)</label>
-            <input class="input" id="adminApiKeyOverride" type="password" autocomplete="off" placeholder="비워두면 서버 환경변수 사용" value="${safe(localStorage.getItem('admin_api_key')||'')}"/>
-            <p style="margin:6px 0 0;font-family:var(--fb);font-weight:400;font-size:12.5px;color:var(--ink-muted);line-height:1.5">Vercel에 ANTHROPIC_API_KEY 환경변수를 설정한 경우 비워둬도 작동합니다. 직접 입력 시 한 번만 저장됨.</p>
-            <button type="button" class="btn btn-ghost" id="adminApiKeySave" style="margin-top:8px">키 저장</button>
-          </div>
-        </details>
+        <p style="margin:6px 0 14px;font-family:var(--fb);font-weight:400;font-size:14.5px;line-height:1.7;color:var(--ink-soft)">사진·링크·대화에서 AI(Claude)가 일정을 자동으로 추출해줘요. 한 번 키 입력해두면 다음부터 자동으로 사용돼요.</p>
+        <div class="field">
+          <label>Anthropic API 키 (sk-ant-…) <a href="#" id="apiKeyGuide" style="font-family:var(--fui);font-size:10.5px;letter-spacing:.16em;color:var(--rose);text-decoration:none;margin-left:6px">📘 발급 방법 보기</a></label>
+          <input class="input" id="adminApiKey" type="password" autocomplete="off" placeholder="첫 사용 시 한 번만 입력하면 브라우저에 저장됩니다" value="${safe(localStorage.getItem('admin_api_key')||'')}"/>
+          <p style="margin:6px 0 0;font-family:var(--fb);font-weight:400;font-size:12.5px;color:var(--ink-muted);line-height:1.5">${localStorage.getItem('admin_api_key') ? '✓ 키가 저장되어 있어요 — 바로 사용 가능' : '키가 없으면 위의 "발급 방법 보기"를 눌러보세요'}</p>
+        </div>
 
         <p class="label-eyebrow" style="margin-top:18px">📷 사진에서 추출</p>
         <div class="field">
@@ -2981,21 +3026,26 @@ function renderAdd(root){
     if(tbtn) tbtn.onclick = adminParseText;
     const ubtn = $('#adminUrlBtn');
     if(ubtn) ubtn.onclick = adminParseUrl;
-    const saveKeyBtn = $('#adminApiKeySave');
-    if(saveKeyBtn) saveKeyBtn.onclick = () => {
-      const v = ($('#adminApiKeyOverride')?.value || '').trim();
-      if(v && !v.startsWith('sk-ant-')){ toast('sk-ant-로 시작하는 키여야 해요'); return; }
-      if(v){
-        try{ localStorage.setItem('admin_api_key', v); }catch(_){}
-        // Keep hidden input in sync
-        const hidden = $('#adminApiKey'); if(hidden) hidden.value = v;
-        toast('API 키 저장됨');
-      } else {
-        try{ localStorage.removeItem('admin_api_key'); }catch(_){}
-        const hidden = $('#adminApiKey'); if(hidden) hidden.value = '';
-        toast('API 키 비움 — 서버 환경변수만 사용');
-      }
+    // Show API key guide modal
+    const guideLink = $('#apiKeyGuide');
+    if(guideLink) guideLink.onclick = (e) => {
+      e.preventDefault();
+      showApiKeyGuide();
     };
+    // Auto-save key when user types (with debounce)
+    const keyInput = $('#adminApiKey');
+    if(keyInput){
+      let saveT;
+      keyInput.addEventListener('input', () => {
+        clearTimeout(saveT);
+        saveT = setTimeout(() => {
+          const v = keyInput.value.trim();
+          if(v && v.startsWith('sk-ant-')){
+            try{ localStorage.setItem('admin_api_key', v); }catch(_){}
+          }
+        }, 800);
+      });
+    }
   }
 }
 
@@ -3336,8 +3386,8 @@ function scoreChunkAsTask(chunk){
   // Time keywords
   if(/\d{1,2}\s*시(?!간)|\d{1,2}:\d{2}|정오|자정/.test(c)) score += 2;
   if(/새벽|아침|점심|낮|저녁|밤(?!\s*늦)/.test(c)) score += 1;
-  // Action verbs (Korean)
-  if(/가야|가기|가\b|만나|해야|할\s*거|먹기|먹어야|보내|보내야|보러|읽기|쓰기|쓰야|발표|회의|미팅|운동|산책|병원|약속|시험|면접|마감|제출|예약|결제|상환|상담|레슨/.test(c)) score += 2;
+  // Action verbs (Korean) — expanded dictionary
+  if(/가야|가기|가\b|와야|만나|해야|할\s*거|할게|해 ?둬|시작|끝내|마쳐|마무리|먹기|먹어야|먹기로|보내|보내야|보러|보기|읽기|읽어야|쓰기|쓰야|적어|챙기|치워|정리|청소|빨래|설거지|배달|주문|결제|입금|송금|예약|예매|환불|반품|환승|체크인|체크아웃|픽업|드롭|뽑|찾|받|등록|신청|접수|제출|업로드|다운로드|업데이트|설치|발표|회의|미팅|면접|상담|진료|검진|치료|수술|진단|레슨|수업|강의|공부|연습|시험|복습|복기|과제|보고|기획|디자인|편집|촬영|녹음|운동|러닝|헬스|요가|필라테스|클라이밍|수영|산책|등산|병원|치과|약국|은행|관공서|약속|모임|만남|데이트|소개팅|미용실|네일|마사지|스파|마감|디데이|기한|만기|상환|결제일/.test(c)) score += 2;
   // Location names
   Object.keys(PLACE_DICT).forEach(p => { if(c.includes(p)) score += 1; });
   // Length bonus (substantial content)
@@ -3381,7 +3431,7 @@ function handleBrainDumpRuleBased(raw){
     // Reject pure-suffix residue ("기", "고", ".")
     if(/^[기고\s.,!?]+$/.test(title)) return;
     // Require either explicit date OR (inherited date + action verb in chunk)
-    const hasAction = /가야|가기|만나|해야|발표|회의|미팅|운동|병원|약속|시험|면접|마감|제출|예약|결제|상환|상담|레슨|쓰기|읽기|먹기/.test(v.chunk);
+    const hasAction = /가야|가기|가\b|만나|해야|할\s*거|먹기|먹어야|발표|회의|미팅|운동|산책|병원|약속|시험|면접|마감|제출|예약|결제|상환|상담|레슨|수업|쓰기|읽기|보러|보기|챙기|정리|청소|배달|주문|픽업|등록|신청|보고|기획|편집|촬영|녹음|러닝|헬스|요가|클라이밍|수영|등산|치과|약국|은행|모임|데이트|소개팅|미용실/.test(v.chunk);
     if(!r.hadKeyword && !lastDate && !hasAction) return; // no date anywhere + no action → drop
 
     const type = stickerType(v.chunk + ' ' + title);
@@ -3444,7 +3494,8 @@ async function handleBrainDumpWithAI(raw, apiKey){
   const today = todayKey();
   const dow = ['일','월','화','수','목','금','토'][nowKST().getDay()];
   const yr = nowKST().getFullYear();
-  const prompt = `다음은 머릿속에 떠오른 의식의 흐름(brain dump) 텍스트입니다. **잡담·감탄사·의문문·감정 표현·혼잣말은 모두 무시**하고, 실제 일정·할일·약속·마감만 추출하세요.
+  const prompt = `다음은 사용자가 머릿속에 떠오르는 대로 와다다 적은 텍스트입니다.
+당신의 임무: **잡담·감탄사·의문문·감정 표현·혼잣말을 모두 무시**하고, 사용자가 진짜로 캘린더에 넣고 싶어할 일정만 정확히 추출하기.
 
 오늘: ${today} (${dow}요일)
 
@@ -3453,22 +3504,39 @@ async function handleBrainDumpWithAI(raw, apiKey){
 ${raw}
 """
 
-규칙:
-- 감탄사 ("아", "음", "와", "ㅋㅋ", "ㅠㅠ", "헐") 무시
-- 의문문/혼잣말 ("뭐 먹지", "어디 갈까", "어떻게 하지") 무시
-- 감정 표현 ("머리 터질거같아", "짜증나", "힘들다") 무시
-- 진짜 일정만 추출 — 날짜·시간·행동·장소·약속·마감·미팅·발표 등
-- 각 일정은 **30자 이내** 한국어 제목으로
-- 같은 흐름은 하나로 묶기 (예: "삼청동 카페 + 점심" = 1개)
-- 날짜 명시 없으면 가까운 합리적 날짜 추정
-- 연도 없으면 ${yr}년. 과거면 ${yr+1}년
-- 시간 없으면 null
-- priority: 1=마감/시험/면접/제출, 2=약속/미팅/이벤트, 3=일반 할 일
+❌ 무시할 것:
+- 감탄사: "아", "어", "음", "와", "ㅋㅋ", "ㅠㅠ", "헐", "어머", "진짜", "대박"
+- 의문문/혼잣말: "뭐 먹지", "어디 갈까", "어떻게 하지", "왜 이래", "~할까"
+- 감정 표현: "머리 터질거같아", "짜증나", "힘들다", "신난다", "좋겠다", "행복해"
+- 추측·희망사항: "~하고 싶다", "~하면 좋겠다", "~해야겠지" (실제 계획이 아니라 막연한 바람)
+- 인사: "안녕", "수고", "잘 자"
 
-**JSON 배열만** 반환 (코드블록 없이):
-[{"date":"YYYY-MM-DD","time":"HH:MM 또는 null","text":"30자 이내","priority":2}]
+✅ 일정으로 추출할 것:
+- 명시적 날짜 + 행동: "5월 21일 시험", "다음주 화요일 발표"
+- 시간 + 행동: "내일 3시 미팅", "오후 7시 약속"
+- 마감·기한: "이번주까지 제출", "금요일까지 보고서"
+- 약속·이벤트: "친구 생일", "공모전 마감", "병원 예약"
 
-추출할 게 없으면 빈 배열 [] 반환.`;
+📐 정리 원칙:
+- 같은 약속 흐름은 **1개 일정으로 통합** (예: "삼청동 카페 + 점심 + 쇼룸" = "삼청동 카페·점심·쇼룸" 한 줄)
+- 각 일정 제목은 **30자 이내** 한국어, 핵심만 짧게
+- 사용자가 명시한 날짜·시간을 **그대로 정확히 사용** (추측 X)
+- 날짜만 적혔으면 time = null
+- 시간만 적혔으면 가장 가까운 날짜 추정 (오늘 또는 명시된 맥락)
+- 연도 없으면 ${yr}년. 과거면 ${yr+1}년 (다음해)
+
+📊 priority:
+- 1 = 마감·시험·면접·제출·디데이·중요 약속
+- 2 = 미팅·이벤트·약속·일반 업무
+- 3 = 가벼운 할 일·산책·운동·정리
+
+**JSON 배열만** 반환 (코드블록 \`\`\` 절대 사용 금지, 다른 설명 텍스트 금지):
+
+[
+  {"date":"YYYY-MM-DD","time":"HH:MM 또는 null","text":"30자 이내 명확한 제목","priority":2}
+]
+
+진짜 일정이 없으면 빈 배열 [] 반환. 모호한 건 추출하지 말고 확실한 것만.`;
 
   setStatus('AI 분석 중… (5~15초)');
   try{
