@@ -5884,16 +5884,78 @@ async function requestNotifyPermission(){
   return result === 'granted';
 }
 
+/* Gentle chime — major-chord arpeggio with overtones, ~2.5s, audible but refined */
+function gentleChime(){
+  if(store.settings && store.settings.soundOn === false) return;
+  try{
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if(!AC) return;
+    const ctx = new AC();
+    const now = ctx.currentTime;
+    // Master with gentle compression-like soft limiter via gain ceiling
+    const master = ctx.createGain();
+    master.gain.value = 0.9;
+    master.connect(ctx.destination);
+    // Notes: C5 → E5 → G5 → C6 (C major arpeggio, hotel-chime style)
+    const seq = [
+      { f: 523.25, t: 0.00, dur: 2.2, vol: 0.26 }, // C5
+      { f: 659.25, t: 0.18, dur: 2.2, vol: 0.22 }, // E5
+      { f: 783.99, t: 0.36, dur: 2.4, vol: 0.20 }, // G5
+      { f: 1046.50, t: 0.58, dur: 2.6, vol: 0.16 } // C6
+    ];
+    seq.forEach(({f, t, dur, vol}) => {
+      // Fundamental — sine, pure & smooth
+      const o1 = ctx.createOscillator();
+      const g1 = ctx.createGain();
+      o1.connect(g1); g1.connect(master);
+      o1.type = 'sine';
+      o1.frequency.value = f;
+      g1.gain.setValueAtTime(0, now + t);
+      g1.gain.linearRampToValueAtTime(vol, now + t + 0.05);             // soft attack
+      g1.gain.exponentialRampToValueAtTime(vol * 0.55, now + t + 0.35); // initial decay
+      g1.gain.exponentialRampToValueAtTime(0.001, now + t + dur);       // long release
+      o1.start(now + t);
+      o1.stop(now + t + dur + 0.1);
+      // Octave overtone — triangle, quiet, adds warmth
+      const o2 = ctx.createOscillator();
+      const g2 = ctx.createGain();
+      o2.connect(g2); g2.connect(master);
+      o2.type = 'triangle';
+      o2.frequency.value = f * 2;
+      g2.gain.setValueAtTime(0, now + t);
+      g2.gain.linearRampToValueAtTime(vol * 0.18, now + t + 0.08);
+      g2.gain.exponentialRampToValueAtTime(0.001, now + t + dur * 0.75);
+      o2.start(now + t);
+      o2.stop(now + t + dur * 0.75 + 0.05);
+      // Fifth harmonic — adds bell-like brilliance
+      const o3 = ctx.createOscillator();
+      const g3 = ctx.createGain();
+      o3.connect(g3); g3.connect(master);
+      o3.type = 'sine';
+      o3.frequency.value = f * 3;
+      g3.gain.setValueAtTime(0, now + t);
+      g3.gain.linearRampToValueAtTime(vol * 0.06, now + t + 0.12);
+      g3.gain.exponentialRampToValueAtTime(0.001, now + t + dur * 0.5);
+      o3.start(now + t);
+      o3.stop(now + t + dur * 0.5 + 0.05);
+    });
+  }catch(e){ /* AudioContext blocked / not allowed yet */ }
+}
+
 function pushNotify(title, body){
   if(!store.settings?.notify) return;
+  // Always play the chime when we'd notify, even if OS-level notification is blocked
+  gentleChime();
   if(notifyPermission() !== 'granted') return;
   try{
     const n = new Notification(title, {
       body,
-      icon: 'data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 64 64%22><rect width=%2264%22 height=%2264%22 rx=%2214%22 fill=%22%23F1EBE0%22/><text x=%2232%22 y=%2243%22 text-anchor=%22middle%22 font-family=%22sans-serif%22 font-size=%2228%22 font-weight=%22600%22 fill=%22%232D2620%22>정</text></svg>',
-      tag: 'todoadhd-' + Date.now()
+      icon: 'data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 64 64%22><rect width=%2264%22 height=%2264%22 rx=%2214%22 fill=%22%23F1EFEA%22/><text x=%2232%22 y=%2243%22 text-anchor=%22middle%22 font-family=%22sans-serif%22 font-size=%2228%22 font-weight=%22600%22 fill=%22%231A140E%22>정</text></svg>',
+      tag: 'todoadhd-' + Date.now(),
+      requireInteraction: false,
+      silent: false
     });
-    setTimeout(()=>n.close(), 6000);
+    setTimeout(()=>n.close(), 8000);
   }catch(e){ console.warn('notify failed', e); }
 }
 
@@ -7252,8 +7314,8 @@ function renderSettings(root){
 
         <div class="setting-row">
           <div class="setting-info">
-            <div class="setting-title">뽀모도로 알림 소리</div>
-            <div class="setting-desc">집중 / 휴식 끝났을 때 비프음</div>
+            <div class="setting-title">알림 소리 (차임벨)</div>
+            <div class="setting-desc">집중/휴식 종료 비프 + 일정 알림 차임벨 (C-E-G-C 메이저 코드, ~2.5초)</div>
           </div>
           <label class="toggle">
             <input type="checkbox" id="soundToggle" ${s.soundOn!==false?'checked':''}>
@@ -7362,8 +7424,8 @@ function renderSettings(root){
   };
 
   $('#testSound').onclick = () => {
-    beep();
-    toast('소리 들렸지?');
+    gentleChime();
+    toast('알림 차임벨 ♪ — 들렸지?');
   };
 
   $('#exportData').onclick = () => {
