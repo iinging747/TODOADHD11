@@ -1465,6 +1465,10 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const fbAuth = firebase.auth();
 const fbDB = firebase.firestore();
+// Persist login across browser restarts — only clears on explicit signOut()
+fbAuth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(e => {
+  console.warn('Auth persistence error', e);
+});
 // Offline persistence — survives reload + works without network
 fbDB.enablePersistence({synchronizeTabs: true}).catch(err => {
   if(err.code === 'failed-precondition') console.warn('Multiple tabs open, persistence not enabled');
@@ -1772,15 +1776,28 @@ async function verifyAdminPasskey(input){
   const h = await sha256Hex(input);
   if(h === ADMIN_PASSKEY_HASH){
     try{ localStorage.setItem('admin_passkey_hash', h); }catch(_){}
+    // Sync to Firestore so admin status follows the Google account across devices
+    if(currentFbUser && store){
+      store.adminUnlockedAt = Date.now();
+      saveStore('__meta');
+    }
     return true;
   }
   return false;
 }
-function lockAdmin(){ try{ localStorage.removeItem('admin_passkey_hash'); }catch(_){} }
+function lockAdmin(){
+  try{ localStorage.removeItem('admin_passkey_hash'); }catch(_){}
+  if(currentFbUser && store){
+    delete store.adminUnlockedAt;
+    saveStore('__meta');
+  }
+}
 function isAdmin(){
   try{
-    return localStorage.getItem('admin_passkey_hash') === ADMIN_PASSKEY_HASH;
-  }catch(_){ return false; }
+    if(localStorage.getItem('admin_passkey_hash') === ADMIN_PASSKEY_HASH) return true;
+  }catch(_){}
+  // Restored from Firestore — same Google account on another device
+  return !!(store && store.adminUnlockedAt);
 }
 
 /* ============ Storage wrapper (window.storage + localStorage fallback) ============ */
@@ -2026,11 +2043,25 @@ fbAuth.onAuthStateChanged(async (user) => {
     currentFbUser = user;
     try{
       await loadStore();
-      // Persist privacy acceptance into Firestore so it's visible from other devices too
+      // ===== Two-way sync: privacy consent =====
       if(hasPrivacyConsent() && !store.privacyAcceptedAt){
+        // localStorage has consent but Firestore doesn't — push up
         store.privacyAcceptedAt = Number(localStorage.getItem('privacy_accepted_at')) || Date.now();
         store.privacyVersion = '2026-05-16';
         saveStore('__meta');
+      } else if(!hasPrivacyConsent() && store.privacyAcceptedAt){
+        // Firestore has consent (other device) but this browser doesn't — pull down
+        try{ localStorage.setItem('privacy_accepted_at', String(store.privacyAcceptedAt)); }catch(_){}
+      }
+      // ===== Two-way sync: admin unlock =====
+      const hasLocalAdmin = (()=>{ try{ return localStorage.getItem('admin_passkey_hash') === ADMIN_PASSKEY_HASH; }catch(_){ return false; } })();
+      if(hasLocalAdmin && !store.adminUnlockedAt){
+        // This browser is unlocked but Firestore isn't — push up
+        store.adminUnlockedAt = Date.now();
+        saveStore('__meta');
+      } else if(!hasLocalAdmin && store.adminUnlockedAt){
+        // Same Google account unlocked admin on another device — restore here
+        try{ localStorage.setItem('admin_passkey_hash', ADMIN_PASSKEY_HASH); }catch(_){}
       }
       closeGate();
       if(!appInitialized){
@@ -2780,6 +2811,24 @@ function renderAdd(root){
 
         <div class="divider" style="margin:18px 0"></div>
 
+        <p class="label-eyebrow">💬 대화/메모에서 추출 <span class="right">카톡·이메일 등</span></p>
+        <p style="margin:4px 0 10px;font-family:var(--fb);font-weight:400;font-size:13.5px;line-height:1.65;color:var(--ink-soft)">긴 대화도 OK — AI가 약속/장소/시간만 뽑아서 1개 일정으로 정리해줘요.</p>
+        <div class="field">
+          <label>텍스트 붙여넣기</label>
+          <textarea class="textarea" id="adminTextInput" style="min-height:140px;font-family:var(--fb);font-size:14px" placeholder="[이하은] [오후 12:00] 삼청동!!! ..."></textarea>
+        </div>
+        <div class="field">
+          <label>맥락/날짜 (선택)</label>
+          <input class="input" id="adminTextIntent" placeholder="예: 다음주 토요일 약속. 비워두면 AI가 추정"/>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:8px">
+          <button class="btn btn-primary" id="adminTextBtn">대화에서 추출 →</button>
+          <span id="adminTextStatus" style="font-family:var(--fb);font-weight:400;font-size:13px;color:var(--ink-soft)"></span>
+        </div>
+        <div id="adminTextPreview" style="margin-top:14px"></div>
+
+        <div class="divider" style="margin:18px 0"></div>
+
         <p class="label-eyebrow">🔗 링크에서 추출</p>
         <div class="field">
           <label>URL (공모전/이벤트 공식 페이지)</label>
@@ -2802,6 +2851,8 @@ function renderAdd(root){
   if(isAdmin()){
     const btn = $('#adminParseBtn');
     if(btn) btn.onclick = adminParsePhoto;
+    const tbtn = $('#adminTextBtn');
+    if(tbtn) tbtn.onclick = adminParseText;
     const ubtn = $('#adminUrlBtn');
     if(ubtn) ubtn.onclick = adminParseUrl;
   }
@@ -3099,6 +3150,184 @@ async function adminParsePhoto(){
     setStatus('오류: ' + (err.message || err), true);
   } finally {
     if(btn) btn.disabled = false;
+  }
+}
+
+/* ===== Admin: Text/conversation → AI-extracted schedule ===== */
+function _renderAdminTextPreview(events){
+  const box = document.getElementById('adminTextPreview');
+  if(!box) return;
+  if(!events || !events.length){
+    box.innerHTML = '<p style="font-family:var(--fb);font-size:13px;color:var(--ink-soft)">추출된 일정이 없어요.</p>';
+    return;
+  }
+  const labels = {1:'🔥 우선', 2:'⚡ 중요', 3:'🌱 일반'};
+  const rows = events.map((e,i)=>`
+    <label style="display:grid;grid-template-columns:auto 1fr;gap:10px;align-items:flex-start;padding:10px 0;border-bottom:1px solid var(--hairline-soft)">
+      <input type="checkbox" data-adtidx="${i}" checked style="margin-top:4px"/>
+      <div>
+        <div style="font-family:var(--fb);font-weight:500;font-size:14px;color:var(--ink)">${safe(e.text||'일정')}</div>
+        <div style="font-family:var(--fui);font-size:11px;letter-spacing:.12em;color:var(--ink-soft);margin-top:3px">${safe(e.date||'')}${e.time?' · '+safe(e.time):''} · ${labels[e.priority]||'🌱 일반'}${e.location?' · '+safe(e.location):''}</div>
+      </div>
+    </label>
+  `).join('');
+  box.innerHTML = `
+    <div class="paper-soft" style="padding:14px">
+      <p class="label-eyebrow">추출된 일정 <span class="right">${events.length}개</span></p>
+      <p style="margin:4px 0 8px;font-family:var(--fb);font-weight:400;font-size:13px;color:var(--ink-soft)">체크 표시된 것만 달력에 추가됩니다.</p>
+      <div>${rows}</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px">
+        <button class="btn btn-primary" id="adminTextConfirm">선택한 일정 추가 →</button>
+        <button class="btn btn-ghost" id="adminTextCancel">취소</button>
+      </div>
+    </div>
+  `;
+  document.getElementById('adminTextConfirm').onclick = ()=>{
+    const checked = Array.from($$('#adminTextPreview [data-adtidx]'))
+      .filter(c => c.checked)
+      .map(c => events[+c.dataset.adtidx]);
+    if(!checked.length){ toast('하나 이상 선택해줘'); return; }
+    const labels2 = {1:'🔥 이건 진짜 우선',2:'⚡ 금방 끝나',3:'🌱 천천히 가도 돼'};
+    const made = checked.map(e => {
+      const lvl = (e.priority===1||e.priority===2||e.priority===3) ? e.priority : 3;
+      const txt = (e.text || '일정').toString().slice(0,30);
+      return {
+        id: Date.now() + Math.random(),
+        date: e.date,
+        time: e.time || timeFor(0, {level: lvl}),
+        text: txt,
+        type: stickerType(txt + ' ' + (e.location||'')),
+        done: false,
+        priority: lvl,
+        priorityLabel: labels2[lvl],
+        reason: e.location ? `장소: ${e.location}` : '대화에서 AI가 추출함',
+        createdAt: Date.now()
+      };
+    });
+    store.tasks = [...store.tasks, ...made];
+    saveStore('tasks');
+    selectedDate = new Date(made[0].date);
+    cursor = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1);
+    toast(`${made.length}개 추가 완료 ✦`);
+    document.getElementById('adminTextPreview').innerHTML = `<p style="font-family:var(--fb);font-size:13px;color:var(--ink-soft)">${made.length}개 추가했어요. 달력에서 확인해보세요.</p>`;
+    const ti = document.getElementById('adminTextInput'); if(ti) ti.value = '';
+  };
+  document.getElementById('adminTextCancel').onclick = ()=>{
+    document.getElementById('adminTextPreview').innerHTML = '';
+  };
+}
+
+async function adminParseText(){
+  if(!isAdmin()) return;
+  const textEl   = document.getElementById('adminTextInput');
+  const intentEl = document.getElementById('adminTextIntent');
+  const keyEl    = document.getElementById('adminApiKey');
+  const status   = document.getElementById('adminTextStatus');
+  const btn      = document.getElementById('adminTextBtn');
+  const preview  = document.getElementById('adminTextPreview');
+
+  const text   = (textEl?.value || '').trim();
+  const intent = (intentEl?.value || '').trim();
+  const apiKey = (keyEl?.value || '').trim();
+
+  const setStatus = (msg, isErr) => {
+    if(!status) return;
+    status.textContent = msg;
+    status.style.color = isErr ? 'var(--rose)' : 'var(--ink-soft)';
+  };
+
+  if(!text || text.length < 5){ setStatus('텍스트가 너무 짧아요.', true); return; }
+  if(!apiKey || !apiKey.startsWith('sk-ant-')){ setStatus('Anthropic API 키(sk-ant-…)를 입력해주세요.', true); return; }
+  try{ localStorage.setItem('admin_api_key', apiKey); }catch(_){}
+
+  btn.disabled = true;
+  preview.innerHTML = '';
+  setStatus('AI 분석 중… (10~20초)');
+
+  const today = todayKey();
+  const dow = ['일','월','화','수','목','금','토'][nowKST().getDay()];
+  const yr = nowKST().getFullYear();
+
+  const prompt = `다음 텍스트(카톡 대화 · 메모 · 이메일 등)에서 **약속/일정 정보만** 추출해서 정리해주세요.
+대화 내용 전체를 일정 텍스트로 넣지 마세요. 핵심만 30자 이내 한국어로 압축.
+
+오늘 날짜: ${today} (${dow}요일)
+${intent ? '사용자 맥락: ' + intent : ''}
+
+텍스트:
+"""
+${text}
+"""
+
+규칙:
+- 같은 약속(같은 사람·같은 장소·같은 흐름)이면 **하나의 일정**으로 통합
+- 약속 제목은 "장소 + 활동" 형태로 자연스럽게 (예: "삼청동 전시·점심·쇼룸", "북촌 카페 약속")
+- 카톡에서 "[이름] [시간]" 같은 메타 정보는 무시. 대화 본문에서만 추출
+- 날짜가 명시 안 됐으면: 사용자 맥락 우선 → 없으면 오늘부터 일주일 안의 적당한 토요일/주말 추정
+- 연도가 안 적혔으면 ${yr}년 가정. 오늘 이전이면 ${yr+1}년
+- 시간이 명시 안 되면 time은 null
+- priority: 1=중요한 미팅/약속, 2=일반 약속, 3=가벼운 만남
+- 활동의 흐름이 있으면 location 필드에 장소 명시
+
+**JSON 배열만 반환** (코드블록 표시 ()없이):
+
+[
+  {"date":"YYYY-MM-DD","time":"HH:MM 또는 null","text":"30자 이내 핵심 일정","priority":2,"location":"장소(선택)"}
+]
+
+추출할 게 없으면 빈 배열 [] 반환.`;
+
+  try{
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 2048,
+        messages: [{ role: 'user', content: prompt }]
+      })
+    });
+    if(!resp.ok){
+      const errText = await resp.text();
+      throw new Error(`API 오류 ${resp.status}: ${errText.slice(0,180)}`);
+    }
+    const data = await resp.json();
+    const textBlocks = (data.content||[]).filter(b => b.type === 'text').map(b => b.text);
+    const fullText = textBlocks.join('\n');
+    const match = fullText.match(/\[[\s\S]*\]/);
+    if(!match) throw new Error('AI 응답에서 JSON을 찾지 못했어요.');
+
+    let events;
+    try{ events = JSON.parse(match[0]); }
+    catch(e){ throw new Error('JSON 파싱 실패: ' + e.message); }
+    if(!Array.isArray(events)) throw new Error('AI가 배열 형식으로 답하지 않았어요.');
+
+    events = events
+      .filter(e => e && e.date && /^\d{4}-\d{2}-\d{2}$/.test(e.date))
+      .map(e => ({
+        date: e.date,
+        time: e.time || null,
+        text: (e.text || '약속').toString().slice(0,30),
+        priority: (e.priority===1||e.priority===2||e.priority===3) ? e.priority : 3,
+        location: e.location || null
+      }));
+
+    if(events.length === 0){
+      setStatus('약속/일정으로 인식할 수 있는 정보가 없었어요.', true);
+      btn.disabled = false; return;
+    }
+    setStatus(`${events.length}개 후보 발견 — 아래에서 확인해주세요.`);
+    _renderAdminTextPreview(events);
+  } catch(err){
+    console.warn('admin text parse error', err);
+    setStatus('오류: ' + (err.message || err), true);
+  } finally {
+    btn.disabled = false;
   }
 }
 
