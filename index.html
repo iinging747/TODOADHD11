@@ -7465,6 +7465,69 @@ function renderHealth(root){
 
           <div class="divider"></div>
 
+          ${(() => {
+            const cm = +(store.settings?.bodyHeight) || 0;
+            const targetKg = +(store.settings?.targetWeight) || 0;
+            if(!latest) return '';
+            const bmi = cm > 0 ? (latest.kg / ((cm/100) * (cm/100))) : null;
+            const bmiBucket = bmi == null ? null
+              : bmi < 18.5 ? { tag:'저체중', color:'var(--indigo)', advice:'근육량 + 영양 균형이 우선' }
+              : bmi < 23   ? { tag:'정상',   color:'var(--olive)', advice:'지금 페이스 유지' }
+              : bmi < 25   ? { tag:'과체중', color:'#C49A3A',      advice:'정상 구간까지 약간만' }
+                            : { tag:'비만',   color:'var(--rose)', advice:'장기적으로 천천히 감량 권장' };
+            const normalMaxKg = cm > 0 ? +(22.9 * (cm/100) * (cm/100)).toFixed(1) : null;
+            const normalMinKg = cm > 0 ? +(18.5 * (cm/100) * (cm/100)).toFixed(1) : null;
+            const idealKg = cm > 0 ? +(21 * (cm/100) * (cm/100)).toFixed(1) : null;
+            const toNormal = bmi != null && bmi >= 23 ? +(latest.kg - normalMaxKg).toFixed(1)
+              : bmi != null && bmi < 18.5 ? +(normalMinKg - latest.kg).toFixed(1)
+              : 0;
+            const toTarget = targetKg > 0 ? +(latest.kg - targetKg).toFixed(1) : 0;
+            return `
+              <p class="label-eyebrow" style="font-size:11px;margin-top:8px">📐 체성분 분석 ${cm > 0 ? '' : '· <span style="color:var(--rose)">아래 신체 정보에 키 입력 필요</span>'}</p>
+              <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(110px, 1fr));gap:10px;margin:8px 0 14px">
+                <div style="padding:10px;background:var(--paper-soft);border-radius:3px;text-align:center">
+                  <div style="font-family:var(--fui);font-size:10.5px;letter-spacing:.16em;color:var(--ink-muted);text-transform:uppercase">BMI</div>
+                  <div style="font-family:var(--fd);font-weight:500;font-size:22px;color:${bmiBucket?bmiBucket.color:'var(--ink-muted)'}">${bmi != null ? bmi.toFixed(1) : '—'}</div>
+                  <div style="font-family:var(--fui);font-size:10px;letter-spacing:.12em;color:${bmiBucket?bmiBucket.color:'var(--ink-muted)'};text-transform:uppercase">${bmiBucket?bmiBucket.tag:'키 필요'}</div>
+                </div>
+                <div style="padding:10px;background:var(--paper-soft);border-radius:3px;text-align:center">
+                  <div style="font-family:var(--fui);font-size:10.5px;letter-spacing:.16em;color:var(--ink-muted);text-transform:uppercase">체지방률</div>
+                  <div style="font-family:var(--fd);font-weight:500;font-size:22px;color:var(--ink)">${latest.bodyFat != null ? latest.bodyFat + '%' : '—'}</div>
+                  <div style="font-family:var(--fui);font-size:10px;letter-spacing:.12em;color:var(--ink-muted);text-transform:uppercase">${latest.bodyFat != null ? 'recorded' : '미기록'}</div>
+                </div>
+                <div style="padding:10px;background:var(--paper-soft);border-radius:3px;text-align:center">
+                  <div style="font-family:var(--fui);font-size:10.5px;letter-spacing:.16em;color:var(--ink-muted);text-transform:uppercase">근육량</div>
+                  <div style="font-family:var(--fd);font-weight:500;font-size:22px;color:var(--ink)">${latest.muscle != null ? latest.muscle + 'kg' : '—'}</div>
+                  <div style="font-family:var(--fui);font-size:10px;letter-spacing:.12em;color:var(--ink-muted);text-transform:uppercase">${latest.muscle != null ? 'recorded' : '미기록'}</div>
+                </div>
+              </div>
+              ${bmiBucket ? `
+                <div style="padding:12px 14px;background:var(--paper);border-left:3px solid ${bmiBucket.color};border-radius:3px;margin-bottom:10px">
+                  <div style="font-family:var(--fb);font-weight:500;font-size:14.5px;color:var(--ink);line-height:1.55">
+                    ${safe(bmiBucket.tag)} 구간 · ${safe(bmiBucket.advice)}
+                  </div>
+                  ${cm > 0 ? `
+                    <div style="font-family:var(--fb);font-weight:400;font-size:13.5px;color:var(--ink-soft);line-height:1.7;margin-top:6px">
+                      정상 구간 (BMI 18.5~22.9) = <b style="color:var(--ink)">${normalMinKg}~${normalMaxKg}kg</b> · 이상 21 BMI = <b style="color:var(--ink)">${idealKg}kg</b>
+                      ${toNormal > 0 ? ` · <b style="color:${bmiBucket.color}">${bmiBucket.tag === '저체중' ? `+${toNormal}kg 더` : `−${toNormal}kg 감량 시 정상`}</b>` : ''}
+                      ${targetKg > 0 ? ` · 목표(${targetKg}kg)까지 <b style="color:${toTarget>=0?'var(--rose)':'var(--olive)'}">${toTarget >= 0 ? `−${toTarget}kg` : `+${Math.abs(toTarget)}kg`}</b>` : ''}
+                    </div>
+                  ` : ''}
+                </div>
+              ` : ''}
+              <div class="row2" style="margin-top:6px">
+                <div class="field">
+                  <label>목표 몸무게 (kg, 선택)</label>
+                  <input class="input" id="targetKg" type="number" step="0.1" min="20" max="300" value="${safe(store.settings?.targetWeight||'')}" placeholder="예: 55"/>
+                </div>
+                <div class="field" style="display:flex;align-items:flex-end">
+                  <button class="btn btn-ghost" id="targetSave" style="width:100%">목표 저장</button>
+                </div>
+              </div>
+              <div class="divider"></div>
+            `;
+          })()}
+
           <div class="row2">
             <div class="field">
               <label>오늘 몸무게 (kg)</label>
@@ -7481,7 +7544,17 @@ function renderHealth(root){
               </select>
             </div>
           </div>
-          <button class="btn btn-primary" id="wtAdd">${todayWeight ? '오늘 기록 수정' : '오늘 몸무게 기록'} →</button>
+          <div class="row2">
+            <div class="field">
+              <label>체지방률 (%, 모르면 비워둬도 돼)</label>
+              <input class="input" id="wtBodyFat" type="number" step="0.1" min="3" max="60" value="${todayWeight?.bodyFat != null ? todayWeight.bodyFat : ''}" placeholder="예: 22.5"/>
+            </div>
+            <div class="field">
+              <label>근육량 (kg, 모르면 비워둬)</label>
+              <input class="input" id="wtMuscle" type="number" step="0.1" min="5" max="100" value="${todayWeight?.muscle != null ? todayWeight.muscle : ''}" placeholder="예: 24.8"/>
+            </div>
+          </div>
+          <button class="btn btn-primary" id="wtAdd">${todayWeight ? '오늘 기록 수정' : '오늘 측정값 기록'} →</button>
 
           ${recent.length >= 3 ? `
             <div style="height:14px"></div>
@@ -7492,24 +7565,49 @@ function renderHealth(root){
     </div>
   `;
 
-  // Weight save
+  // Weight + body composition save
   const wtBtn = $('#wtAdd');
   if(wtBtn) wtBtn.onclick = () => {
-    const kg = +$('#wtKg').value;
-    if(!kg || kg < 20 || kg > 300){ toast('숫자 다시 확인'); return; }
+    const kg = parseFloat($('#wtKg').value);
+    if(!kg || kg < 20 || kg > 300){ toast('몸무게 숫자 다시 확인'); return; }
+    const bf = parseFloat($('#wtBodyFat')?.value);
+    const mu = parseFloat($('#wtMuscle')?.value);
     if(!store.health) store.health = {water:{}, exercise:[], fasting:{}, supplements:[], weights:[]};
     if(!store.health.weights) store.health.weights = [];
-    // Replace today's entry if exists
     store.health.weights = store.health.weights.filter(w => w.date !== tk);
-    store.health.weights.push({
+    const entry = {
       date: tk,
       kg,
       time: $('#wtTime').value || '',
       at: Date.now()
-    });
-    saveStore();
+    };
+    if(!isNaN(bf) && bf > 0 && bf < 60) entry.bodyFat = bf;
+    if(!isNaN(mu) && mu > 0 && mu < 100) entry.muscle = mu;
+    store.health.weights.push(entry);
+    saveStore('health');
     render();
-    toast('몸무게 기록 ♡');
+    const extras = [];
+    if(entry.bodyFat != null) extras.push(`체지방 ${entry.bodyFat}%`);
+    if(entry.muscle != null) extras.push(`근육 ${entry.muscle}kg`);
+    toast(`${kg}kg 기록${extras.length?` · ${extras.join(' · ')}`:''} ♡`);
+  };
+
+  // Target weight save
+  const tgtBtn = $('#targetSave');
+  if(tgtBtn) tgtBtn.onclick = () => {
+    const v = parseFloat($('#targetKg').value);
+    if(!store.settings) store.settings = {};
+    if(isNaN(v) || v === 0){
+      delete store.settings.targetWeight;
+      toast('목표 비움');
+    } else if(v < 20 || v > 300){
+      toast('목표는 20~300kg 사이로 적어줘'); return;
+    } else {
+      store.settings.targetWeight = v;
+      toast(`목표 ${v}kg 저장 ♡`);
+    }
+    saveStore('__meta');
+    render();
   };
 
   // Water clicks
