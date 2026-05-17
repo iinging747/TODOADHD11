@@ -1696,7 +1696,33 @@ const _vaultHex = {
   fromHex: hex => { const out = new Uint8Array(hex.length/2); for(let i=0;i<out.length;i++) out[i] = parseInt(hex.substr(i*2,2),16); return out; }
 };
 let _vaultKey = null;     // in-memory CryptoKey
-let _vaultPlain = '';     // in-memory plaintext
+let _vaultPlain = '';     // in-memory plaintext (note text)
+let _vaultImages = [];    // in-memory array of {data: base64, caption}
+
+/* Compress image to JPEG ≤1200px, ~70% quality */
+async function compressImageDataUrl(file, maxDim, quality){
+  maxDim = maxDim || 1200;
+  quality = quality || 0.72;
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const scale = Math.min(1, maxDim / Math.max(img.width, img.height));
+        const w = Math.round(img.width * scale);
+        const h = Math.round(img.height * scale);
+        const canvas = document.createElement('canvas');
+        canvas.width = w; canvas.height = h;
+        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+        resolve(canvas.toDataURL('image/jpeg', quality));
+      };
+      img.onerror = () => reject(new Error('이미지 로드 실패'));
+      img.src = e.target.result;
+    };
+    reader.onerror = () => reject(new Error('파일 읽기 실패'));
+    reader.readAsDataURL(file);
+  });
+}
 
 async function vaultDeriveKey(pin, saltHex){
   const baseKey = await crypto.subtle.importKey(
@@ -1727,11 +1753,12 @@ async function vaultSetup(pin){
   const saltHex = _vaultHex.toHex(salt);
   const key = await vaultDeriveKey(pin, saltHex);
   const verify = await vaultEncrypt(key, VAULT_MAGIC);
-  const cipher = await vaultEncrypt(key, '');
+  const cipher = await vaultEncrypt(key, JSON.stringify({ text:'', images:[] }));
   store.vault = { setup: true, salt: saltHex, verify, cipher, updatedAt: Date.now() };
   saveStore('__meta');
   _vaultKey = key;
   _vaultPlain = '';
+  _vaultImages = [];
 }
 async function vaultUnlock(pin){
   if(!store.vault?.setup) return false;
@@ -1740,28 +1767,62 @@ async function vaultUnlock(pin){
     const v = await vaultDecrypt(key, store.vault.verify);
     if(v !== VAULT_MAGIC) return false;
     _vaultKey = key;
-    _vaultPlain = await vaultDecrypt(key, store.vault.cipher);
+    const raw = await vaultDecrypt(key, store.vault.cipher);
+    // Try parse as JSON (new format); fall back to legacy plain text
+    try{
+      const parsed = JSON.parse(raw);
+      if(parsed && typeof parsed === 'object' && 'text' in parsed){
+        _vaultPlain = parsed.text || '';
+        _vaultImages = Array.isArray(parsed.images) ? parsed.images : [];
+      } else {
+        _vaultPlain = raw;
+        _vaultImages = [];
+      }
+    } catch(_) {
+      _vaultPlain = raw;
+      _vaultImages = [];
+    }
     return true;
   } catch(_){ return false; }
 }
-function vaultLock(){ _vaultKey = null; _vaultPlain = ''; }
-async function vaultSave(plaintext){
+function vaultLock(){ _vaultKey = null; _vaultPlain = ''; _vaultImages = []; }
+async function vaultSave(plaintext, images){
   if(!_vaultKey || !store.vault) return false;
-  store.vault.cipher = await vaultEncrypt(_vaultKey, plaintext || '');
+  const data = {
+    text: plaintext == null ? _vaultPlain : plaintext,
+    images: images == null ? _vaultImages : images
+  };
+  store.vault.cipher = await vaultEncrypt(_vaultKey, JSON.stringify(data));
   store.vault.updatedAt = Date.now();
-  _vaultPlain = plaintext || '';
+  _vaultPlain = data.text;
+  _vaultImages = data.images;
   saveStore('__meta');
+  return true;
+}
+async function vaultAddImage(file, caption){
+  if(!_vaultKey) return false;
+  const dataUrl = await compressImageDataUrl(file);
+  _vaultImages.push({ data: dataUrl, caption: (caption||'').slice(0,80), at: Date.now() });
+  await vaultSave(_vaultPlain, _vaultImages);
+  return true;
+}
+async function vaultRemoveImage(idx){
+  if(!_vaultKey) return false;
+  if(idx < 0 || idx >= _vaultImages.length) return false;
+  _vaultImages.splice(idx, 1);
+  await vaultSave(_vaultPlain, _vaultImages);
   return true;
 }
 async function vaultChangePin(oldPin, newPin){
   const okUnlock = await vaultUnlock(oldPin);
   if(!okUnlock) return false;
-  const currentPlain = _vaultPlain;
+  const currentText = _vaultPlain;
+  const currentImages = _vaultImages.slice();
   const salt = crypto.getRandomValues(new Uint8Array(16));
   const saltHex = _vaultHex.toHex(salt);
   const key = await vaultDeriveKey(newPin, saltHex);
   const verify = await vaultEncrypt(key, VAULT_MAGIC);
-  const cipher = await vaultEncrypt(key, currentPlain);
+  const cipher = await vaultEncrypt(key, JSON.stringify({ text: currentText, images: currentImages }));
   store.vault = { setup: true, salt: saltHex, verify, cipher, updatedAt: Date.now() };
   saveStore('__meta');
   _vaultKey = key;
@@ -1769,7 +1830,7 @@ async function vaultChangePin(oldPin, newPin){
 }
 function vaultDestroy(){
   delete store.vault;
-  _vaultKey = null; _vaultPlain = '';
+  _vaultKey = null; _vaultPlain = ''; _vaultImages = [];
   saveStore('__meta');
 }
 async function verifyAdminPasskey(input){
@@ -4307,20 +4368,43 @@ function renderMemo(root){
       <div style="height:18px"></div>
     `;
   } else {
+    const imagesHtml = _vaultImages.length
+      ? `<div style="display:grid;grid-template-columns:repeat(auto-fill, minmax(140px, 1fr));gap:10px;margin-top:10px">
+          ${_vaultImages.map((img, idx) => `
+            <div style="position:relative;border:1px solid var(--hairline);border-radius:4px;overflow:hidden;background:var(--paper-soft)">
+              <img src="${img.data}" alt="${safe(img.caption||'')}" style="display:block;width:100%;height:120px;object-fit:cover;cursor:pointer" data-vaultimg="${idx}"/>
+              ${img.caption?`<div style="padding:6px 8px;font-family:var(--fb);font-weight:400;font-size:12px;color:var(--ink-soft);line-height:1.4;border-top:1px solid var(--hairline-soft)">${safe(img.caption)}</div>`:''}
+              <button type="button" data-vaultimgdel="${idx}" style="position:absolute;top:4px;right:4px;background:rgba(0,0,0,.55);color:#fff;border:0;border-radius:50%;width:24px;height:24px;cursor:pointer;font-size:13px;line-height:1" aria-label="사진 삭제">×</button>
+            </div>
+          `).join('')}
+        </div>`
+      : '<p class="empty" style="margin:8px 0 0">아직 첨부된 사진이 없어요</p>';
+
     vaultSection = `
       <div class="paper" style="border-left:3px solid var(--olive);background:linear-gradient(180deg, var(--paper) 0%, var(--paper-warm) 220%)">
         <p class="label-eyebrow">🔓 비밀 보관함 <span class="right" style="color:var(--olive)">잠금 해제됨 ✓</span></p>
-        <p style="margin:6px 0 14px;font-family:var(--fb);font-weight:500;font-size:14px;color:var(--ink);line-height:1.65">내용은 PIN으로 암호화되어 저장돼요. 페이지 나가면 자동으로 잠겨요.</p>
+        <p style="margin:6px 0 14px;font-family:var(--fb);font-weight:500;font-size:14px;color:var(--ink);line-height:1.65">텍스트 + 사진 모두 PIN으로 암호화되어 저장돼요. 페이지 나가면 자동으로 잠겨요.</p>
         <div class="field">
           <label>중요한 정보</label>
           <textarea class="textarea" id="vaultText" placeholder="비밀번호, 계좌번호, 진짜 중요한 메모…" style="min-height:200px;font-family:var(--fb)">${safe(_vaultPlain)}</textarea>
         </div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
-          <button class="btn btn-primary" id="vaultSaveBtn">저장</button>
+          <button class="btn btn-primary" id="vaultSaveBtn">텍스트 저장</button>
           <button class="btn btn-ghost" id="vaultLockBtn">잠그기 🔒</button>
           <button class="btn btn-ghost" id="vaultChangeBtn" style="margin-left:auto">PIN 변경</button>
         </div>
         <p id="vaultSaveMsg" style="margin:10px 0 0;font-family:var(--fb);font-size:13px;color:var(--ink-soft);min-height:1em"></p>
+
+        <div class="divider"></div>
+        <p class="label-eyebrow">📷 사진 첨부 <span class="right">${_vaultImages.length}장 · 암호화 저장</span></p>
+        <p style="margin:4px 0 10px;font-family:var(--fb);font-weight:400;font-size:13px;color:var(--ink-soft);line-height:1.6">자동으로 1200px·JPEG로 압축돼서 저장돼요. 카드, 신분증, 영수증 같은 거 안전하게.</p>
+        <div class="row2">
+          <div class="field"><label>사진 선택</label><input type="file" id="vaultPhotoInput" accept="image/*" style="font-family:var(--fb);font-size:13.5px;color:var(--ink-soft)"/></div>
+          <div class="field"><label>설명 (선택)</label><input class="input" id="vaultPhotoCaption" placeholder="예: 신용카드 뒷면"/></div>
+        </div>
+        <button class="btn btn-primary" id="vaultPhotoAddBtn">사진 추가 →</button>
+        <p id="vaultPhotoMsg" style="margin:8px 0 0;font-family:var(--fb);font-size:13px;color:var(--ink-soft);min-height:1em"></p>
+        ${imagesHtml}
       </div>
       <div style="height:18px"></div>
     `;
@@ -4469,6 +4553,57 @@ function renderMemo(root){
     toast('보관함 잠금 🔒');
     render();
   };
+
+  // Vault photo upload
+  const photoBtn = $('#vaultPhotoAddBtn');
+  if(photoBtn) photoBtn.onclick = async () => {
+    const fileEl = $('#vaultPhotoInput');
+    const captionEl = $('#vaultPhotoCaption');
+    const msgEl = $('#vaultPhotoMsg');
+    const file = fileEl?.files?.[0];
+    if(!file){ if(msgEl) msgEl.textContent = '사진을 먼저 골라주세요.'; return; }
+    if(file.size > 15 * 1024 * 1024){ if(msgEl) msgEl.textContent = '15MB 이하 사진만 가능해요.'; return; }
+    photoBtn.disabled = true;
+    if(msgEl){ msgEl.textContent = '압축 + 암호화 중…'; msgEl.style.color = 'var(--ink-soft)'; }
+    try{
+      await vaultAddImage(file, captionEl?.value || '');
+      toast('사진 저장됨 🔐');
+      render();
+    } catch(e){
+      if(msgEl){ msgEl.textContent = '오류: ' + (e.message || e); msgEl.style.color = 'var(--rose)'; }
+      photoBtn.disabled = false;
+    }
+  };
+
+  // Vault photo delete
+  $$('#main [data-vaultimgdel]').forEach(b => b.onclick = async () => {
+    const idx = +b.dataset.vaultimgdel;
+    if(!confirm('이 사진을 삭제할까요? 복구 불가능.')) return;
+    await vaultRemoveImage(idx);
+    toast('사진 삭제됨');
+    render();
+  });
+
+  // Vault photo enlarge (full-screen preview on click)
+  $$('#main [data-vaultimg]').forEach(img => img.onclick = () => {
+    const idx = +img.dataset.vaultimg;
+    const photo = _vaultImages[idx];
+    if(!photo) return;
+    let overlay = document.getElementById('vaultPhotoOverlay');
+    if(!overlay){
+      overlay = document.createElement('div');
+      overlay.id = 'vaultPhotoOverlay';
+      overlay.style.cssText = 'position:fixed;inset:0;z-index:60;background:rgba(0,0,0,.85);display:grid;place-items:center;cursor:zoom-out;padding:20px';
+      overlay.onclick = () => overlay.remove();
+      document.body.appendChild(overlay);
+    }
+    overlay.innerHTML = `
+      <div style="max-width:96vw;max-height:96vh;text-align:center">
+        <img src="${photo.data}" style="max-width:96vw;max-height:90vh;object-fit:contain;border-radius:4px;box-shadow:0 20px 60px rgba(0,0,0,.6)"/>
+        ${photo.caption?`<p style="color:#fff;font-family:var(--fb);font-size:14px;margin:14px 0 0">${safe(photo.caption)}</p>`:''}
+      </div>
+    `;
+  });
 
   const changeBtn = $('#vaultChangeBtn');
   if(changeBtn) changeBtn.onclick = async () => {
@@ -6020,6 +6155,22 @@ function scheduleDailyReminders(){
       sessionStorage.setItem('eve_'+todayKey(), '1');
     }
 
+    // 5b. 영양제 알림 — 등록 시간 도래 + 아직 미복용
+    (store.health?.supplements||[]).forEach((s, i) => {
+      if(!s.time || !supDueToday(s, todayKey())) return;
+      if((s.taken||{})[todayKey()]) return; // already taken
+      const [sh, sm] = s.time.split(':').map(Number);
+      const nowMin = h * 60 + m;
+      const supMin = sh * 60 + sm;
+      if(nowMin === supMin || (nowMin === supMin + 1)){
+        const key = `sup_${i}_${todayKey()}`;
+        if(!sessionStorage.getItem(key)){
+          pushNotify('💊 영양제 시간', `${s.name} — ${s.time}`);
+          sessionStorage.setItem(key, '1');
+        }
+      }
+    });
+
     // 5. 사용자가 직접 설정한 알림 (task.notify = 분 단위 offset)
     const todayK = todayKey();
     const tomorrowK = dkey(dateAdd(now, 1));
@@ -6146,15 +6297,18 @@ function supplementInfo(name){
   if(/비타민\s*d|vitamin\s*d|vit\s*d|vd/i.test(n)) info.push('뼈 건강 · 면역력 · 햇빛 적은 겨울에 특히 필요');
   if(/비타민\s*c|vitamin\s*c|vit\s*c|vc/i.test(n)) info.push('항산화 · 피로 회복 · 콜라겐 합성');
   if(/비타민\s*b|vitamin\s*b|vit\s*b|vb/i.test(n)) info.push('에너지 대사 · 신경 안정 · 피로 개선');
-  if(/오메가|omega|epa|dha|피쉬오일|fish.?oil/i.test(n)) info.push('뇌 기능 · 혈관 건강 · 항염');
-  if(/마그네슘|magnesium|mg/i.test(n)) info.push('근육 이완 · 수면 · 스트레스 완화');
+  if(/비타민\s*a|vitamin\s*a|vit\s*a/i.test(n)) info.push('시력 · 피부 · 점막 건강');
+  if(/비타민\s*e|vitamin\s*e|vit\s*e/i.test(n)) info.push('항산화 · 피부 노화 방지 · 순환');
+  if(/비타민\s*k|vitamin\s*k|vit\s*k/i.test(n)) info.push('혈액 응고 · 뼈 건강');
+  if(/오메가|omega|epa|dha|피쉬오일|fish.?oil/i.test(n)) info.push('뇌 기능 · 혈관 건강 · 항염 · 우울/불안 완화');
+  if(/마그네슘|magnesium|mg/i.test(n)) info.push('근육 이완 · 수면 · 스트레스 완화 · 두통');
   if(/철|iron|페로/i.test(n)) info.push('빈혈 예방 · 산소 운반 · 피로 개선');
-  if(/아연|zinc/i.test(n)) info.push('면역 · 피부 · 호르몬 균형');
+  if(/아연|zinc/i.test(n)) info.push('면역 · 피부 · 호르몬 균형 · 상처 회복');
   if(/칼슘|calcium/i.test(n)) info.push('뼈·치아 · 근육 수축 · 신경 전달');
-  if(/유산균|프로바이오틱|probiotic|락토|비피더스/i.test(n)) info.push('장 건강 · 면역력 · 변비 완화');
+  if(/유산균|프로바이오틱|probiotic|락토|비피더스/i.test(n)) info.push('장 건강 · 면역력 · 변비 완화 · 피부');
   if(/콜라겐|collagen/i.test(n)) info.push('피부 탄력 · 관절 건강 · 근육량 유지');
   if(/밀크씨슬|milk\s*thistle|실리마린/i.test(n)) info.push('간 보호 · 피로 회복 · 음주 후');
-  if(/루테인|lutein/i.test(n)) info.push('눈 건강 · 황반 변성 예방 · 블루라이트 차단');
+  if(/루테인|lutein|지아잔틴/i.test(n)) info.push('눈 건강 · 황반 변성 예방 · 블루라이트 차단');
   if(/엽산|folate|folic/i.test(n)) info.push('세포 분열 · 임산부 필수 · 정신 건강');
   if(/멀티비타민|multi/i.test(n)) info.push('전반적 영양 보충 · 균형이 부족할 때');
   if(/프로폴리스|propolis/i.test(n)) info.push('면역 · 항염 · 인후 보호');
@@ -6163,8 +6317,55 @@ function supplementInfo(name){
   if(/글루타민|glutamine|아미노/i.test(n)) info.push('근육 회복 · 면역 · 장 건강');
   if(/크레아틴|creatine/i.test(n)) info.push('근력 향상 · 운동 수행 · 인지 기능');
   if(/콘드로이친|글루코사민|chondroitin|glucosamine/i.test(n)) info.push('관절 · 연골 · 무릎 통증');
-  if(!info.length) info.push('이 영양제 정보를 입력하면 효능을 정리해줄게');
+  if(/코엔자임|coq10|q10/i.test(n)) info.push('심장 건강 · 에너지 생성 · 항산화');
+  if(/셀레늄|selenium/i.test(n)) info.push('항산화 · 갑상선 · 면역');
+  if(/엘카르니틴|l.?carnitine|카르니틴/i.test(n)) info.push('지방 대사 · 운동 능력');
+  if(/가르시니아|garcinia|hca/i.test(n)) info.push('체지방 감소 보조 (식욕 억제)');
+  if(/녹차|green\s*tea|egcg|카테킨/i.test(n)) info.push('항산화 · 대사 촉진');
+  if(/크릴오일|krill/i.test(n)) info.push('오메가3 · 인지질 · 흡수율 높음');
+  if(/엘테아닌|l.?theanine|테아닌/i.test(n)) info.push('이완 · 스트레스 · 집중력');
+  if(/가바|gaba/i.test(n)) info.push('진정 · 수면 · 스트레스');
+  if(/스피루리나|spirulina|클로렐라|chlorella/i.test(n)) info.push('단백질·미네랄 보충 · 해독');
+  if(/이뮨|면역|elderberry|엘더베리/i.test(n)) info.push('면역 강화 · 감기 예방');
+  if(/실리카|silica/i.test(n)) info.push('머리카락 · 손톱 · 피부');
+  if(/이노시톨|inositol/i.test(n)) info.push('불안 · PCOS · 호르몬');
+  if(!info.length) info.push('이 영양제 정보를 등록해두면 다음엔 자동으로 효능이 떠요');
   return info.join(' · ');
+}
+
+/* 영양제 추천 — 사용자 최근 감정·운동·수면 패턴 기반 */
+function supplementRecommend(){
+  const recs = [];
+  const diaries = (store.diaries||[]).slice(-14);
+  const moods = diaries.flatMap(d => Array.isArray(d.mood) ? d.mood : (d.mood ? [d.mood] : []));
+  const exercise14 = (store.health?.exercise||[]).filter(e => {
+    const cutoff = dkey(dateAdd(nowKST(), -14));
+    return e.date >= cutoff;
+  });
+  const sleepDeprived = diaries.filter(d => /못 ?자|불면|수면/.test(d.text||'')).length;
+
+  if(moods.filter(m => /피곤|지침|무기력|졸림/.test(m)).length >= 3){
+    recs.push({tag:'😪 피로 신호 많음', pick:'비타민 B군 · 마그네슘 · 홍삼 · 코엔자임 Q10'});
+  }
+  if(moods.filter(m => /불안|긴장|스트레스|압박감|복잡/.test(m)).length >= 3){
+    recs.push({tag:'😰 스트레스/불안 신호', pick:'마그네슘 · 엘테아닌 · 오메가3 · 가바'});
+  }
+  if(moods.filter(m => /우울|슬픔|무기력|외로움/.test(m)).length >= 3){
+    recs.push({tag:'☁️ 우울감 신호', pick:'오메가3 · 비타민 D · 비타민 B군'});
+  }
+  if(sleepDeprived >= 2){
+    recs.push({tag:'🌙 수면 부족 신호', pick:'마그네슘 · 멜라토닌(단기) · 엘테아닌'});
+  }
+  if(exercise14.length >= 8){
+    recs.push({tag:'💪 운동량 많음', pick:'글루타민 · 크레아틴 · 단백질 · 비타민 D'});
+  } else if(exercise14.length <= 2){
+    recs.push({tag:'🏃 활동 부족', pick:'비타민 D (햇빛 부족) · 멀티비타민'});
+  }
+  const isWinter = nowKST().getMonth() >= 10 || nowKST().getMonth() <= 2;
+  if(isWinter){
+    recs.push({tag:'❄️ 겨울 시즌', pick:'비타민 D · 비타민 C · 프로폴리스 · 아연'});
+  }
+  return recs;
 }
 
 function weightAdvice(recent){
@@ -6657,6 +6858,23 @@ function renderHealth(root){
         <button class="btn ${fastBtnAction==='stop'?'btn-ghost':'btn-primary'}" id="fastBtn">${fastBtnLabel}</button>
       </div>
 
+      <!-- SUPPLEMENT RECOMMENDATIONS -->
+      ${(()=>{
+        const recs = supplementRecommend();
+        if(!recs.length) return '';
+        return `<div class="paper-soft">
+          <p class="label-eyebrow">💊 너 컨디션 기반 추천 <span class="right">최근 2주</span></p>
+          <p style="margin:4px 0 12px;font-family:var(--fb);font-weight:400;font-size:13px;color:var(--ink-soft);line-height:1.6">최근 감정·수면·운동 데이터 기반 — 참고용. 실제 복용은 의사 상담 권장.</p>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            ${recs.map(r => `<div style="padding:10px 12px;background:var(--paper);border-left:3px solid var(--olive);border-radius:3px">
+              <div style="font-family:var(--fb);font-weight:500;font-size:14px;color:var(--ink);margin-bottom:2px">${safe(r.tag)}</div>
+              <div style="font-family:var(--fb);font-weight:400;font-size:13.5px;color:var(--ink-soft)">${safe(r.pick)}</div>
+            </div>`).join('')}
+          </div>
+        </div>
+        <div style="height:18px"></div>`;
+      })()}
+
       <!-- SUPPLEMENTS -->
       <div class="paper">
         <p class="label-eyebrow">영양제 <span class="right">오늘 ${todaySupTakenCount}/${sups.filter(s=>supDueToday(s,tk)).length} 복용</span></p>
@@ -6667,7 +6885,7 @@ function renderHealth(root){
               const due = supDueToday(s, tk);
               const freqLabel = supFreqLabel(s);
               return `<div class="sup-card ${taken?'taken':''} ${!due?'not-due':''}">
-                <button class="sup-toggle" data-suptake="${i}" ${!due?'disabled title="오늘 복용일 아님"':''}>${taken ? '✓' : ''}</button>
+                <button type="button" class="sup-toggle" data-suptake="${i}" title="${due ? '복용 체크' : '오늘 복용일은 아니지만 토글 가능'}">${taken ? '✓' : ''}</button>
                 <div class="sup-body">
                   <div class="sup-name">
                     ${safe(s.name)}
@@ -7029,15 +7247,24 @@ function renderHealth(root){
     toast('영양제 추가 ♡');
   };
 
-  // Supplement toggle
-  $$('[data-suptake]').forEach(b => b.onclick = () => {
+  // Supplement toggle — works even when not "due" today (manual override allowed)
+  $$('#main [data-suptake]').forEach(b => b.onclick = (e) => {
+    e.preventDefault();
     const i = +b.dataset.suptake;
-    const s = store.health.supplements[i];
+    const s = store.health?.supplements?.[i];
     if(!s) return;
-    if(!supDueToday(s, tk)){ toast('오늘은 복용일이 아니야'); return; }
     if(!s.taken) s.taken = {};
     s.taken[tk] = !s.taken[tk];
-    saveStore(); render();
+    s.takenAt = s.takenAt || {};
+    if(s.taken[tk]){
+      s.takenAt[tk] = Date.now();
+      toast(`${s.name} 복용 ✓`);
+    } else {
+      delete s.takenAt[tk];
+      toast(`${s.name} 복용 취소`);
+    }
+    saveStore('health');
+    render();
   });
 
   // Supplement edit (cycle through frequency options inline)
