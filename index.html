@@ -51,6 +51,9 @@
   --indigo:#7A82A8;
   --shadow-page:0 1px 0 rgba(255,255,255,.7) inset,0 30px 60px -28px rgba(80,55,25,.22),0 12px 24px -16px rgba(80,55,25,.14);
   --shadow-soft:0 8px 24px -12px rgba(80,55,25,.18);
+  /* Paper grain — fractal SVG noise (light mode: warm brown speckle) */
+  --paper-grain: url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.92' numOctaves='2' seed='5' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.42 0 0 0 0 0.36 0 0 0 0 0.28 0 0 0 0.06 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.8'/%3E%3C/svg%3E");
+  --paper-grain-strong: url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' seed='8' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.40 0 0 0 0 0.33 0 0 0 0 0.24 0 0 0 0.10 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
   --fd:'Cormorant', 'Pretendard', serif;
   --fs:'Pinyon Script', cursive;
   --fb:'Pretendard', 'Noto Sans KR', 'Apple SD Gothic Neo', sans-serif;
@@ -78,6 +81,9 @@ body.dark{
   --indigo:#A0A8CC;
   --shadow-page:0 1px 0 rgba(255,255,255,.03) inset,0 30px 60px -28px rgba(0,0,0,.6),0 12px 24px -16px rgba(0,0,0,.4);
   --shadow-soft:0 8px 24px -12px rgba(0,0,0,.5);
+  /* Paper grain — dark mode: cream-colored fiber speckle */
+  --paper-grain: url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.92' numOctaves='2' seed='5' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.92 0 0 0 0 0.86 0 0 0 0 0.74 0 0 0 0.06 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.6'/%3E%3C/svg%3E");
+  --paper-grain-strong: url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' seed='8' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.95 0 0 0 0 0.88 0 0 0 0 0.74 0 0 0 0.08 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 }
 
 *,*::before,*::after{box-sizing:border-box}
@@ -97,6 +103,8 @@ html,body{margin:0;padding:0}
 body{
   min-height:100vh;
   font-family:var(--fb);font-weight:400;color:var(--ink);font-size:15.5px;line-height:1.6;
+  background-image: var(--paper-grain);
+  background-repeat: repeat;
   background:
     radial-gradient(120% 80% at 10% 5%, #F7F1E4 0%, transparent 55%),
     radial-gradient(100% 90% at 95% 100%, #E8DEC8 0%, transparent 50%),
@@ -545,9 +553,9 @@ body.dark .pill[data-brieftab].active{
 .week-cell.notes .lbl-script{font-family:var(--fs);font-size:34px;color:var(--ink);line-height:1;margin-top:8px}
 
 .section-wrap{max-width:840px;margin:0 auto}
-.paper{background:var(--paper);border-radius:2px;padding:32px 36px;box-shadow:var(--shadow-page);position:relative}
+.paper{background-color:var(--paper);background-image:var(--paper-grain-strong);background-repeat:repeat;border-radius:2px;padding:32px 36px;box-shadow:var(--shadow-page);position:relative}
 .paper::before{content:"";position:absolute;top:0;left:36px;width:60px;height:14px;background:var(--tan-soft)}
-.paper-soft{background:var(--paper-soft);border:1px solid var(--hairline);border-radius:2px;padding:24px 28px}
+.paper-soft{background-color:var(--paper-soft);background-image:var(--paper-grain);background-repeat:repeat;border:1px solid var(--hairline);border-radius:2px;padding:24px 28px}
 
 .label-eyebrow{font-family:var(--fui);font-size:12px;letter-spacing:.22em;text-transform:uppercase;color:var(--ink);margin:0 0 14px;font-weight:600;display:flex;align-items:center;gap:12px}
 .label-eyebrow::after{content:"";flex:1;height:1px;background:var(--hairline)}
@@ -1289,9 +1297,12 @@ body.dark .toast{background:var(--ink);color:var(--bg)}
 
     <p class="gate-privacy">
       🔒 이 다이어리는 <b>너만</b> 볼 수 있어.<br>
-      Google 계정으로 안전하게 보호되고, 너만 접근 가능해.<br>
-      <span style="display:block;margin-top:8px;font-size:11.5px;color:var(--ink-muted)">로그인 후 개인정보처리방침에 동의를 받습니다.</span>
+      Google 계정으로 안전하게 보호되고, 너만 접근 가능해.
     </p>
+    <label id="privacyConsentRow" style="display:flex;gap:8px;align-items:flex-start;margin-top:14px;padding:10px 12px;background:var(--paper-soft);border-radius:3px;font-family:var(--fb);font-weight:500;font-size:13px;line-height:1.55;color:var(--ink);cursor:pointer">
+      <input type="checkbox" id="privacyConsent" style="margin-top:3px;flex-shrink:0;accent-color:var(--ink)"/>
+      <span><a href="#" id="openPrivacy" style="color:var(--ink);text-decoration:underline;font-weight:600">개인정보처리방침</a>을 읽었고 이에 동의합니다 <span style="color:var(--ink-muted);font-weight:400">(로그인 시 필수)</span></span>
+    </label>
   </div>
   </div>
 </div>
@@ -2145,13 +2156,28 @@ fbAuth.onAuthStateChanged(async (user) => {
     hidePrivacyModal();
     vaultLock();
     openGate();
-    // Show consent modal up-front if user hasn't agreed yet (before login is allowed)
-    if(!hasPrivacyConsent()){
-      setTimeout(() => {
-        // Guard: don't show if user has since logged in or already accepted
-        if(currentFbUser || hasPrivacyConsent()) return;
-        showPrivacyModal('consent');
-      }, 200);
+    // Sync inline consent checkbox with stored state
+    setTimeout(() => {
+      const cb = document.getElementById('privacyConsent');
+      if(cb) cb.checked = hasPrivacyConsent();
+    }, 100);
+  }
+});
+
+/* Inline consent checkbox listener — records consent when checked */
+document.addEventListener('change', (e) => {
+  if(e.target && e.target.id === 'privacyConsent'){
+    if(e.target.checked){
+      const ts = Date.now();
+      try{ localStorage.setItem('privacy_accepted_at', String(ts)); }catch(_){}
+      if(store){
+        store.privacyAcceptedAt = ts;
+        store.privacyVersion = '2026-05-16';
+        if(currentFbUser) saveStore('__meta');
+      }
+    } else {
+      // Uncheck = withdraw consent locally
+      try{ localStorage.removeItem('privacy_accepted_at'); }catch(_){}
     }
   }
 });
@@ -2161,9 +2187,19 @@ const gBtn = $('#googleSignInBtn');
 if(gBtn){
   gBtn.addEventListener('click', async () => {
     if(!hasPrivacyConsent()){
-      showAuthError('로그인 전에 개인정보처리방침에 먼저 동의해주세요.');
-      showPrivacyModal('consent');
-      return;
+      const cb = document.getElementById('privacyConsent');
+      if(cb && !cb.checked){
+        showAuthError('체크박스로 개인정보처리방침에 먼저 동의해주세요.');
+        cb.focus();
+        // Highlight the checkbox briefly
+        const row = document.getElementById('privacyConsentRow');
+        if(row){
+          row.style.transition = 'background .2s';
+          row.style.background = 'var(--rose-soft)';
+          setTimeout(() => { row.style.background = 'var(--paper-soft)'; }, 1200);
+        }
+        return;
+      }
     }
     hideAuthError();
     gBtn.classList.add('loading');
@@ -3143,21 +3179,10 @@ ${raw}
 
   status('AI 분석 중…');
   try{
-    const resp = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01',
-        'anthropic-dangerous-direct-browser-access': 'true'
-      },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-6', max_tokens: 1024,
-        messages: [{ role:'user', content: prompt }]
-      })
+    const data = await adminAICall({
+      model: 'claude-sonnet-4-6', max_tokens: 1024,
+      messages: [{ role:'user', content: prompt }]
     });
-    if(!resp.ok){ throw new Error('API ' + resp.status); }
-    const data = await resp.json();
     const text = (data.content||[]).filter(b=>b.type==='text').map(b=>b.text).join('\n');
     const match = text.match(/\[[\s\S]*\]/);
     if(!match) throw new Error('AI 응답에서 일정을 찾지 못함');
@@ -3419,21 +3444,10 @@ ${raw}
 
   setStatus('AI 분석 중… (5~15초)');
   try{
-    const resp = await fetch('https://api.anthropic.com/v1/messages', {
-      method:'POST',
-      headers:{
-        'Content-Type':'application/json',
-        'x-api-key':apiKey,
-        'anthropic-version':'2023-06-01',
-        'anthropic-dangerous-direct-browser-access':'true'
-      },
-      body: JSON.stringify({
-        model:'claude-sonnet-4-6', max_tokens:2048,
-        messages:[{role:'user', content:prompt}]
-      })
+    const data = await adminAICall({
+      model:'claude-sonnet-4-6', max_tokens:2048,
+      messages:[{role:'user', content:prompt}]
     });
-    if(!resp.ok) throw new Error('API ' + resp.status);
-    const data = await resp.json();
     const text = (data.content||[]).filter(b=>b.type==='text').map(b=>b.text).join('\n');
     const match = text.match(/\[[\s\S]*\]/);
     if(!match) throw new Error('AI 응답에서 일정을 못 찾음');
@@ -3613,8 +3627,10 @@ async function adminParsePhoto(){
   };
 
   if(!file){ setStatus('이미지를 먼저 골라주세요.', true); return; }
-  if(!apiKey || !apiKey.startsWith('sk-ant-')){ setStatus('Anthropic API 키(sk-ant-…)를 입력해주세요.', true); return; }
-  try{ localStorage.setItem('admin_api_key', apiKey); }catch(_){}
+  // API key is now optional — server proxy handles it. If provided, save for fallback.
+  if(apiKey && apiKey.startsWith('sk-ant-')){
+    try{ localStorage.setItem('admin_api_key', apiKey); }catch(_){}
+  }
 
   btn.disabled = true;
   setStatus('이미지 분석 중…');
@@ -3646,32 +3662,17 @@ async function adminParsePhoto(){
 - 명확한 시간이 없으면 time은 null
 - 일정이 하나도 없으면 빈 배열 [] 반환`;
 
-    const resp = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01',
-        'anthropic-dangerous-direct-browser-access': 'true'
-      },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-6',
-        max_tokens: 2048,
-        messages: [{
-          role: 'user',
-          content: [
-            { type: 'image', source: { type: 'base64', media_type: mediaType, data: base64 } },
-            { type: 'text', text: prompt }
-          ]
-        }]
-      })
+    const data = await adminAICall({
+      model: 'claude-sonnet-4-6',
+      max_tokens: 2048,
+      messages: [{
+        role: 'user',
+        content: [
+          { type: 'image', source: { type: 'base64', media_type: mediaType, data: base64 } },
+          { type: 'text', text: prompt }
+        ]
+      }]
     });
-
-    if(!resp.ok){
-      const errText = await resp.text();
-      throw new Error(`API 오류 ${resp.status}: ${errText.slice(0,180)}`);
-    }
-    const data = await resp.json();
     const text = data.content?.[0]?.text || '';
     const match = text.match(/\[[\s\S]*\]/);
     if(!match) throw new Error('AI 응답에서 일정을 찾지 못했어요.');
@@ -3724,6 +3725,54 @@ async function adminParsePhoto(){
   } finally {
     if(btn) btn.disabled = false;
   }
+}
+
+/* ===== Admin AI call — server proxy first, client fallback =====
+   Server: POST /api/admin-ai with {adminHash, anthropic: {model, max_tokens, messages, tools?}}
+   Client fallback: requires localStorage.admin_api_key (sk-ant-…) */
+async function adminAICall(anthropicBody){
+  const adminHash = (()=>{ try{ return localStorage.getItem('admin_passkey_hash') || ''; }catch(_){ return ''; } })();
+  // Try server proxy first — works when Vercel has ANTHROPIC_API_KEY env var
+  try{
+    const r = await fetch('/api/admin-ai', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ adminHash, anthropic: anthropicBody })
+    });
+    if(r.ok) return await r.json();
+    const errData = await r.json().catch(() => ({}));
+    // If server explicitly says missing env var, fall back silently
+    if(r.status === 500 && /ANTHROPIC_API_KEY/.test(errData.error || '')){
+      console.warn('Server proxy not configured, falling back to client-side key');
+    } else if(r.status === 403){
+      throw new Error('관리자 인증 실패');
+    } else if(r.status !== 500){
+      throw new Error('서버 ' + r.status + ': ' + (errData.error || ''));
+    }
+  } catch(e){
+    if(e.message === '관리자 인증 실패') throw e;
+    console.warn('Server proxy error, trying client fallback:', e.message);
+  }
+  // Fallback: direct call with locally stored Anthropic key
+  const apiKey = (()=>{ try{ return (localStorage.getItem('admin_api_key')||'').trim(); }catch(_){ return ''; } })();
+  if(!apiKey || !apiKey.startsWith('sk-ant-')){
+    throw new Error('Anthropic API 키가 필요해요 — 서버 환경변수(ANTHROPIC_API_KEY)를 설정하거나, 일정 추가 화면의 관리자 패널에서 키를 한 번 입력해주세요');
+  }
+  const resp = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': apiKey,
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true'
+    },
+    body: JSON.stringify(anthropicBody)
+  });
+  if(!resp.ok){
+    const errText = await resp.text();
+    throw new Error('API ' + resp.status + ': ' + errText.slice(0, 180));
+  }
+  return resp.json();
 }
 
 /* ===== Admin: Text/conversation → AI-extracted schedule ===== */
@@ -3810,8 +3859,10 @@ async function adminParseText(){
   };
 
   if(!text || text.length < 5){ setStatus('텍스트가 너무 짧아요.', true); return; }
-  if(!apiKey || !apiKey.startsWith('sk-ant-')){ setStatus('Anthropic API 키(sk-ant-…)를 입력해주세요.', true); return; }
-  try{ localStorage.setItem('admin_api_key', apiKey); }catch(_){}
+  // API key is now optional — server proxy handles it. If provided, save for fallback.
+  if(apiKey && apiKey.startsWith('sk-ant-')){
+    try{ localStorage.setItem('admin_api_key', apiKey); }catch(_){}
+  }
 
   btn.disabled = true;
   preview.innerHTML = '';
@@ -3851,25 +3902,11 @@ ${text}
 추출할 게 없으면 빈 배열 [] 반환.`;
 
   try{
-    const resp = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01',
-        'anthropic-dangerous-direct-browser-access': 'true'
-      },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-6',
-        max_tokens: 2048,
-        messages: [{ role: 'user', content: prompt }]
-      })
+    const data = await adminAICall({
+      model: 'claude-sonnet-4-6',
+      max_tokens: 2048,
+      messages: [{ role: 'user', content: prompt }]
     });
-    if(!resp.ok){
-      const errText = await resp.text();
-      throw new Error(`API 오류 ${resp.status}: ${errText.slice(0,180)}`);
-    }
-    const data = await resp.json();
     const textBlocks = (data.content||[]).filter(b => b.type === 'text').map(b => b.text);
     const fullText = textBlocks.join('\n');
     const match = fullText.match(/\[[\s\S]*\]/);
@@ -3991,8 +4028,10 @@ async function adminParseUrl(){
   };
 
   if(!url || !/^https?:\/\//i.test(url)){ setStatus('http(s):// 로 시작하는 URL을 넣어주세요.', true); return; }
-  if(!apiKey || !apiKey.startsWith('sk-ant-')){ setStatus('Anthropic API 키(sk-ant-…)를 입력해주세요.', true); return; }
-  try{ localStorage.setItem('admin_api_key', apiKey); }catch(_){}
+  // API key is now optional — server proxy handles it. If provided, save for fallback.
+  if(apiKey && apiKey.startsWith('sk-ant-')){
+    try{ localStorage.setItem('admin_api_key', apiKey); }catch(_){}
+  }
 
   btn.disabled = true;
   preview.innerHTML = '';
@@ -4025,27 +4064,12 @@ web_search 도구를 써서 위 URL의 페이지 내용을 확인해주세요. U
 - 페이지를 찾지 못했거나 일정이 없으면 빈 배열 [] 반환`;
 
   try{
-    const resp = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01',
-        'anthropic-dangerous-direct-browser-access': 'true'
-      },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-6',
-        max_tokens: 4096,
-        tools: [{ type: 'web_search_20250305', name: 'web_search', max_uses: 5 }],
-        messages: [{ role: 'user', content: prompt }]
-      })
+    const data = await adminAICall({
+      model: 'claude-sonnet-4-6',
+      max_tokens: 4096,
+      tools: [{ type: 'web_search_20250305', name: 'web_search', max_uses: 5 }],
+      messages: [{ role: 'user', content: prompt }]
     });
-
-    if(!resp.ok){
-      const errText = await resp.text();
-      throw new Error(`API 오류 ${resp.status}: ${errText.slice(0,200)}`);
-    }
-    const data = await resp.json();
     const textBlocks = (data.content || []).filter(b => b.type === 'text').map(b => b.text);
     const fullText = textBlocks.join('\n');
     const match = fullText.match(/\[[\s\S]*\]/);
@@ -7431,14 +7455,20 @@ function renderHealth(root){
               const taken = (s.taken||{})[tk];
               const due = supDueToday(s, tk);
               const freqLabel = supFreqLabel(s);
+              const dose = s.dose?.amount ? `${s.dose.amount}${s.dose.unit||'알'}` : '';
+              // Month-to-date cumulative dose
+              const thisMonthPrefix = tk.slice(0,7);
+              const monthTakenDays = Object.keys(s.taken||{}).filter(d => d.startsWith(thisMonthPrefix));
+              const monthAmount = dose && s.dose?.amount ? monthTakenDays.length * (+s.dose.amount) : 0;
               return `<div class="sup-card ${taken?'taken':''} ${!due?'not-due':''}">
                 <button type="button" class="sup-toggle" data-suptake="${i}" title="${due ? '복용 체크' : '오늘 복용일은 아니지만 토글 가능'}">${taken ? '✓' : ''}</button>
                 <div class="sup-body">
                   <div class="sup-name">
-                    ${safe(s.name)}
+                    ${safe(s.name)}${dose ? ` <span style="font-family:var(--fui);font-size:10.5px;letter-spacing:.12em;color:var(--rose);font-weight:600;margin-left:6px">1회 ${safe(dose)}</span>` : ''}
                     <span class="sup-freq">${freqLabel}${s.time?' · '+safe(s.time):''}</span>
                   </div>
                   <div class="sup-info">${safe(s.info || supplementInfo(s.name))}</div>
+                  ${monthAmount > 0 ? `<div style="font-family:var(--fui);font-size:10.5px;letter-spacing:.12em;color:var(--ink-muted);margin-top:4px">이번 달 누적 · ${monthTakenDays.length}회 · 총 ${monthAmount}${safe(s.dose?.unit||'')}</div>` : ''}
                   ${!due ? '<div class="sup-skip">오늘은 복용일 아니야</div>' : ''}
                 </div>
                 <div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end">
@@ -7482,7 +7512,28 @@ function renderHealth(root){
               </select>
             </div>
           </div>
-          <p class="sup-hint">이름 적으면 자동으로 효능 + 권장 복용 시간 표시</p>
+          <div class="row2">
+            <div class="field">
+              <label>1회 복용량 (수량)</label>
+              <input class="input" id="supDoseAmount" type="number" step="0.5" min="0.5" placeholder="예: 1"/>
+            </div>
+            <div class="field">
+              <label>단위</label>
+              <select class="select" id="supDoseUnit">
+                <option value="알">알</option>
+                <option value="정">정</option>
+                <option value="캡슐">캡슐</option>
+                <option value="ml">ml</option>
+                <option value="mg">mg</option>
+                <option value="g">g</option>
+                <option value="포">포</option>
+                <option value="스푼">스푼</option>
+                <option value="회">회</option>
+                <option value="방울">방울</option>
+              </select>
+            </div>
+          </div>
+          <p class="sup-hint">이름 적으면 자동으로 효능 + 권장 복용 시간 표시 · 복용량은 매번 자동 누적돼서 한 달 섭취량 확인 가능</p>
           <button class="btn btn-primary" id="supAdd">추가 →</button>
         </div>
       </div>
@@ -7985,19 +8036,26 @@ function renderHealth(root){
     if(!name){ toast('영양제 이름 입력'); return; }
     const freq = $('#supFreq').value || 'daily';
     const time = $('#supTime').value || '';
+    const doseAmount = parseFloat($('#supDoseAmount')?.value);
+    const doseUnit = $('#supDoseUnit')?.value || '알';
     if(!store.health) store.health = {water:{}, exercise:[], fasting:{}, supplements:[], weights:[]};
     if(!store.health.supplements) store.health.supplements = [];
-    store.health.supplements.push({
+    const entry = {
       name,
       info: supplementInfo(name),
       freq,
       time,
       startDow: nowKST().getDay(),
       taken:{},
+      takenAt:{},
       addedAt: Date.now()
-    });
-    saveStore(); render();
-    toast('영양제 추가 ♡');
+    };
+    if(!isNaN(doseAmount) && doseAmount > 0){
+      entry.dose = { amount: doseAmount, unit: doseUnit };
+    }
+    store.health.supplements.push(entry);
+    saveStore('health'); render();
+    toast(entry.dose ? `${name} 추가 · 1회 ${entry.dose.amount}${entry.dose.unit} ♡` : `${name} 추가 ♡`);
   };
 
   // Supplement toggle — works even when not "due" today (manual override allowed)
