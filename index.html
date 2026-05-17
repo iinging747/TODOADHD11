@@ -6280,6 +6280,98 @@ function healthAdvice(){
   return { advice, summary };
 }
 
+/* ===== MET values (kcal/kg/hr) and calorie helpers ===== */
+const MET_VALUES = {
+  '러닝':10, '걷기':3.5, '자전거':8, '수영':6,
+  '헬스':6, '요가':3, '필라테스':4, '스트레칭':2.5,
+  '홈트':5, '구기':7, '등산':7,
+  '크로스핏':12, '폴댄스':6, '폴 댄스':6, '폴 휘트니스':6,
+  '클라이밍':8, '복싱':9, '권투':9, '킥복싱':9,
+  '무에타이':10, '주짓수':10, '유도':10, '태권도':10,
+  '댄스':7, '줌바':7, '발레':5, 'k-pop':6,
+  '골프':4.5, '테니스':7, '배드민턴':5.5, '탁구':4,
+  '인라인':7, '스케이트':7, '서핑':5,
+  '스피닝':9, '스쿼시':12, '에어로빅':7, '바스켓볼':6.5,
+  '축구':7, '농구':6.5, '야구':4.5, '볼링':3.5,
+  '맨몸':5, '저글링':3, '활쏘기':3.5,
+  '기타':5
+};
+function metFor(type, subtype){
+  if(subtype && MET_VALUES[subtype] != null) return MET_VALUES[subtype];
+  return MET_VALUES[type] != null ? MET_VALUES[type] : 5;
+}
+function userWeightKg(){
+  const w = (store.health?.weights || []).slice().sort((a,b) => b.date.localeCompare(a.date));
+  return w.length ? +w[0].kg : (+(store.settings?.weightKg) || 60);
+}
+function caloriesBurned(entry){
+  if(!entry || !entry.min) return 0;
+  return Math.round(metFor(entry.type, entry.subtype) * userWeightKg() * (entry.min / 60));
+}
+function bmrKcal(){
+  const s = store.settings || {};
+  const kg = userWeightKg();
+  const cm = +s.bodyHeight || 165;
+  const age = s.birthYear ? (new Date().getFullYear() - +s.birthYear) : 30;
+  const sex = s.sex || 'female';
+  return Math.round((sex === 'male')
+    ? 10 * kg + 6.25 * cm - 5 * age + 5
+    : 10 * kg + 6.25 * cm - 5 * age - 161);
+}
+function tdeeKcal(){
+  const activity = (store.settings?.activityLevel) || 'moderate';
+  const mult = { sedentary:1.2, light:1.375, moderate:1.55, active:1.725, extreme:1.9 };
+  return Math.round(bmrKcal() * (mult[activity] || 1.55));
+}
+
+/* ===== Common food calorie dictionary (Korean meals) ===== */
+const FOOD_DICT = {
+  // 밥/면
+  '밥 한 공기':300, '잡곡밥':280, '현미밥':290, '죽 한 그릇':200,
+  '국수 1인분':400, '라면':500, '비빔국수':480, '냉면':500,
+  '비빔밥':550, '김밥':480, '주먹밥':250, '도시락':650,
+  // 국/찌개
+  '김치찌개':250, '된장찌개':200, '미역국':80, '북엇국':100,
+  '갈비탕':500, '설렁탕':450, '순두부찌개':300, '부대찌개':600,
+  // 메인
+  '돈까스':800, '치킨 1조각':250, '치킨 한 마리':1500, '제육볶음':500,
+  '불고기':400, '삼겹살 100g':330, '삼겹살 1인분':900, '갈비 1인분':800,
+  '회 1인분':300, '초밥 8피스':350, '연어 100g':200, '회덮밥':500,
+  '카레라이스':650, '오므라이스':600, '파스타':600, '쌀국수':500,
+  '피자 1조각':280, '피자 한 판':1800, '햄버거':500, '치즈버거':650,
+  '떡볶이 1인분':500, '순대':450, '튀김 1개':150, '닭갈비 1인분':600,
+  // 단백질
+  '닭가슴살 100g':165, '계란 1개':70, '두부 1모':80, '계란말이':200,
+  '오믈렛':280, '소시지 1개':100, '두유 한 잔':100,
+  // 음료
+  '아메리카노':5, '라떼':200, '카푸치노':150, '믹스커피':70,
+  '주스 한 잔':120, '탄산음료':150, '우유 한 잔':130, '요거트':100,
+  '맥주 1잔':150, '맥주 1캔':200, '소주 1잔':50, '소주 1병':500,
+  '와인 1잔':120, '하이볼':180, '막걸리 1잔':110,
+  // 과일/채소
+  '사과 1개':80, '바나나 1개':100, '오렌지 1개':70, '딸기 10개':50,
+  '귤 1개':40, '포도 1송이':150, '수박 1조각':50, '아보카도':250,
+  '샐러드':150, '시저샐러드':350, '닭가슴살 샐러드':350,
+  // 간식/디저트
+  '초콜릿 한 조각':150, '초콜릿 한 봉지':500, '아이스크림':200,
+  '도넛':350, '쿠키 1개':50, '쿠키 한 봉지':300, '식빵 1쪽':80,
+  '머핀':350, '크루아상':280, '베이글':250, '케이크 1조각':400,
+  '과자 한 봉지':500, '팝콘':400, '떡 1개':80,
+  // 토스트/샌드위치
+  '토스트':250, '샌드위치':400, '햄치즈샌드위치':500, '에그타르트':200
+};
+
+function lookupFoodCalories(name){
+  if(!name) return null;
+  const n = name.trim();
+  if(FOOD_DICT[n] != null) return FOOD_DICT[n];
+  // fuzzy: substring match
+  for(const k in FOOD_DICT){
+    if(n.includes(k) || k.includes(n)) return FOOD_DICT[k];
+  }
+  return null;
+}
+
 function renderHealth(root){
   const tk = todayKey();
   const water = store.health?.water?.[tk] || 0;
@@ -6287,6 +6379,11 @@ function renderHealth(root){
   const fasting = store.health?.fasting || {};
   const sups = store.health?.supplements || [];
   const fastHours = store.settings?.fastingHours || 16;
+  const foods = (store.health?.foods || []).filter(f => f.date === tk);
+  const todayBurnedKcal = exercise.filter(e => e.date === tk).reduce((a,e) => a + (+e.calories || 0), 0);
+  const todayEatenKcal = foods.reduce((a,f) => a + (+f.calories || 0), 0);
+  const dailyGoal = tdeeKcal();
+  const balanceKcal = todayEatenKcal - todayBurnedKcal;
 
   // This week exercise
   const weekStart = nowKST(); weekStart.setDate(weekStart.getDate() - weekStart.getDay());
@@ -6375,16 +6472,51 @@ function renderHealth(root){
         <div class="field">
           <label>운동 종류</label>
           <select class="select" id="exType">
-            <option value="러닝">러닝</option>
-            <option value="걷기">걷기</option>
-            <option value="자전거">자전거</option>
-            <option value="수영">수영</option>
-            <option value="헬스">헬스/웨이트</option>
-            <option value="요가">요가/필라테스/스트레칭</option>
-            <option value="홈트">홈트레이닝</option>
-            <option value="구기">구기/스포츠</option>
-            <option value="등산">등산/하이킹</option>
-            <option value="기타">기타</option>
+            <optgroup label="유산소">
+              <option value="러닝">러닝</option>
+              <option value="걷기">걷기</option>
+              <option value="자전거">자전거</option>
+              <option value="수영">수영</option>
+              <option value="등산">등산/하이킹</option>
+              <option value="에어로빅">에어로빅</option>
+              <option value="스피닝">스피닝</option>
+            </optgroup>
+            <optgroup label="근력/펑셔널">
+              <option value="헬스">헬스/웨이트</option>
+              <option value="크로스핏">크로스핏</option>
+              <option value="홈트">홈트레이닝</option>
+              <option value="맨몸">맨몸 트레이닝</option>
+            </optgroup>
+            <optgroup label="유연·자세">
+              <option value="요가">요가/필라테스/스트레칭</option>
+              <option value="발레">발레</option>
+            </optgroup>
+            <optgroup label="댄스/표현">
+              <option value="댄스">댄스</option>
+              <option value="폴댄스">폴댄스/폴 휘트니스</option>
+              <option value="줌바">줌바</option>
+            </optgroup>
+            <optgroup label="격투">
+              <option value="복싱">복싱/킥복싱</option>
+              <option value="무에타이">무에타이</option>
+              <option value="주짓수">주짓수/유도</option>
+              <option value="태권도">태권도</option>
+            </optgroup>
+            <optgroup label="스포츠">
+              <option value="클라이밍">클라이밍/볼더링</option>
+              <option value="골프">골프</option>
+              <option value="테니스">테니스</option>
+              <option value="배드민턴">배드민턴</option>
+              <option value="탁구">탁구</option>
+              <option value="구기">축구/농구/야구</option>
+              <option value="스쿼시">스쿼시</option>
+              <option value="볼링">볼링</option>
+            </optgroup>
+            <optgroup label="기타">
+              <option value="인라인">인라인/스케이트</option>
+              <option value="서핑">서핑</option>
+              <option value="기타">기타</option>
+            </optgroup>
           </select>
         </div>
         <div id="exFields"></div>
@@ -6398,7 +6530,7 @@ function renderHealth(root){
               const realIdx = exercise.length - 1 - idxRev;
               return `<div style="display:flex;justify-content:space-between;align-items:flex-start;padding:8px 0;border-bottom:1px solid var(--hairline-soft)">
                 <div style="flex:1;min-width:0">
-                  <div style="font-family:var(--fb);font-weight:500;font-size:14px;color:var(--ink)">${safe(e.type||'운동')}${e.subtype?` · ${safe(e.subtype)}`:''}</div>
+                  <div style="font-family:var(--fb);font-weight:500;font-size:14px;color:var(--ink)">${safe(e.type||'운동')}${e.subtype?` · ${safe(e.subtype)}`:''}${e.calories?` <span style="color:var(--rose);font-weight:600">· ${e.calories} kcal</span>`:''}</div>
                   <div style="font-family:var(--fb);font-weight:400;font-size:13.5px;color:var(--ink-soft);margin-top:2px">
                     ${e.date}${e.min?` · ${e.min}분`:''}${e.km?` · ${e.km}km`:''}${e.distance?` · ${e.distance}m`:''}${e.sets?` · ${e.sets}세트`:''}${e.reps?` × ${e.reps}회`:''}${e.weight?` · ${e.weight}kg`:''}${e.muscle?` · ${safe(e.muscle)}`:''}${e.pace?` · 페이스 ${e.pace}`:''}
                   </div>
@@ -6409,6 +6541,100 @@ function renderHealth(root){
             }).join('')}
           </div>
         ` : ''}
+      </div>
+
+      <!-- ===== CALORIE BALANCE ===== -->
+      <div class="paper">
+        <p class="label-eyebrow">🔥 오늘 칼로리 <span class="right">목표 ${dailyGoal} kcal</span></p>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;text-align:center;margin:14px 0">
+          <div style="padding:10px;background:var(--paper-soft);border-radius:3px">
+            <div style="font-family:var(--fui);font-size:10.5px;letter-spacing:.16em;color:var(--ink-muted);text-transform:uppercase">섭취</div>
+            <div style="font-family:var(--fd);font-weight:500;font-size:24px;color:var(--ink);margin-top:4px">${todayEatenKcal}</div>
+            <div style="font-family:var(--fui);font-size:10px;letter-spacing:.12em;color:var(--ink-muted);text-transform:uppercase">kcal</div>
+          </div>
+          <div style="padding:10px;background:var(--paper-soft);border-radius:3px">
+            <div style="font-family:var(--fui);font-size:10.5px;letter-spacing:.16em;color:var(--rose);text-transform:uppercase">운동 소비</div>
+            <div style="font-family:var(--fd);font-weight:500;font-size:24px;color:var(--rose);margin-top:4px">−${todayBurnedKcal}</div>
+            <div style="font-family:var(--fui);font-size:10px;letter-spacing:.12em;color:var(--ink-muted);text-transform:uppercase">kcal</div>
+          </div>
+          <div style="padding:10px;background:var(--paper-soft);border-radius:3px">
+            <div style="font-family:var(--fui);font-size:10.5px;letter-spacing:.16em;color:${balanceKcal > dailyGoal ? 'var(--rose)' : 'var(--olive)'};text-transform:uppercase">순 섭취</div>
+            <div style="font-family:var(--fd);font-weight:500;font-size:24px;color:${balanceKcal > dailyGoal ? 'var(--rose)' : 'var(--olive)'};margin-top:4px">${balanceKcal}</div>
+            <div style="font-family:var(--fui);font-size:10px;letter-spacing:.12em;color:var(--ink-muted);text-transform:uppercase">kcal</div>
+          </div>
+        </div>
+        <div style="height:8px;background:var(--paper-soft);border-radius:999px;overflow:hidden">
+          <div style="height:100%;width:${Math.min(100, (balanceKcal / dailyGoal) * 100)}%;background:linear-gradient(90deg,${balanceKcal > dailyGoal ? 'var(--rose-soft),var(--rose)' : '#A8D078,#5BA040'});transition:width .6s"></div>
+        </div>
+        <p style="margin:10px 0 0;font-family:var(--fb);font-weight:400;font-size:13.5px;color:var(--ink-soft);line-height:1.6">
+          ${balanceKcal > dailyGoal
+            ? `목표 ${dailyGoal}kcal를 ${balanceKcal - dailyGoal}kcal 초과 — 다이어트 중이면 운동 추가 권장`
+            : `목표 대비 ${dailyGoal - balanceKcal}kcal 여유 — ${dailyGoal === 0 ? '신체 정보 입력하면 더 정확해요' : '적정 페이스'}`}
+        </p>
+      </div>
+
+      <!-- ===== FOOD LOG ===== -->
+      <div class="paper">
+        <p class="label-eyebrow">🍎 식단 <span class="right">오늘 ${foods.length}개 기록</span></p>
+        <div class="row2">
+          <div class="field"><label>음식 이름 (자주 먹는 건 자동 인식)</label><input class="input" id="foodName" list="foodSuggest" placeholder="예: 김치찌개, 비빔밥, 라떼"/></div>
+          <div class="field"><label>칼로리 (kcal · 비워두면 자동)</label><input class="input" id="foodKcal" type="number" min="0" placeholder="자동으로 채워짐"/></div>
+        </div>
+        <datalist id="foodSuggest">
+          ${Object.keys(FOOD_DICT).slice(0,60).map(n => `<option value="${safe(n)}">`).join('')}
+        </datalist>
+        <button class="btn btn-primary" id="foodAdd">기록 →</button>
+        ${foods.length ? `
+          <div class="divider"></div>
+          <p class="label-eyebrow">오늘 먹은 것 <span class="right">합계 ${todayEatenKcal} kcal</span></p>
+          <div style="display:flex;flex-direction:column;gap:6px">
+            ${foods.map((f, i) => `
+              <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--hairline-soft)">
+                <div style="flex:1;min-width:0">
+                  <span style="font-family:var(--fb);font-weight:500;font-size:14px;color:var(--ink)">${safe(f.name)}</span>
+                  <span style="font-family:var(--fb);font-weight:400;font-size:13.5px;color:var(--rose);margin-left:8px">${f.calories} kcal</span>
+                </div>
+                <button class="sup-del" data-fooddel="${i}">삭제</button>
+              </div>
+            `).join('')}
+          </div>
+        ` : '<p class="empty" style="margin-top:14px">오늘 기록 없음 — 한 줄씩 적어두면 패턴이 보여</p>'}
+      </div>
+
+      <!-- ===== BMR / TDEE / 신체 정보 ===== -->
+      <div class="paper">
+        <p class="label-eyebrow">⚖️ 기초대사량 & 신체 정보 <span class="right">${bmrKcal()} kcal/일 기초</span></p>
+        <p style="margin:4px 0 14px;font-family:var(--fb);font-weight:400;font-size:13.5px;color:var(--ink-soft);line-height:1.6">
+          현재 신체 정보 기준 — 기초대사량 <b>${bmrKcal()} kcal</b> · 활동 포함 권장 섭취 <b>${tdeeKcal()} kcal</b>
+        </p>
+        <div class="row2">
+          <div class="field"><label>키 (cm)</label><input class="input" id="bodyHeight" type="number" min="100" max="220" value="${safe(store.settings?.bodyHeight||'')}" placeholder="예: 165"/></div>
+          <div class="field"><label>출생연도</label><input class="input" id="birthYear" type="number" min="1920" max="${new Date().getFullYear()-5}" value="${safe(store.settings?.birthYear||'')}" placeholder="예: 1995"/></div>
+        </div>
+        <div class="row2">
+          <div class="field">
+            <label>성별</label>
+            <select class="select" id="bodySex">
+              <option value="female" ${(store.settings?.sex||'female')==='female'?'selected':''}>여성</option>
+              <option value="male" ${(store.settings?.sex)==='male'?'selected':''}>남성</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>활동 수준</label>
+            <select class="select" id="activityLevel">
+              <option value="sedentary" ${(store.settings?.activityLevel)==='sedentary'?'selected':''}>거의 안 움직임 (×1.2)</option>
+              <option value="light" ${(store.settings?.activityLevel)==='light'?'selected':''}>가벼움 (주 1~3회 ×1.375)</option>
+              <option value="moderate" ${(store.settings?.activityLevel||'moderate')==='moderate'?'selected':''}>보통 (주 3~5회 ×1.55)</option>
+              <option value="active" ${(store.settings?.activityLevel)==='active'?'selected':''}>활발 (주 6~7회 ×1.725)</option>
+              <option value="extreme" ${(store.settings?.activityLevel)==='extreme'?'selected':''}>매우 활발 (×1.9)</option>
+            </select>
+          </div>
+        </div>
+        <button class="btn btn-primary" id="bodySave">저장 →</button>
+        <p style="margin:10px 0 0;font-family:var(--fb);font-weight:400;font-size:12px;color:var(--ink-muted);line-height:1.6;font-style:italic">
+          ※ 몸무게는 위쪽 "몸무게 기록"에서 — 최신 값이 자동으로 적용돼요 (현재 ${userWeightKg()}kg)<br>
+          ※ Mifflin-St Jeor 공식 기반 추정치. 실제와 약 ±10% 차이 가능.
+        </p>
       </div>
 
       <!-- FASTING -->
@@ -6679,7 +6905,7 @@ function renderHealth(root){
       const v = el.value.trim();
       return v || null;
     };
-    if(!store.health) store.health = {water:{}, exercise:[], fasting:{}, supplements:[], weights:[]};
+    if(!store.health) store.health = {water:{}, exercise:[], fasting:{}, supplements:[], weights:[], foods:[]};
     if(!store.health.exercise) store.health.exercise = [];
     const entry = { date: tk, type, at: Date.now() };
     const min = numOrNull('exMin'); if(min != null) entry.min = min;
@@ -6692,9 +6918,11 @@ function renderHealth(root){
     const subtype = txtOrNull('exSubtype'); if(subtype) entry.subtype = subtype;
     const pace = txtOrNull('exPace'); if(pace) entry.pace = pace;
     const notes = txtOrNull('exNotes'); if(notes) entry.notes = notes;
+    // Auto-compute calories burned
+    entry.calories = caloriesBurned(entry);
     store.health.exercise.push(entry);
     saveStore('health'); render();
-    toast('운동 기록 ♡');
+    toast(entry.calories > 0 ? `운동 기록 · −${entry.calories} kcal ♡` : '운동 기록 ♡');
   };
 
   $$('#main [data-exdel]').forEach(b => b.onclick = () => {
@@ -6703,6 +6931,60 @@ function renderHealth(root){
     store.health.exercise.splice(i, 1);
     saveStore('health'); render();
   });
+
+  // ===== Food log =====
+  const foodNameEl = $('#foodName');
+  const foodKcalEl = $('#foodKcal');
+  if(foodNameEl) foodNameEl.addEventListener('input', () => {
+    const cal = lookupFoodCalories(foodNameEl.value);
+    if(cal != null && !foodKcalEl.value){
+      foodKcalEl.placeholder = `${cal} kcal (자동 인식)`;
+      foodKcalEl.dataset.suggest = cal;
+    } else {
+      foodKcalEl.placeholder = '자동으로 채워짐';
+      delete foodKcalEl.dataset.suggest;
+    }
+  });
+  const foodAddBtn = $('#foodAdd');
+  if(foodAddBtn) foodAddBtn.onclick = () => {
+    const name = (foodNameEl.value || '').trim();
+    if(!name){ toast('음식 이름을 적어줘'); return; }
+    let kcal = parseFloat(foodKcalEl.value);
+    if(isNaN(kcal)){
+      const suggested = foodKcalEl.dataset.suggest;
+      kcal = suggested ? +suggested : lookupFoodCalories(name);
+      if(!kcal){ toast('칼로리를 직접 입력해줘 (사전에 없는 음식이야)'); return; }
+    }
+    if(!store.health) store.health = {water:{}, exercise:[], fasting:{}, supplements:[], weights:[], foods:[]};
+    if(!store.health.foods) store.health.foods = [];
+    store.health.foods.push({ date: tk, name, calories: Math.round(kcal), at: Date.now() });
+    saveStore('health'); render();
+    toast(`+${Math.round(kcal)} kcal 기록 ♡`);
+  };
+  $$('#main [data-fooddel]').forEach(b => b.onclick = () => {
+    const i = +b.dataset.fooddel;
+    const todayFoods = (store.health?.foods||[]).filter(f => f.date === tk);
+    const target = todayFoods[i];
+    if(!target) return;
+    if(!confirm(`"${target.name}" 기록을 지울까요?`)) return;
+    store.health.foods = store.health.foods.filter(f => f !== target);
+    saveStore('health'); render();
+  });
+
+  // ===== Body info save =====
+  const bodySaveBtn = $('#bodySave');
+  if(bodySaveBtn) bodySaveBtn.onclick = () => {
+    if(!store.settings) store.settings = {};
+    const h = parseFloat($('#bodyHeight').value);
+    const y = parseInt($('#birthYear').value, 10);
+    if(!isNaN(h)) store.settings.bodyHeight = h;
+    if(!isNaN(y)) store.settings.birthYear = y;
+    store.settings.sex = $('#bodySex').value;
+    store.settings.activityLevel = $('#activityLevel').value;
+    saveStore('__meta');
+    render();
+    toast(`기초대사량 ${bmrKcal()} · 권장 ${tdeeKcal()} kcal/일`);
+  };
 
   // Fasting
   $('#fastHours').onchange = () => {
