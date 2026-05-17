@@ -4417,7 +4417,14 @@ function renderMood(root){
     '무기력','외로움','그리움','쓸쓸','불안','짜증','우울','화남','분노','슬픔','후회','부끄러움','상처','억울','과부하','지침','스트레스','압박감','절망'
   ];
   const todayMoods = Array.isArray(today.mood) ? today.mood : (today.mood ? [today.mood] : []);
+  const todayPhotos = Array.isArray(today.photos) ? today.photos : [];
   const pattern = moodPatternAdvice();
+
+  // Past entries (latest 30)
+  const past = (store.diaries||[])
+    .filter(d => d.date !== todayKey() && ((d.text && d.text.trim()) || (Array.isArray(d.mood) && d.mood.length) || (Array.isArray(d.photos) && d.photos.length)))
+    .sort((a,b) => b.date.localeCompare(a.date))
+    .slice(0, 30);
 
   root.innerHTML = `
     <div class="hero"><h1 class="hero-title">DIARY</h1><span class="hero-script">today</span></div>
@@ -4425,7 +4432,7 @@ function renderMood(root){
       <div class="paper">
         <p class="label-eyebrow">감정 일기 <span class="right">${todayKey()}</span></p>
         <div class="field">
-          <label>지금 상태 <span style="font-family:var(--fb);font-weight:300;font-size:11px;color:var(--ink-muted);letter-spacing:0;text-transform:none;font-style:italic;margin-left:6px">여러 개 가능</span></label>
+          <label>지금 상태 <span style="font-family:var(--fb);font-weight:400;font-size:11px;color:var(--ink-muted);letter-spacing:0;text-transform:none;font-style:italic;margin-left:6px">여러 개 가능</span></label>
           <div class="mood-row" id="moodRow">
             ${moods.map(m => `<button data-mood="${m}" class="${todayMoods.includes(m)?'on':''}"><span class="mood-emoji">${moodToEmoji(m)}</span>${m}</button>`).join('')}
           </div>
@@ -4434,6 +4441,29 @@ function renderMood(root){
           <label>한 문장이라도</label>
           <textarea class="textarea" id="diaryText" placeholder="머릿속에 제일 시끄러운 것 하나만 적어도 돼">${safe(today.text||'')}</textarea>
         </div>
+
+        <p class="label-eyebrow" style="font-size:11px;margin-top:8px">📷 오늘의 사진 <span class="right">${todayPhotos.length}장</span></p>
+        <div class="row2">
+          <div class="field"><label>사진 선택 (1200px JPEG로 자동 압축)</label><input type="file" id="diaryPhotoInput" accept="image/*" style="font-family:var(--fb);font-size:13.5px;color:var(--ink-soft)"/></div>
+          <div class="field"><label>한 줄 캡션 (선택)</label><input class="input" id="diaryPhotoCaption" placeholder="예: 한강 노을, 좋아하는 카페"/></div>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+          <button class="btn btn-ghost" id="diaryPhotoAddBtn">사진 추가</button>
+          <span id="diaryPhotoMsg" style="font-family:var(--fb);font-size:13px;color:var(--ink-soft)"></span>
+        </div>
+        ${todayPhotos.length ? `
+          <div style="display:grid;grid-template-columns:repeat(auto-fill, minmax(120px, 1fr));gap:8px;margin-top:12px">
+            ${todayPhotos.map((p, idx) => `
+              <div style="position:relative;border:1px solid var(--hairline);border-radius:4px;overflow:hidden;background:var(--paper-soft)">
+                <img src="${p.data}" alt="${safe(p.caption||'')}" style="display:block;width:100%;height:100px;object-fit:cover;cursor:pointer" data-diaryimg-today="${idx}"/>
+                ${p.caption?`<div style="padding:5px 7px;font-family:var(--fb);font-weight:400;font-size:11.5px;color:var(--ink-soft);line-height:1.3;border-top:1px solid var(--hairline-soft)">${safe(p.caption)}</div>`:''}
+                <button type="button" data-diaryimgdel-today="${idx}" style="position:absolute;top:3px;right:3px;background:rgba(0,0,0,.55);color:#fff;border:0;border-radius:50%;width:22px;height:22px;cursor:pointer;font-size:12px;line-height:1" aria-label="삭제">×</button>
+              </div>
+            `).join('')}
+          </div>
+        ` : ''}
+
+        <div style="height:14px"></div>
         <button class="btn btn-primary" id="saveDiary">저장 →</button>
       </div>
 
@@ -4450,10 +4480,36 @@ function renderMood(root){
           ${pattern.map(a => `<p style="margin:0 0 8px;font-family:var(--fb);font-weight:400;font-size:14px;line-height:1.7;color:var(--ink);letter-spacing:.005em">·  ${a.replace(/\*\*(.+?)\*\*/g,'<b style="color:var(--ink);font-weight:500">$1</b>')}</p>`).join('')}
         </div>
       ` : ''}
+
+      ${past.length ? `
+        <div style="height:18px"></div>
+        <p class="label-eyebrow" style="max-width:none">📖 지난 일기 <span class="right">${past.length}개${(store.diaries||[]).length > past.length+1 ? ` (전체 ${(store.diaries||[]).length}개)` : ''}</span></p>
+        <div style="display:flex;flex-direction:column;gap:14px">
+          ${past.map(d => {
+            const moodTags = Array.isArray(d.mood) ? d.mood : (d.mood ? [d.mood] : []);
+            const photos = Array.isArray(d.photos) ? d.photos : [];
+            const dateLabel = (() => {
+              const dt = new Date(d.date + 'T00:00:00');
+              return `${dt.getMonth()+1}월 ${dt.getDate()}일 · ${dayNamesKR[dt.getDay()]}요일`;
+            })();
+            return `<div class="paper" data-diaryday="${d.date}" style="padding:18px 20px">
+              <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px">
+                <p style="margin:0;font-family:var(--fd);font-weight:400;font-size:22px;color:var(--ink);letter-spacing:.02em">${dateLabel}</p>
+                <span style="font-family:var(--fui);font-size:10.5px;letter-spacing:.18em;color:var(--ink-muted)">${safe(d.date)}</span>
+              </div>
+              ${moodTags.length ? `<div style="display:flex;flex-wrap:wrap;gap:6px;margin:0 0 10px">${moodTags.map(m=>`<span style="font-family:var(--fb);font-weight:500;font-size:12.5px;color:var(--ink-soft);background:var(--paper-soft);padding:3px 9px;border-radius:999px">${moodToEmoji(m)} ${safe(m)}</span>`).join('')}</div>` : ''}
+              ${d.text ? `<p style="margin:0 0 ${photos.length?'12px':'0'};font-family:var(--fb);font-weight:400;font-size:14.5px;line-height:1.75;color:var(--ink);white-space:pre-wrap">${renderTextWithLinks(d.text)}</p>` : ''}
+              ${photos.length ? `<div style="display:grid;grid-template-columns:repeat(auto-fill, minmax(120px, 1fr));gap:6px">${photos.map((p, idx) => `<img src="${p.data}" alt="${safe(p.caption||'')}" data-diaryimg-past="${d.date}|${idx}" style="display:block;width:100%;height:90px;object-fit:cover;border-radius:3px;cursor:pointer;border:1px solid var(--hairline-soft)"/>`).join('')}</div>` : ''}
+            </div>`;
+          }).join('')}
+        </div>
+      ` : ''}
     </div>
   `;
 
   let curMoods = [...todayMoods];
+  let curPhotos = [...todayPhotos];
+
   $$('#moodRow button').forEach(b => b.onclick = () => {
     const m = b.dataset.mood;
     const idx = curMoods.indexOf(m);
@@ -4463,15 +4519,78 @@ function renderMood(root){
   });
 
   const ta = $('#diaryText');
-  ta.oninput = () => { $('#diaryHint').textContent = diaryComment(ta.value); };
-  $('#saveDiary').onclick = () => {
-    const text = ta.value.trim();
+  if(ta) ta.oninput = () => { $('#diaryHint').textContent = diaryComment(ta.value); };
+
+  function persistToday(){
+    const text = (ta?.value || '').trim();
     store.diaries = store.diaries.filter(d => d.date !== todayKey());
-    store.diaries.push({date: todayKey(), mood: curMoods, text});
-    saveStore();
+    store.diaries.push({date: todayKey(), mood: curMoods, text, photos: curPhotos});
+    saveStore('diaries');
+  }
+
+  $('#saveDiary').onclick = () => {
+    persistToday();
     toast('일기 저장 ♡');
     render();
   };
+
+  // Photo add
+  const photoBtn = $('#diaryPhotoAddBtn');
+  if(photoBtn) photoBtn.onclick = async () => {
+    const fileEl = $('#diaryPhotoInput');
+    const capEl = $('#diaryPhotoCaption');
+    const msg = $('#diaryPhotoMsg');
+    const file = fileEl?.files?.[0];
+    if(!file){ if(msg) msg.textContent = '사진을 먼저 골라줘'; return; }
+    if(file.size > 15 * 1024 * 1024){ if(msg) msg.textContent = '15MB 이하만 가능'; return; }
+    photoBtn.disabled = true;
+    if(msg){ msg.textContent = '압축 중…'; msg.style.color = 'var(--ink-soft)'; }
+    try{
+      const dataUrl = await compressImageDataUrl(file);
+      curPhotos.push({ data: dataUrl, caption: (capEl?.value || '').slice(0,80), at: Date.now() });
+      persistToday();
+      toast('사진 추가 ♡');
+      render();
+    } catch(e){
+      if(msg){ msg.textContent = '오류: ' + (e.message || e); msg.style.color = 'var(--rose)'; }
+      photoBtn.disabled = false;
+    }
+  };
+
+  // Today photo delete
+  $$('#main [data-diaryimgdel-today]').forEach(b => b.onclick = () => {
+    const idx = +b.dataset.diaryimgdelToday;
+    if(!confirm('이 사진을 지울까요?')) return;
+    curPhotos.splice(idx, 1);
+    persistToday();
+    render();
+  });
+
+  // Photo lightbox (today + past)
+  const openLightbox = (src, caption) => {
+    let ov = document.getElementById('diaryPhotoOverlay');
+    if(!ov){
+      ov = document.createElement('div');
+      ov.id = 'diaryPhotoOverlay';
+      ov.style.cssText = 'position:fixed;inset:0;z-index:60;background:rgba(0,0,0,.85);display:grid;place-items:center;cursor:zoom-out;padding:20px';
+      ov.onclick = () => ov.remove();
+      document.body.appendChild(ov);
+    }
+    ov.innerHTML = `<div style="max-width:96vw;max-height:96vh;text-align:center"><img src="${src}" style="max-width:96vw;max-height:90vh;object-fit:contain;border-radius:4px;box-shadow:0 20px 60px rgba(0,0,0,.6)"/>${caption?`<p style="color:#fff;font-family:var(--fb);font-size:14px;margin:14px 0 0">${safe(caption)}</p>`:''}</div>`;
+  };
+
+  $$('#main [data-diaryimg-today]').forEach(img => img.onclick = () => {
+    const idx = +img.dataset.diaryimgToday;
+    const p = curPhotos[idx]; if(!p) return;
+    openLightbox(p.data, p.caption);
+  });
+
+  $$('#main [data-diaryimg-past]').forEach(img => img.onclick = () => {
+    const [date, idxStr] = img.dataset.diaryimgPast.split('|');
+    const entry = store.diaries.find(d => d.date === date);
+    const p = entry?.photos?.[+idxStr];
+    if(p) openLightbox(p.data, p.caption);
+  });
 }
 
 /* ============ Link extraction + preview cards ============ */
