@@ -304,15 +304,15 @@ input,textarea,select{font-family:inherit;color:inherit;background:none;border:0
 .nav-section{display:flex;flex-direction:column;gap:1px}
 .nav-section h4{font-family:var(--fui);font-size:10px;font-weight:500;letter-spacing:.22em;text-transform:uppercase;color:var(--ink-muted);margin:0 0 10px;padding:0 4px}
 .nav-item{
-  display:flex;align-items:center;gap:10px;padding:8px 4px;border-radius:0;
-  text-align:left;font-family:var(--fb);font-weight:400;font-size:13.5px;
+  display:flex;align-items:center;gap:11px;padding:10px 4px;border-radius:0;
+  text-align:left;font-family:var(--fb);font-weight:500;font-size:14.5px;
   color:var(--ink-soft);letter-spacing:.005em;
-  border-left:1px solid transparent;padding-left:14px;
+  border-left:1.5px solid transparent;padding-left:14px;
   transition:color .15s, border-color .15s, padding-left .2s;
 }
 .nav-item:hover{color:var(--ink);padding-left:18px}
-.nav-item.active{color:var(--ink);border-left-color:var(--ink);font-weight:500}
-.nav-item .ico{font-family:var(--fui);font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-muted);width:18px;flex-shrink:0}
+.nav-item.active{color:var(--ink);border-left-color:var(--ink);font-weight:600;background:var(--paper-soft)}
+.nav-item .ico{font-family:var(--fui);font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-muted);width:20px;flex-shrink:0;font-weight:600}
 .nav-item.active .ico{color:var(--ink)}
 
 .rail-bottom{margin-top:auto;padding-top:18px;border-top:1px solid var(--hairline);display:flex;flex-direction:column;gap:12px}
@@ -549,9 +549,9 @@ body.dark .pill[data-brieftab].active{
 .paper::before{content:"";position:absolute;top:0;left:36px;width:60px;height:14px;background:var(--tan-soft)}
 .paper-soft{background:var(--paper-soft);border:1px solid var(--hairline);border-radius:2px;padding:24px 28px}
 
-.label-eyebrow{font-family:var(--fui);font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--ink-soft);margin:0 0 14px;font-weight:500;display:flex;align-items:center;gap:12px}
+.label-eyebrow{font-family:var(--fui);font-size:12px;letter-spacing:.22em;text-transform:uppercase;color:var(--ink);margin:0 0 14px;font-weight:600;display:flex;align-items:center;gap:12px}
 .label-eyebrow::after{content:"";flex:1;height:1px;background:var(--hairline)}
-.label-eyebrow .right{flex:initial;font-family:var(--fui);font-size:10px;letter-spacing:.16em;color:var(--ink-muted);font-weight:400}
+.label-eyebrow .right{flex:initial;font-family:var(--fui);font-size:11px;letter-spacing:.16em;color:var(--ink-muted);font-weight:500}
 
 .field{display:flex;flex-direction:column;gap:8px;margin-bottom:18px}
 .field label{font-family:var(--fui);font-size:10.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--ink-soft);font-weight:500}
@@ -1425,6 +1425,7 @@ body.dark .toast{background:var(--ink);color:var(--bg)}
         <span class="name" id="userName">—</span>
         <button class="signout" id="signOut">로그아웃</button>
       </div>
+      <div id="railLevel" style="margin-top:14px;padding-top:14px;border-top:1px solid var(--hairline-soft)"></div>
     </div>
   </aside>
 
@@ -2566,6 +2567,7 @@ function render(){
   if(currentFbUser){
     const name = currentFbUser.displayName || (currentFbUser.email||'').split('@')[0] || 'me';
     const un = $('#userName'); if(un) un.textContent = name;
+    const rl = $('#railLevel'); if(rl) rl.innerHTML = renderLevelMini();
     const ui = $('#userInit');
     if(ui){
       if(currentFbUser.photoURL){
@@ -6642,6 +6644,234 @@ function renderHealth(root){
 }
 
 /* ============ REPORT ============ */
+/* ===== Level system — growth tree theme ===== */
+const LEVELS = [
+  { key:'seed',     name:'콩알',     min:0,    desc:'작은 시작, 그게 전부야' },
+  { key:'sprout',   name:'새싹',     min:15,   desc:'첫 잎이 났어' },
+  { key:'leaf',     name:'초록잎',   min:40,   desc:'잎이 단단해지고 있어' },
+  { key:'sunleaf',  name:'햇살잎',   min:90,   desc:'햇빛을 듬뿍 받고 있어' },
+  { key:'softtree', name:'말랑나무', min:180,  desc:'부드러운 첫 나무가 됐어' },
+  { key:'pufftree', name:'몽실나무', min:360,  desc:'풍성한 나뭇잎이 자랐어' },
+  { key:'flower',   name:'반짝꽃',   min:660,  desc:'꽃이 피기 시작했어' },
+  { key:'fruit',    name:'열매요정', min:1100, desc:'열매가 익어가고 있어' },
+  { key:'keeper',   name:'숲지기',   min:2000, desc:'온전한 숲을 지키는 사람' }
+];
+
+function calcPoints(){
+  const tasks = (store.tasks||[]).filter(t => t.done).length;
+  const diaries = (store.diaries||[]).length;
+  const memos = (store.memos||[]).length;
+  const focus = (store.focusLog||[]).filter(f => f.kind !== 'break').length;
+  const exercises = (store.health?.exercise||[]).length;
+  const streak = +(store.streak?.count) || 0;
+  const goalsHit = +(store.goalsHit) || 0;
+  return (
+    tasks * 1 +
+    diaries * 2 +
+    memos * 1 +
+    focus * 1 +
+    exercises * 3 +
+    streak * 1 +
+    goalsHit * 10
+  );
+}
+
+function getLevelInfo(points){
+  let current = LEVELS[0], next = LEVELS[1] || null;
+  for(let i = 0; i < LEVELS.length; i++){
+    if(points >= LEVELS[i].min){
+      current = LEVELS[i];
+      next = LEVELS[i+1] || null;
+    }
+  }
+  const progress = next
+    ? Math.min(100, Math.round(((points - current.min) / (next.min - current.min)) * 100))
+    : 100;
+  return { current, next, progress, points };
+}
+
+function levelSvg(key, size){
+  const s = size || 96;
+  const svgs = {
+    'seed': `<svg viewBox="0 0 64 64" width="${s}" height="${s}" xmlns="http://www.w3.org/2000/svg">
+      <defs><radialGradient id="seedG" cx="40%" cy="35%"><stop offset="0%" stop-color="#E8C49B"/><stop offset="100%" stop-color="#B58755"/></radialGradient></defs>
+      <ellipse cx="32" cy="58" rx="14" ry="3" fill="#3D2914" opacity=".18"/>
+      <ellipse cx="32" cy="38" rx="13" ry="17" fill="url(#seedG)"/>
+      <ellipse cx="27" cy="30" rx="3.5" ry="5.5" fill="#F0D6B0" opacity=".6"/>
+      <path d="M 32 22 Q 28 18 30 12" stroke="#7A9050" stroke-width="2" fill="none" stroke-linecap="round"/>
+      <circle cx="30" cy="12" r="2" fill="#7A9050"/>
+      <circle cx="22" cy="50" r="1.2" fill="#7A6E58" opacity=".5"/>
+      <circle cx="44" cy="48" r="1" fill="#7A6E58" opacity=".5"/>
+    </svg>`,
+
+    'sprout': `<svg viewBox="0 0 64 64" width="${s}" height="${s}" xmlns="http://www.w3.org/2000/svg">
+      <ellipse cx="32" cy="58" rx="18" ry="3" fill="#3D2914" opacity=".18"/>
+      <path d="M 22 58 Q 32 56 42 58 L 40 56 L 24 56 Z" fill="#8B6F47" opacity=".7"/>
+      <path d="M 32 56 Q 32 42 32 30" stroke="#5C8A3C" stroke-width="3" fill="none" stroke-linecap="round"/>
+      <ellipse cx="22" cy="32" rx="9" ry="6" fill="#8AC068" transform="rotate(-25 22 32)"/>
+      <ellipse cx="22" cy="32" rx="6" ry="3" fill="#A8D278" transform="rotate(-25 22 32)" opacity=".7"/>
+      <ellipse cx="42" cy="28" rx="9" ry="6" fill="#7AB058" transform="rotate(25 42 28)"/>
+      <ellipse cx="42" cy="28" rx="6" ry="3" fill="#9AC668" transform="rotate(25 42 28)" opacity=".7"/>
+      <circle cx="32" cy="22" r="2.5" fill="#A8D278"/>
+    </svg>`,
+
+    'leaf': `<svg viewBox="0 0 64 64" width="${s}" height="${s}" xmlns="http://www.w3.org/2000/svg">
+      <ellipse cx="32" cy="60" rx="14" ry="2" fill="#3D2914" opacity=".15"/>
+      <path d="M 32 60 Q 32 44 32 32" stroke="#4A6E2F" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+      <ellipse cx="32" cy="28" rx="20" ry="15" fill="#5BA040" transform="rotate(-12 32 28)"/>
+      <ellipse cx="28" cy="24" rx="11" ry="6" fill="#7AC050" opacity=".6" transform="rotate(-15 28 24)"/>
+      <path d="M 16 30 Q 32 28 48 26" stroke="#4A6E2F" stroke-width="1.2" fill="none" opacity=".5"/>
+      <path d="M 22 22 Q 28 24 34 22" stroke="#4A6E2F" stroke-width=".8" fill="none" opacity=".4"/>
+      <path d="M 30 32 Q 36 30 42 32" stroke="#4A6E2F" stroke-width=".8" fill="none" opacity=".4"/>
+    </svg>`,
+
+    'sunleaf': `<svg viewBox="0 0 64 64" width="${s}" height="${s}" xmlns="http://www.w3.org/2000/svg">
+      <defs><radialGradient id="sunG"><stop offset="0%" stop-color="#FCE598"/><stop offset="100%" stop-color="#F4C540"/></radialGradient></defs>
+      <circle cx="50" cy="14" r="6" fill="url(#sunG)"/>
+      <g stroke="#F4C540" stroke-width="1.5" stroke-linecap="round" opacity=".75">
+        <line x1="50" y1="3" x2="50" y2="6"/>
+        <line x1="60" y1="14" x2="62" y2="14"/>
+        <line x1="50" y1="24" x2="50" y2="22"/>
+        <line x1="42" y1="6" x2="44" y2="8"/>
+        <line x1="58" y1="6" x2="56" y2="8"/>
+        <line x1="58" y1="22" x2="56" y2="20"/>
+      </g>
+      <path d="M 32 60 Q 32 46 32 36" stroke="#4A6E2F" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+      <ellipse cx="32" cy="36" rx="20" ry="15" fill="#B5D068" transform="rotate(-10 32 36)"/>
+      <ellipse cx="26" cy="32" rx="10" ry="5" fill="#D8E08C" opacity=".7" transform="rotate(-10 26 32)"/>
+      <path d="M 16 38 Q 32 36 48 34" stroke="#7A9038" stroke-width="1.2" fill="none" opacity=".5"/>
+    </svg>`,
+
+    'softtree': `<svg viewBox="0 0 64 64" width="${s}" height="${s}" xmlns="http://www.w3.org/2000/svg">
+      <ellipse cx="32" cy="60" rx="16" ry="2.5" fill="#3D2914" opacity=".15"/>
+      <rect x="28" y="38" width="8" height="20" rx="3" fill="#8B6F47"/>
+      <ellipse cx="32" cy="56" rx="6" ry="2" fill="#6B4F2F" opacity=".5"/>
+      <circle cx="22" cy="28" r="11" fill="#7AB058"/>
+      <circle cx="36" cy="20" r="13" fill="#8AC068"/>
+      <circle cx="44" cy="30" r="10" fill="#7AB058"/>
+      <circle cx="28" cy="36" r="11" fill="#8AC068"/>
+      <circle cx="40" cy="36" r="9" fill="#7AB058"/>
+      <circle cx="20" cy="22" r="4" fill="#A8D078" opacity=".5"/>
+      <circle cx="40" cy="14" r="3" fill="#A8D078" opacity=".5"/>
+    </svg>`,
+
+    'pufftree': `<svg viewBox="0 0 64 64" width="${s}" height="${s}" xmlns="http://www.w3.org/2000/svg">
+      <ellipse cx="32" cy="60" rx="18" ry="2.5" fill="#3D2914" opacity=".15"/>
+      <rect x="28" y="42" width="8" height="18" rx="3" fill="#7A5F37"/>
+      <ellipse cx="32" cy="58" rx="7" ry="2" fill="#5C4520" opacity=".5"/>
+      <circle cx="18" cy="32" r="12" fill="#8AC068"/>
+      <circle cx="32" cy="20" r="15" fill="#A8D078"/>
+      <circle cx="46" cy="32" r="12" fill="#8AC068"/>
+      <circle cx="22" cy="42" r="10" fill="#8AC068"/>
+      <circle cx="42" cy="42" r="10" fill="#A8D078"/>
+      <circle cx="32" cy="34" r="13" fill="#9AC868"/>
+      <circle cx="14" cy="28" r="3" fill="#C8E098" opacity=".6"/>
+      <circle cx="50" cy="38" r="3" fill="#C8E098" opacity=".6"/>
+      <circle cx="32" cy="14" r="3" fill="#C8E098" opacity=".7"/>
+    </svg>`,
+
+    'flower': `<svg viewBox="0 0 64 64" width="${s}" height="${s}" xmlns="http://www.w3.org/2000/svg">
+      <defs><radialGradient id="petalG"><stop offset="0%" stop-color="#FFE0E5"/><stop offset="100%" stop-color="#F8A8B8"/></radialGradient></defs>
+      <ellipse cx="32" cy="60" rx="12" ry="2" fill="#3D2914" opacity=".15"/>
+      <rect x="30" y="36" width="4" height="22" rx="1.5" fill="#5C8A3C"/>
+      <ellipse cx="22" cy="44" rx="10" ry="4" fill="#5C8A3C" transform="rotate(-25 22 44)"/>
+      <ellipse cx="42" cy="40" rx="8" ry="3.5" fill="#7AB058" transform="rotate(20 42 40)"/>
+      <!-- petals -->
+      <circle cx="32" cy="20" r="9" fill="url(#petalG)"/>
+      <circle cx="22" cy="26" r="8" fill="url(#petalG)"/>
+      <circle cx="42" cy="26" r="8" fill="url(#petalG)"/>
+      <circle cx="24" cy="36" r="7" fill="url(#petalG)"/>
+      <circle cx="40" cy="36" r="7" fill="url(#petalG)"/>
+      <circle cx="32" cy="28" r="5" fill="#F4D154"/>
+      <circle cx="32" cy="28" r="2.5" fill="#E8A030"/>
+      <!-- sparkles -->
+      <g fill="#F4D154" opacity=".9">
+        <circle cx="10" cy="12" r="1.5"/>
+        <circle cx="52" cy="10" r="1.5"/>
+        <circle cx="54" cy="44" r="1.2"/>
+        <circle cx="8" cy="32" r="1.2"/>
+      </g>
+    </svg>`,
+
+    'fruit': `<svg viewBox="0 0 64 64" width="${s}" height="${s}" xmlns="http://www.w3.org/2000/svg">
+      <ellipse cx="32" cy="60" rx="18" ry="2.5" fill="#3D2914" opacity=".15"/>
+      <rect x="28" y="40" width="8" height="20" rx="3" fill="#7A5F37"/>
+      <circle cx="20" cy="30" r="12" fill="#7AB058"/>
+      <circle cx="32" cy="18" r="14" fill="#8AC068"/>
+      <circle cx="44" cy="30" r="12" fill="#7AB058"/>
+      <circle cx="24" cy="40" r="10" fill="#8AC068"/>
+      <circle cx="40" cy="40" r="10" fill="#7AB058"/>
+      <!-- fruits -->
+      <circle cx="18" cy="32" r="3.5" fill="#E85A6A"/>
+      <circle cx="17" cy="31" r="1" fill="#FFB0BC" opacity=".7"/>
+      <circle cx="40" cy="28" r="3.5" fill="#F4A040"/>
+      <circle cx="39" cy="27" r="1" fill="#FFD896" opacity=".7"/>
+      <circle cx="30" cy="22" r="3.5" fill="#E85A6A"/>
+      <circle cx="29" cy="21" r="1" fill="#FFB0BC" opacity=".7"/>
+      <circle cx="44" cy="38" r="3" fill="#F4A040"/>
+      <circle cx="26" cy="42" r="3" fill="#E85A6A"/>
+      <!-- fairy sparkles -->
+      <g fill="#FFE898" opacity=".9">
+        <circle cx="12" cy="14" r="1.6"/>
+        <circle cx="52" cy="12" r="1.6"/>
+        <circle cx="54" cy="48" r="1.4"/>
+        <circle cx="10" cy="44" r="1.4"/>
+        <path d="M 50 18 L 51 20 L 53 21 L 51 22 L 50 24 L 49 22 L 47 21 L 49 20 Z"/>
+      </g>
+    </svg>`,
+
+    'keeper': `<svg viewBox="0 0 64 64" width="${s}" height="${s}" xmlns="http://www.w3.org/2000/svg">
+      <defs><radialGradient id="starG"><stop offset="0%" stop-color="#FFF4B0"/><stop offset="100%" stop-color="#F4D154"/></radialGradient></defs>
+      <ellipse cx="32" cy="60" rx="22" ry="3" fill="#3D2914" opacity=".18"/>
+      <rect x="26" y="38" width="12" height="22" rx="4" fill="#5C4220"/>
+      <ellipse cx="32" cy="58" rx="9" ry="2.5" fill="#3D2A0F" opacity=".5"/>
+      <!-- canopy -->
+      <circle cx="32" cy="22" r="22" fill="#4A8030"/>
+      <circle cx="14" cy="32" r="13" fill="#5BA040"/>
+      <circle cx="50" cy="32" r="13" fill="#5BA040"/>
+      <circle cx="32" cy="14" r="15" fill="#7AB058"/>
+      <circle cx="22" cy="20" r="8" fill="#9AC868" opacity=".7"/>
+      <circle cx="42" cy="20" r="8" fill="#9AC868" opacity=".7"/>
+      <!-- big star -->
+      <path d="M 32 4 L 34 10 L 40 10 L 35.5 13.5 L 37 19.5 L 32 16 L 27 19.5 L 28.5 13.5 L 24 10 L 30 10 Z" fill="url(#starG)" stroke="#E8B030" stroke-width=".5"/>
+      <!-- smaller stars -->
+      <g fill="#F4D154" opacity=".85">
+        <path d="M 10 12 L 11 14 L 13 14.5 L 11 15 L 10 17 L 9 15 L 7 14.5 L 9 14 Z"/>
+        <path d="M 54 16 L 55 18 L 57 18.5 L 55 19 L 54 21 L 53 19 L 51 18.5 L 53 18 Z"/>
+        <path d="M 50 44 L 51 46 L 53 46.5 L 51 47 L 50 49 L 49 47 L 47 46.5 L 49 46 Z"/>
+        <path d="M 8 38 L 9 40 L 11 40.5 L 9 41 L 8 43 L 7 41 L 5 40.5 L 7 40 Z" opacity=".7"/>
+      </g>
+    </svg>`
+  };
+  return svgs[key] || svgs['seed'];
+}
+
+function renderLevelCard(){
+  const info = getLevelInfo(calcPoints());
+  return `<div class="level-card paper" style="text-align:center;padding:28px 22px">
+    <div style="display:flex;justify-content:center;margin-bottom:12px">${levelSvg(info.current.key, 108)}</div>
+    <p style="margin:0;font-family:var(--fd);font-weight:500;font-size:28px;color:var(--ink);letter-spacing:.02em">${safe(info.current.name)}</p>
+    <p style="margin:6px 0 18px;font-family:var(--fb);font-weight:400;font-size:13.5px;color:var(--ink-soft);font-style:italic">${safe(info.current.desc)}</p>
+    <div style="height:6px;background:var(--paper-soft);border-radius:999px;overflow:hidden;margin:0 auto;max-width:240px">
+      <div style="height:100%;width:${info.progress}%;background:linear-gradient(90deg,#A8D078,#5BA040);transition:width .6s"></div>
+    </div>
+    <p style="margin:10px 0 0;font-family:var(--fui);font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-muted)">
+      ${info.points}점 ${info.next ? `· 다음 <b style="color:var(--ink)">${safe(info.next.name)}</b>까지 ${info.next.min - info.points}점` : '· 최고 단계 달성 ✦'}
+    </p>
+  </div>`;
+}
+
+function renderLevelMini(){
+  const info = getLevelInfo(calcPoints());
+  return `<div style="display:flex;align-items:center;gap:8px;padding:8px 0">
+    <div style="width:32px;height:32px;flex-shrink:0">${levelSvg(info.current.key, 32)}</div>
+    <div style="min-width:0">
+      <div style="font-family:var(--fb);font-weight:500;font-size:12.5px;color:var(--ink);line-height:1.2">${safe(info.current.name)}</div>
+      <div style="font-family:var(--fui);font-size:9.5px;letter-spacing:.12em;color:var(--ink-muted)">${info.points}점</div>
+    </div>
+  </div>`;
+}
+
 const _praiseLines = [
   '✨ 진짜 잘했어. 이번 주 목표 달성!',
   '🎉 해냈다! 너 자신한테 박수.',
@@ -6705,6 +6935,17 @@ function renderReport(root){
   const achievements = checkAchievements(stats);
   const goalsSet = goals.completion != null || goals.exerciseCount != null || goals.focusMin != null || goals.diaryDays != null;
 
+  // Persist goal-achievement count for level points (once per week)
+  if(achievements.length){
+    const weekTag = wsK;
+    store.goalsHitWeeks = store.goalsHitWeeks || [];
+    if(!store.goalsHitWeeks.includes(weekTag)){
+      store.goalsHitWeeks.push(weekTag);
+      store.goalsHit = (store.goalsHit||0) + 1;
+      saveStore('__meta');
+    }
+  }
+
   const weekSpends = (store.spends||[]).filter(s => s.date >= wsK);
   const weekOut = weekSpends.filter(s => (s.kind||'out')==='out').reduce((a,b)=>a+Number(b.amount||0),0);
   const weekIn = weekSpends.filter(s => s.kind==='in').reduce((a,b)=>a+Number(b.amount||0),0);
@@ -6738,6 +6979,9 @@ function renderReport(root){
   root.innerHTML = `
     <div class="hero"><h1 class="hero-title">REPORT</h1><span class="hero-script">reflect</span></div>
     <div class="section-wrap">
+
+      ${renderLevelCard()}
+      <div style="height:18px"></div>
 
       ${achievements.length ? `
         <div class="paper" style="border:1px solid var(--rose-soft);background:linear-gradient(180deg, var(--paper) 0%, var(--rose-soft) 220%)">
@@ -7354,7 +7598,7 @@ function renderDrawer(){
   $('#drawerEyebrow').textContent=k===todayKey()?'Today':'Selected';
   $('#drawerDate').innerHTML=`${selectedDate.getMonth()+1}월 ${selectedDate.getDate()}일 <span class="day-name">${weekdaysKR[selectedDate.getDay()]}</span>`;
   $('#drawerBody').innerHTML=`
-    <p class="label-eyebrow">${k===todayKey()?'오늘 할 일':'그 날 할 일'} <span class="right">${done}/${list.length}</span></p>
+    <p class="label-eyebrow">${k===todayKey()?'오늘 할 일':'그 날 할 일'} <span class="right">${done}/${list.length}${list.length > 1 ? ` <button type="button" data-delall="${k}" style="margin-left:8px;background:transparent;border:0;color:var(--rose);font-family:var(--fui);font-size:10.5px;letter-spacing:.18em;cursor:pointer">전체 삭제</button>` : ''}</span></p>
     ${list.length?`<div class="list" id="taskList">${list.map(t=>`
       <div class="row ${t.done?'done':''}" data-tid="${t.id}">
         <div class="ic">${stickerEmoji(t.type||'fallback')}</div>
@@ -7382,17 +7626,55 @@ function renderDrawer(){
   `;
   $$('#drawerBody [data-toggle]').forEach(b=>b.onchange=()=>toggleTask(b.dataset.toggle));
   $$('#drawerBody [data-del]').forEach(b=>b.onclick=()=>deleteTask(b.dataset.del));
+  $$('#drawerBody [data-delall]').forEach(b=>b.onclick=()=>deleteAllOnDay(b.dataset.delall));
   $('#qAdd').onclick=quickAddDrawer;
   $('#qTask').addEventListener('keydown',e=>{if(e.key==='Enter')quickAddDrawer()});
 }
 function deleteTask(id){
   const t=store.tasks.find(x=>String(x.id)===String(id));
   if(!t) return;
-  if(!confirm(`"${t.text}" 일정을 지울까요?`)) return;
-  store.tasks=store.tasks.filter(x=>String(x.id)!==String(id));
+  const tk = todayKey();
+  // 같은 텍스트의 미래 + 오늘 일정 찾기 (반복 일정 일괄 삭제용)
+  const similar = store.tasks.filter(x =>
+    String(x.id) !== String(id) &&
+    x.text === t.text &&
+    x.date >= tk
+  );
+  if(similar.length === 0){
+    if(!confirm(`"${t.text}" 일정을 지울까요?`)) return;
+    store.tasks=store.tasks.filter(x=>String(x.id)!==String(id));
+    saveStore('tasks');
+    renderDrawer(); render();
+    toast('삭제됨');
+    return;
+  }
+  // 비슷한 일정이 있으면 두 단계 확인
+  const msg = `"${t.text}" — 같은 일정 ${similar.length + 1}개 발견.\n\n[확인] 이 일정 1개만 삭제\n[취소] 다음 옵션 보기`;
+  if(confirm(msg)){
+    store.tasks=store.tasks.filter(x=>String(x.id)!==String(id));
+    saveStore('tasks');
+    renderDrawer(); render();
+    toast('1개 삭제됨');
+    return;
+  }
+  if(confirm(`같은 이름의 일정 ${similar.length + 1}개를 모두 삭제할까요?\n(오늘 이후의 일정 ${similar.length}개 + 이 일정)`)){
+    const ids = new Set([id, ...similar.map(x=>x.id)].map(String));
+    store.tasks=store.tasks.filter(x=>!ids.has(String(x.id)));
+    saveStore('tasks');
+    renderDrawer(); render();
+    toast(`${ids.size}개 일괄 삭제됨 ✦`);
+  }
+}
+
+/* "이 날 전부" 일괄 삭제 */
+function deleteAllOnDay(dateKey){
+  const list = store.tasks.filter(t => t.date === dateKey);
+  if(list.length === 0) return;
+  if(!confirm(`${dateKey}의 일정 ${list.length}개를 모두 삭제할까요?`)) return;
+  store.tasks = store.tasks.filter(t => t.date !== dateKey);
   saveStore('tasks');
   renderDrawer(); render();
-  toast('삭제됨');
+  toast(`${list.length}개 삭제됨`);
 }
 function quickAddDrawer(){
   const text=$('#qTask').value.trim();if(!text)return;
