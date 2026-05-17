@@ -7107,7 +7107,8 @@ function tdeeKcal(){
   return Math.round(bmrKcal() * (mult[activity] || 1.55));
 }
 
-/* ===== Common food calorie dictionary (Korean meals) ===== */
+/* ===== Common food calorie dictionary (Korean + popular meals) =====
+   Numbers are typical 1 serving unless otherwise noted */
 const FOOD_DICT = {
   // 밥/면
   '밥 한 공기':300, '잡곡밥':280, '현미밥':290, '죽 한 그릇':200,
@@ -7141,18 +7142,99 @@ const FOOD_DICT = {
   '머핀':350, '크루아상':280, '베이글':250, '케이크 1조각':400,
   '과자 한 봉지':500, '팝콘':400, '떡 1개':80,
   // 토스트/샌드위치
-  '토스트':250, '샌드위치':400, '햄치즈샌드위치':500, '에그타르트':200
+  '토스트':250, '샌드위치':400, '햄치즈샌드위치':500, '에그타르트':200,
+  // 추가 한식
+  '잡채':350, '김치전':400, '파전':500, '해물파전':550, '갈비찜':600, '닭볶음탕':550,
+  '갈비 1대':150, '소갈비 1대':180, '칼국수':500, '수제비':400, '짜장면':600, '짬뽕':650,
+  '탕수육 1접시':800, '만두 5개':200, '군만두 5개':300, '냉면 1그릇':500, '비빔냉면':600,
+  '북어해장국':350, '콩나물국밥':400, '추어탕':500, '닭한마리':1000, '돼지국밥':600,
+  '족발 1인분':800, '보쌈 1인분':700, '제육덮밥':650, '오징어덮밥':550,
+  // 일식
+  '우동 1그릇':450, '라멘':600, '돈코츠라멘':700, '카츠동':800, '규동':550,
+  '오니기리':200, '연어덮밥':500, '야끼소바':500, '텐동':700, '오야꼬동':600,
+  // 중식
+  '깐풍기 1접시':900, '마라탕':500, '마라샹궈':700, '양꼬치 5개':300, '동파육':800,
+  '꿔바로우 1접시':800,
+  // 양식
+  '스테이크 200g':600, '리조또':550, '라자냐':650, '그라탕':500, '핫도그':350,
+  '치즈볼':150, '베이컨':80, '브런치 세트':700,
+  // 디저트
+  '케이크 한 조각':400, '치즈케이크':450, '빙수':500, '팥빙수':600, '마카롱 1개':80,
+  '와플':400, '크레페':450, '에그타르트':200, '브라우니':350,
+  // 술/음료 추가
+  '하이볼':180, '위스키 한 잔':100, '칵테일':200, '사케 1잔':50, '진토닉':170,
+  '제로콜라':5, '아이스티':80, '레모네이드':120, '바닐라라떼':250, '카라멜마키아토':280,
+  '딸기라떼':280, '말차라떼':220, '핫초콜릿':250
 };
+
+/* Convert Korean count words to numbers ("두 개" → 2, "한 잔" → 1) */
+const _PORTION_KR = {한:1, 두:2, 세:3, 네:4, 다섯:5, 여섯:6, 일곱:7, 여덟:8, 아홉:9, 열:10};
+function parsePortion(text){
+  if(!text) return null;
+  // "150g", "300ml" — explicit grams/ml
+  let m = text.match(/(\d+(?:\.\d+)?)\s*(?:g|그램|gram)/i);
+  if(m) return { amount: +m[1], unit: 'g' };
+  m = text.match(/(\d+(?:\.\d+)?)\s*(?:ml|cc)/i);
+  if(m) return { amount: +m[1], unit: 'ml' };
+  // "2 인분", "두 인분"
+  m = text.match(/(\d+(?:\.\d+)?)\s*인분/);
+  if(m) return { amount: +m[1], unit: '인분' };
+  m = text.match(/(한|두|세|네|다섯|여섯|일곱|여덟|아홉|열)\s*인분/);
+  if(m) return { amount: _PORTION_KR[m[1]], unit: '인분' };
+  // "1개", "두 개", "한 잔", "한 컵"
+  m = text.match(/(\d+(?:\.\d+)?)\s*(?:개|잔|컵|조각|쪽|판|마리|봉지|봉|병|캔|공기|그릇|모|장)/);
+  if(m) return { amount: +m[1], unit: m[0].slice(-1) };
+  m = text.match(/(한|두|세|네|다섯|여섯|일곱|여덟|아홉|열)\s*(?:개|잔|컵|조각|쪽|판|마리|봉지|봉|병|캔|공기|그릇|모|장)/);
+  if(m) return { amount: _PORTION_KR[m[1]], unit: m[0].slice(-1) };
+  return null;
+}
 
 function lookupFoodCalories(name){
   if(!name) return null;
   const n = name.trim();
   if(FOOD_DICT[n] != null) return FOOD_DICT[n];
-  // fuzzy: substring match
+  // Strip portion words for matching
+  const nClean = n.replace(/\d+(?:\.\d+)?\s*(?:g|ml|cc|인분|개|잔|컵|조각|쪽|판|마리|봉지|봉|병|캔|공기|그릇|모|장)/g, '').replace(/(한|두|세|네|다섯|여섯|일곱|여덟|아홉|열)\s*(?:인분|개|잔|컵|조각|쪽|판|마리|봉지|봉|병|캔|공기|그릇|모|장)/g, '').trim();
+  if(FOOD_DICT[nClean] != null) return FOOD_DICT[nClean];
+  // Fuzzy: longest-substring match (best dictionary entry)
+  let best = null, bestLen = 0;
   for(const k in FOOD_DICT){
-    if(n.includes(k) || k.includes(n)) return FOOD_DICT[k];
+    const kClean = k.replace(/\s+/g, '');
+    const nCleanNoSpace = nClean.replace(/\s+/g, '');
+    if(nCleanNoSpace.includes(kClean) && kClean.length > bestLen){
+      best = FOOD_DICT[k]; bestLen = kClean.length;
+    }
+    else if(kClean.includes(nCleanNoSpace) && nCleanNoSpace.length >= 2 && nCleanNoSpace.length > bestLen){
+      best = FOOD_DICT[k]; bestLen = nCleanNoSpace.length;
+    }
   }
-  return null;
+  return best;
+}
+
+/* Estimate calories with portion multiplier — "닭가슴살 200g" → base × 2 */
+function estimateFoodCalories(name){
+  const base = lookupFoodCalories(name);
+  if(base == null) return null;
+  const portion = parsePortion(name);
+  if(!portion) return base;
+  // Special: "100g" foods scale by gram count
+  if(portion.unit === 'g'){
+    if(/100\s*g/.test(name)) return base; // already 100g base
+    // Check if dictionary key has "100g" — use as per-100g rate
+    for(const k in FOOD_DICT){
+      const kClean = k.replace(/\s+/g, '');
+      const nClean = name.replace(/\s+/g, '').replace(/\d+(?:\.\d+)?\s*g/g, '');
+      if(kClean.includes(nClean.slice(0,3)) && /100g/.test(k)){
+        return Math.round(FOOD_DICT[k] * portion.amount / 100);
+      }
+    }
+    return base;
+  }
+  // Generic: multiply by amount (인분, 개, 잔 etc.)
+  if(portion.amount > 0 && portion.amount <= 10){
+    return Math.round(base * portion.amount);
+  }
+  return base;
 }
 
 function renderHealth(root){
@@ -7327,7 +7409,8 @@ function renderHealth(root){
           </select>
         </div>
         <div id="exFields"></div>
-        <button class="btn btn-primary" id="exAdd" style="margin-top:8px">오늘 운동 기록 →</button>
+        <div id="exKcalPreview" style="margin:8px 0;padding:8px 12px;background:var(--paper-soft);border-radius:3px;font-family:var(--fb);font-weight:500;font-size:14px;color:var(--ink-soft);text-align:center"></div>
+        <button class="btn btn-primary" id="exAdd">오늘 운동 기록 →</button>
 
         ${exercise.length ? `
           <div class="divider"></div>
@@ -7915,7 +7998,28 @@ function renderHealth(root){
     box.innerHTML = html;
   }
   renderExerciseFields();
-  $('#exType').onchange = renderExerciseFields;
+  $('#exType').onchange = () => { renderExerciseFields(); updateExKcalPreview(); };
+  function updateExKcalPreview(){
+    const type = $('#exType')?.value;
+    const min = parseFloat($('#exMin')?.value);
+    const subtype = $('#exSubtype')?.value;
+    const el = $('#exKcalPreview');
+    if(!el) return;
+    if(min > 0 && type){
+      const kcal = caloriesBurned({ type, subtype, min });
+      const met = metFor(type, subtype);
+      el.innerHTML = `≈ <b style="color:var(--rose);font-size:15px">${kcal} kcal</b> 소모 예상 <span style="color:var(--ink-muted)">(${userWeightKg()}kg · MET ${met} · ${min}분)</span>`;
+    } else {
+      el.innerHTML = '<span style="color:var(--ink-muted)">시간 입력하면 예상 소모 칼로리 보여줘요</span>';
+    }
+  }
+  // Wire live preview to any field input in #exFields
+  const exFieldsContainer = document.getElementById('exFields');
+  if(exFieldsContainer){
+    exFieldsContainer.addEventListener('input', updateExKcalPreview);
+    exFieldsContainer.addEventListener('change', updateExKcalPreview);
+  }
+  setTimeout(updateExKcalPreview, 50);
 
   $('#exAdd').onclick = () => {
     const type = $('#exType').value;
@@ -7957,14 +8061,17 @@ function renderHealth(root){
     saveStore('health'); render();
   });
 
-  // ===== Food log =====
+  // ===== Food log — auto-detect calories with portion multiplier =====
   const foodNameEl = $('#foodName');
   const foodKcalEl = $('#foodKcal');
   if(foodNameEl) foodNameEl.addEventListener('input', () => {
-    const cal = lookupFoodCalories(foodNameEl.value);
+    const cal = estimateFoodCalories(foodNameEl.value);
     if(cal != null && !foodKcalEl.value){
       foodKcalEl.placeholder = `${cal} kcal (자동 인식)`;
       foodKcalEl.dataset.suggest = cal;
+    } else if(cal == null){
+      foodKcalEl.placeholder = '사전에 없음 — 직접 입력';
+      delete foodKcalEl.dataset.suggest;
     } else {
       foodKcalEl.placeholder = '자동으로 채워짐';
       delete foodKcalEl.dataset.suggest;
@@ -7977,7 +8084,7 @@ function renderHealth(root){
     let kcal = parseFloat(foodKcalEl.value);
     if(isNaN(kcal)){
       const suggested = foodKcalEl.dataset.suggest;
-      kcal = suggested ? +suggested : lookupFoodCalories(name);
+      kcal = suggested ? +suggested : estimateFoodCalories(name);
       if(!kcal){ toast('칼로리를 직접 입력해줘 (사전에 없는 음식이야)'); return; }
     }
     if(!store.health) store.health = {water:{}, exercise:[], fasting:{}, supplements:[], weights:[], foods:[]};
