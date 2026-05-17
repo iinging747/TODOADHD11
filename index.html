@@ -9508,7 +9508,7 @@ function renderDrawer(){
   $('#drawerEyebrow').textContent=k===todayKey()?'Today':'Selected';
   $('#drawerDate').innerHTML=`${selectedDate.getMonth()+1}월 ${selectedDate.getDate()}일 <span class="day-name">${weekdaysKR[selectedDate.getDay()]}</span>`;
   $('#drawerBody').innerHTML=`
-    <p class="label-eyebrow">${k===todayKey()?'오늘 할 일':'그 날 할 일'} <span class="right">${done}/${list.length}${list.length > 1 ? ` <button type="button" data-delall="${k}" style="margin-left:8px;background:transparent;border:0;color:var(--rose);font-family:var(--fui);font-size:10.5px;letter-spacing:.18em;cursor:pointer">전체 삭제</button>` : ''}</span></p>
+    <p class="label-eyebrow">${k===todayKey()?'오늘 할 일':'그 날 할 일'} <span class="right">${done}/${list.length}${list.length > 0 ? ` <button type="button" data-shareday="${k}" style="margin-left:10px;background:transparent;border:0;color:var(--olive);font-family:var(--fui);font-size:10.5px;letter-spacing:.18em;cursor:pointer">📤 공유</button>` : ''}${list.length > 1 ? ` <button type="button" data-delall="${k}" style="margin-left:8px;background:transparent;border:0;color:var(--rose);font-family:var(--fui);font-size:10.5px;letter-spacing:.18em;cursor:pointer">전체 삭제</button>` : ''}</span></p>
     ${list.length?`<div class="list" id="taskList">${list.map(t=>{
       const notifLabel = t.notify == null ? null
         : t.notify === 0 ? '정시'
@@ -9547,6 +9547,7 @@ function renderDrawer(){
   $$('#drawerBody [data-del]').forEach(b=>b.onclick=()=>deleteTask(b.dataset.del));
   $$('#drawerBody [data-delall]').forEach(b=>b.onclick=()=>deleteAllOnDay(b.dataset.delall));
   $$('#drawerBody [data-notify]').forEach(b=>b.onclick=()=>setTaskNotify(b.dataset.notify));
+  $$('#drawerBody [data-shareday]').forEach(b=>b.onclick=()=>shareDay(b.dataset.shareday));
   $('#qAdd').onclick=quickAddDrawer;
   $('#qTask').addEventListener('keydown',e=>{if(e.key==='Enter')quickAddDrawer()});
 }
@@ -9584,6 +9585,171 @@ function deleteTask(id){
     renderDrawer(); render();
     toast(`${ids.size}개 일괄 삭제됨 ✦`);
   }
+}
+
+/* ===== Schedule sharing ===== */
+function _escapeICS(s){
+  return String(s||'').replace(/\\/g,'\\\\').replace(/;/g,'\\;').replace(/,/g,'\\,').replace(/\n/g,'\\n');
+}
+function _icsDatetime(date, time){
+  const d = date.replace(/-/g, '');
+  if(!time) return { allDay: true, start: d };
+  const [hh, mm] = time.split(':').map(Number);
+  const endH = pad((hh + 1) % 24);
+  return {
+    allDay: false,
+    start: `${d}T${pad(hh)}${pad(mm)}00`,
+    end: `${d}T${endH}${pad(mm)}00`
+  };
+}
+function makeICS(tasks){
+  const lines = [
+    'BEGIN:VCALENDAR',
+    'VERSION:2.0',
+    'PRODID:-//TODOADHD//KR',
+    'CALSCALE:GREGORIAN'
+  ];
+  tasks.forEach(t => {
+    const dt = _icsDatetime(t.date, t.time);
+    lines.push('BEGIN:VEVENT');
+    lines.push('UID:' + t.id + '@todoadhd');
+    lines.push('SUMMARY:' + _escapeICS(t.text));
+    if(dt.allDay){
+      lines.push('DTSTART;VALUE=DATE:' + dt.start);
+    } else {
+      lines.push('DTSTART:' + dt.start);
+      lines.push('DTEND:' + dt.end);
+    }
+    if(t.reason) lines.push('DESCRIPTION:' + _escapeICS(t.reason));
+    lines.push('END:VEVENT');
+  });
+  lines.push('END:VCALENDAR');
+  return lines.join('\r\n');
+}
+function googleCalendarUrl(t){
+  const dt = _icsDatetime(t.date, t.time);
+  const text = encodeURIComponent(t.text);
+  let dates;
+  if(dt.allDay){
+    // Google all-day requires start + end (next day)
+    const d = new Date(t.date + 'T00:00:00');
+    const next = dateAdd(d, 1);
+    const nextStr = `${next.getFullYear()}${pad(next.getMonth()+1)}${pad(next.getDate())}`;
+    dates = `${dt.start}/${nextStr}`;
+  } else {
+    dates = `${dt.start}/${dt.end}`;
+  }
+  const details = t.reason ? encodeURIComponent(t.reason) : '';
+  return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${text}&dates=${dates}${details?'&details='+details:''}`;
+}
+function buildShareText(dateKey, tasks){
+  const d = new Date(dateKey + 'T00:00:00');
+  const dow = ['일','월','화','수','목','금','토'][d.getDay()];
+  const dateLabel = `${d.getMonth()+1}월 ${d.getDate()}일 (${dow})`;
+  const lines = [`📅 ${dateLabel} 일정`, ''];
+  const sorted = [...tasks].sort((a,b)=>(a.time||'').localeCompare(b.time||''));
+  sorted.forEach(t => {
+    const tag = t.priority === 1 ? ' 🔥' : '';
+    const time = t.time ? `${t.time} · ` : '';
+    lines.push(`· ${time}${t.text}${tag}`);
+  });
+  lines.push('');
+  lines.push('— 정신차려 (TODOADHD) ✨');
+  return lines.join('\n');
+}
+function shareDay(dateKey){
+  const tasks = (store.tasks||[]).filter(t => t.date === dateKey);
+  if(!tasks.length){ toast('공유할 일정이 없어'); return; }
+  const text = buildShareText(dateKey, tasks);
+  showShareModal(dateKey, tasks, text);
+}
+function showShareModal(dateKey, tasks, text){
+  let modal = document.getElementById('shareModal');
+  if(!modal){
+    modal = document.createElement('div');
+    modal.id = 'shareModal';
+    modal.style.cssText = 'position:fixed;inset:0;z-index:55;background:rgba(45,38,32,.6);display:grid;place-items:center;padding:18px;overflow:auto';
+    document.body.appendChild(modal);
+  } else {
+    modal.style.display = 'grid';
+    modal.hidden = false;
+  }
+  const d = new Date(dateKey + 'T00:00:00');
+  const dow = ['일','월','화','수','목','금','토'][d.getDay()];
+  const hasShare = !!(navigator.share && typeof navigator.share === 'function');
+  modal.innerHTML = `
+    <div style="background:var(--paper);background-image:var(--paper-grain-strong);max-width:520px;width:100%;border-radius:4px;padding:26px 24px;max-height:88vh;overflow-y:auto;border:1px solid var(--hairline);box-shadow:var(--shadow-page)">
+      <p class="label-eyebrow">📤 일정 공유 <button type="button" id="shareClose" style="float:right;background:transparent;border:0;color:var(--ink-soft);font-family:var(--fui);font-size:12px;cursor:pointer">닫기 ✕</button></p>
+      <h2 style="font-family:var(--fd);font-weight:400;font-size:24px;margin:6px 0 4px;color:var(--ink)">${d.getMonth()+1}월 ${d.getDate()}일 (${dow}) · ${tasks.length}개</h2>
+      <textarea readonly id="shareTextArea" style="width:100%;min-height:140px;margin:14px 0 10px;padding:12px;font-family:var(--fb);font-size:14px;line-height:1.6;color:var(--ink);background:var(--paper-soft);border:1px solid var(--hairline);border-radius:3px;resize:vertical">${safe(text)}</textarea>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+        <button type="button" class="btn btn-primary" id="shareCopy">📋 텍스트 복사</button>
+        ${hasShare ? `<button type="button" class="btn btn-primary" id="shareSystem">📤 다른 앱으로</button>` : `<button type="button" class="btn btn-ghost" id="shareCopy2">📋 다시 복사</button>`}
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <button type="button" class="btn btn-ghost" id="shareGCal">📅 구글 캘린더</button>
+        <button type="button" class="btn btn-ghost" id="shareICS">📥 ICS 파일</button>
+      </div>
+      <p style="margin:12px 0 0;font-family:var(--fb);font-weight:400;font-size:12.5px;color:var(--ink-muted);line-height:1.6">
+        · <b>텍스트 복사</b>: 카톡·SMS·메일 어디든 붙여넣기<br>
+        · <b>구글 캘린더</b>: 첫 일정부터 차례로 캘린더에 추가<br>
+        · <b>ICS 파일</b>: 다른 캘린더 앱(애플·아웃룩 등)으로 한꺼번에 가져오기
+      </p>
+    </div>
+  `;
+  const close = () => { modal.style.display='none'; modal.hidden = true; };
+  document.getElementById('shareClose').onclick = close;
+  modal.onclick = (e) => { if(e.target === modal) close(); };
+
+  const doCopy = async () => {
+    try{
+      await navigator.clipboard.writeText(text);
+      toast('텍스트 복사됨 ✓ 이제 붙여넣기');
+    } catch(e){
+      // Fallback
+      const ta = document.getElementById('shareTextArea');
+      if(ta){ ta.select(); document.execCommand('copy'); toast('복사됨'); }
+    }
+  };
+  document.getElementById('shareCopy').onclick = doCopy;
+  const copy2 = document.getElementById('shareCopy2');
+  if(copy2) copy2.onclick = doCopy;
+
+  const sysBtn = document.getElementById('shareSystem');
+  if(sysBtn) sysBtn.onclick = async () => {
+    try{
+      await navigator.share({ title: `${d.getMonth()+1}월 ${d.getDate()}일 일정`, text });
+    } catch(e){
+      if(e.name !== 'AbortError') toast('공유 취소됨 또는 실패');
+    }
+  };
+
+  document.getElementById('shareGCal').onclick = () => {
+    // Open google calendar in new tab for each event (or just first if many)
+    if(tasks.length === 1){
+      window.open(googleCalendarUrl(tasks[0]), '_blank', 'noopener');
+    } else {
+      if(confirm(`${tasks.length}개 일정을 차례로 구글 캘린더 새 탭으로 열게요. 팝업 차단 풀어주세요. 계속?`)){
+        tasks.forEach((t, i) => {
+          setTimeout(() => window.open(googleCalendarUrl(t), '_blank', 'noopener'), i * 200);
+        });
+      }
+    }
+  };
+
+  document.getElementById('shareICS').onclick = () => {
+    const ics = makeICS(tasks);
+    const blob = new Blob([ics], { type: 'text/calendar;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `todoadhd-${dateKey}.ics`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    toast('ICS 파일 다운로드됨 — 캘린더 앱에서 열어줘');
+  };
 }
 
 /* "이 날 전부" 일괄 삭제 */
