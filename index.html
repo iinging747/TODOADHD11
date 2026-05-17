@@ -4468,32 +4468,101 @@ function moodToEmoji(mood){
 }
 
 function diaryComment(t){
-  if(!t) return '아직 안 적었네. 머릿속에 제일 시끄러운 거 하나만 적어도 돼';
+  if(!t) return _pickPhr([
+    '한 줄도 안 적어도 돼. 그냥 지금 떠오르는 단어 하나라도 흘려놔봐',
+    '아무거나 적어도 괜찮아. 머릿속에 자꾸 떠오르는 그 한 마디로 시작해봐',
+    '오늘 가장 컸던 거 하나만 적어줘. 거창하게 안 해도 돼',
+    '아 진짜 정리 안 해도 돼. 그냥 와다다 쏟아내봐',
+    '오늘 어땠어? 한 단어로라도'
+  ]);
   if(/우울|무기력|지침|지쳤|에너지 ?없|기운 ?없/.test(t))
-    return '에너지가 바닥인 날이네. 오늘은 생산성 말고 회복이 우선. 따뜻한 거 마시고 산책 30분만';
+    return _pickPhr([
+      '오늘 진짜 힘들었구나... 그런 날이 있는 거야. 무리하지 말자',
+      '에너지 다 쓴 날 같네. 잠깐 누워있어도 괜찮아. 회복이 먼저야',
+      '지쳤다는 거 알아채는 것도 잘한 거야. 오늘은 그냥 흘려보내도 돼',
+      '몸이 신호 보내는 중이야. 따뜻한 거 한 잔, 그것만이라도 챙겨줘',
+      '바닥인 날엔 바닥인 채로 있어도 돼. 내일 다시 일어나면 그걸로 충분'
+    ]);
   if(/불안|무섭|걱정|초조|두근/.test(t))
-    return '머릿속이 너무 빨리 돌고 있을 거야. 종이에 걱정거리 다 적어놓고 — 그 중 진짜 컨트롤 가능한 거 하나만 골라봐';
-  if(/짜증|화|열받|짜증|성가시/.test(t))
-    return '지금 결정 내리지 마. 10분만 산책하고 와서 다시 보면 다르게 보일 거야';
+    return _pickPhr([
+      '머릿속이 너무 빠르게 돌고 있을 거야. 일단 숨 한 번 길게 내쉬고',
+      '걱정거리 그냥 종이에 다 적어봐. 적어두면 머리에서 좀 나가',
+      '진짜 컨트롤 가능한 거 하나만 골라서 거기에만 집중해보자',
+      '몸이 먼저 알아채는 신호야. 따뜻한 물 한 잔 마시고 손이라도 씻으면 좀 가라앉아'
+    ]);
+  if(/짜증|화|열받|성가시|빡|짜증/.test(t))
+    return _pickPhr([
+      '지금 결정 내리지 마. 10분만 다른 거 하고 다시 봐',
+      '화 나는 게 당연해. 일단 글로 쏟아내면 좀 풀려',
+      '뭐가 진짜 화의 원인인지 한 번 적어봐. 의외로 다른 게 원인일 때 많아',
+      '몸부터 좀 식히자. 찬물 한 잔이라도'
+    ]);
   if(/외로움|혼자|쓸쓸|허전/.test(t))
-    return '연락하고 싶은 사람 한 명한테 짧게라도 메시지 보내봐. 답 안 와도 보낸 너 자신은 가벼워져';
+    return _pickPhr([
+      '연락하고 싶었던 사람 한 명한테 그냥 안부 한 줄 보내봐. 답 안 와도 보낸 너는 가벼워져',
+      '혼자라는 감각이 항상 사실은 아니야. 누군가 떠오르면 그 사람부터',
+      '오늘은 자기 자신한테 좀 다정해도 돼. 좋아하는 음식, 좋아하는 음악',
+      '쓸쓸함은 사람들 사이에서도 가능해. 진짜 가까운 1명만 떠올려보자'
+    ]);
   if(/그리움|보고싶|생각나|추억/.test(t))
-    return '그 사람/순간을 떠올리는 너의 지금 감정도 기록해둬. 시간 지나면 이 감정 자체가 의미있어져';
+    return _pickPhr([
+      '그 사람/순간 떠올리는 지금 너의 감정도 기록해둬. 시간 지나면 그 자체가 의미가 돼',
+      '그립다는 건 그만큼 좋았다는 거야. 부정 말고 그냥 흘려보내',
+      '추억은 미화될 수 있어. 그래도 그게 너한테 좋은 영양분이면 됐어'
+    ]);
   if(/슬픔|울|눈물|상실|아파/.test(t))
-    return '슬픔은 빨리 지나가게 만들려 하지 말고 그냥 흘려보내. 조명 어둡게 하고 좋아하는 거 봐도 돼';
-  if(/과부하|벅차|많아|한 ?번에|동시에/.test(t))
-    return '의지 문제가 아니라 그냥 양이 많은 거야. 오늘 할 일 절반 잘라봐. 진짜 급한 거 하나만 먼저';
-  if(/복잡|혼란|뭘 ?모르|결정/.test(t))
-    return '결론 지금 안 내려도 돼. 15분짜리 작은 행동 하나만 하고 나서 다시 보면 정리될 수 있어';
+    return _pickPhr([
+      '슬픔은 빨리 지나가게 하려 하지 말고 그냥 흘려보내. 조명 어둡게 하고 좋아하는 거 봐도 돼',
+      '울고 싶으면 울어도 돼. 참는 게 더 오래 가',
+      '오늘은 슬픈 게 맞아. 내일 일은 내일 생각하자',
+      '아픈 감정도 결국 지나가. 그동안은 그냥 옆에 두고 같이 있어'
+    ]);
+  if(/과부하|벅차|많아|한 ?번에|동시에|머리 ?터질/.test(t))
+    return _pickPhr([
+      '의지 문제 아니야. 그냥 양이 많은 거야. 절반 잘라봐',
+      '진짜 급한 거 하나만 골라서, 나머진 일단 던져둬',
+      '뇌는 한 번에 한 가지만 잘 해. 우선순위 1개만 적어보자',
+      '와다다 적어서 머리 밖으로 다 빼놓고 시작해도 늦지 않아'
+    ]);
+  if(/복잡|혼란|뭘 ?모르|결정|모르겠/.test(t))
+    return _pickPhr([
+      '결론 지금 안 내려도 돼. 15분짜리 작은 행동 하나만 하고 다시 봐',
+      '머릿속이 흐릴 땐 결정 미루는 게 답이야. 자고 일어나서',
+      '선택지 다 적어놓고 잠깐 떨어져 있으면 보여',
+      '몰라도 돼. 모르는 채로 한 발만 움직이자'
+    ]);
   if(/멍함|멍|공허|텅|아무 ?생각/.test(t))
-    return '뇌가 좀 쉬는 중인 거야. 억지로 채우려 하지 마. 가벼운 거 하나만';
-  if(/뿌듯|해냈|성공|만족|좋|기쁘|행복|감사/.test(t))
-    return '오늘 좋았던 거 조건들 기억해둬. 시간/장소/같이 있던 사람 — 다음에 비슷한 조건 만들면 또 그렇게 될 수도';
+    return _pickPhr([
+      '뇌가 쉬는 중인 거야. 억지로 채우려 하지 마',
+      '아무 생각 없는 것도 필요해. 그냥 그 상태로 있어도 돼',
+      '비어있는 시간도 회복이야. 가벼운 거 하나만 챙기자'
+    ]);
+  if(/뿌듯|해냈|성공|만족|좋|기쁘|행복|감사|벅참/.test(t))
+    return _pickPhr([
+      '오늘 좋았네! 그 조건들 (시간·장소·사람) 기억해두자. 다음에 비슷하게 만들면 또 그렇게 돼',
+      '이런 날은 좀 음미해줘. 빨리 다음으로 안 넘어가도 돼',
+      '뿌듯한 거 진짜 잘한 거야. 너 자신한테 칭찬 한 마디',
+      '이 감정 그대로 옆 사람한테 전해봐. 다시 한 번 더 좋아져'
+    ]);
   if(/설렘|기대|두근|신나/.test(t))
-    return '그 설렘 그대로 일정에 옮겨봐. 너무 완벽하게 준비하지 말고, 일단 시작';
+    return _pickPhr([
+      '그 설렘 그대로 일정에 옮겨봐. 완벽하게 준비 안 해도 돼',
+      '두근거리는 거 진짜 좋아. 그 감각이 곧 시작이야',
+      '신난다는 건 너 자신이 살아있다는 신호야',
+      '계획 너무 짜지 말고 그냥 가벼운 마음으로'
+    ]);
   if(/평온|차분|편안|안정/.test(t))
-    return '이 상태 좋다. 지금 머리 맑을 때 미뤘던 결정 하나 처리해도 좋고';
-  return '복잡한 하루였네. 결론은 잠깐 미루고, 15분짜리 행동 하나로 일단 몸부터 움직여봐';
+    return _pickPhr([
+      '이 상태 좋다. 머리 맑을 때 미뤘던 결정 하나 처리해도 좋고',
+      '평온함도 적어둬. 다음에 흔들릴 때 이 글이 위로가 돼',
+      '잔잔한 날도 일기에 쓸 가치 있어. 모든 게 격렬할 필요 없잖아'
+    ]);
+  return _pickPhr([
+    '하루가 복잡했네. 결론은 잠깐 미루고, 15분짜리 작은 행동 하나로 일단 몸부터 움직여봐',
+    '오늘 적은 거 자체가 의미 있어. 정리 안 돼도 일단 적어둔 게 어디야',
+    '이런 감정도 기록해둬. 지나고 나면 알게 되는 게 있어',
+    '뭔가 정리되지 않은 채로도 괜찮아. 적은 너 자신한테 토닥토닥'
+  ]);
 }
 function moodPatternAdvice(){
   const diaries = store.diaries || [];
@@ -4582,8 +4651,12 @@ function renderMood(root){
           </div>
         </div>
         <div class="field">
-          <label>한 문장이라도</label>
-          <textarea class="textarea" id="diaryText" placeholder="머릿속에 제일 시끄러운 것 하나만 적어도 돼">${safe(today.text||'')}</textarea>
+          <label>오늘의 일기 <span style="font-family:var(--fb);font-weight:400;font-size:11px;color:var(--ink-muted);text-transform:none;letter-spacing:0;margin-left:6px;font-style:italic">와다다 적어도 OK · 자동 저장 · "지금 시각" 누르면 timestamp 추가</span></label>
+          <textarea class="textarea" id="diaryText" placeholder="머릿속에 떠오르는 거 다 쏟아내봐. 정리 안 해도 돼. 한 줄도 괜찮고, 종일 누적해도 됨" style="min-height:200px;font-family:var(--fb);font-size:15px;line-height:1.75">${safe(today.text||'')}</textarea>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:8px">
+            <button type="button" class="btn btn-ghost" id="diaryNowStamp" style="padding:8px 14px;font-size:12px">⏰ 지금 시각 추가</button>
+            <span id="diaryAutoSave" style="font-family:var(--fb);font-weight:400;font-size:12px;color:var(--ink-muted);font-style:italic"></span>
+          </div>
         </div>
 
         <p class="label-eyebrow" style="font-size:11px;margin-top:8px">📷 오늘의 사진 <span class="right">${todayPhotos.length}장</span></p>
@@ -4663,7 +4736,9 @@ function renderMood(root){
   });
 
   const ta = $('#diaryText');
-  if(ta) ta.oninput = () => { $('#diaryHint').textContent = diaryComment(ta.value); };
+  let _autoSaveT;
+  const autoSaveMsg = $('#diaryAutoSave');
+  const showSaveMsg = (msg) => { if(autoSaveMsg) autoSaveMsg.textContent = msg; };
 
   function persistToday(){
     const text = (ta?.value || '').trim();
@@ -4672,8 +4747,51 @@ function renderMood(root){
     saveStore('diaries');
   }
 
+  if(ta){
+    ta.oninput = () => {
+      $('#diaryHint').textContent = diaryComment(ta.value);
+      // Auto-save with debounce
+      clearTimeout(_autoSaveT);
+      showSaveMsg('적는 중…');
+      _autoSaveT = setTimeout(() => {
+        persistToday();
+        const now = new Date();
+        showSaveMsg(`✓ 자동 저장됨 (${pad(now.getHours())}:${pad(now.getMinutes())})`);
+      }, 1500);
+    };
+  }
+
+  // "지금 시각 추가" — insert timestamp at cursor position
+  const nowStampBtn = $('#diaryNowStamp');
+  if(nowStampBtn) nowStampBtn.onclick = () => {
+    if(!ta) return;
+    const now = new Date();
+    const hh = pad(now.getHours());
+    const mm = pad(now.getMinutes());
+    const stamp = `\n\n[${hh}:${mm}]\n`;
+    const cur = ta.value;
+    // Insert at cursor or append if empty
+    const cursorPos = ta.selectionStart;
+    if(!cur.trim()){
+      ta.value = `[${hh}:${mm}]\n`;
+    } else if(cursorPos === cur.length){
+      ta.value = cur.replace(/\s*$/, '') + stamp;
+    } else {
+      ta.value = cur.slice(0, cursorPos) + stamp + cur.slice(cursorPos);
+    }
+    // Move cursor to end of stamp
+    ta.focus();
+    const newPos = (cursorPos === cur.length ? ta.value.length : cursorPos + stamp.length);
+    ta.setSelectionRange(newPos, newPos);
+    // Trigger save
+    ta.dispatchEvent(new Event('input'));
+    toast(`[${hh}:${mm}] 추가됨`);
+  };
+
   $('#saveDiary').onclick = () => {
+    clearTimeout(_autoSaveT);
     persistToday();
+    showSaveMsg(`✓ 저장 완료`);
     toast('일기 저장 ♡');
     render();
   };
@@ -4806,25 +4924,65 @@ function renderLinkPreviews(text){
 
 /* MEMO */
 function memoComment(text){
-  if(!text) return '아직 비어있네. 뭐든 적어두면 나중에 너가 고마워할 거야';
+  if(!text) return _pickPhr([
+    '아직 비어있네. 뭐든 적어두면 나중에 너가 고마워할 거야',
+    '한 줄도 괜찮아. 손가락 가는 대로 적어봐',
+    '머릿속에 떠도는 그 한 마디부터 적어보자'
+  ]);
   const r = (rx) => rx.test(text);
   if(r(/일정|업무|마감|프로젝트|보고서|작업|업로드|회의|미팅/i))
-    return '이거 일정으로 옮겨두면 머릿속에서 비울 수 있어. 첫 단계만 캘린더에';
+    return _pickPhr([
+      '이거 일정으로 옮겨두면 머릿속에서 비울 수 있어. 첫 단계만 캘린더에',
+      '계속 신경 쓰이는 건 일단 캘린더로 빼두자. 그래야 잠도 잘 와',
+      '메모는 메모, 일정은 일정. 옮겨두면 훨씬 가벼워져'
+    ]);
   if(r(/사람|친구|관계|남친|여친|썸|싸웠|연락|상처|배신|믿|의심|서운/i))
-    return '나중에 다시 읽으면 다르게 보일 거야. 사실이랑 너의 해석은 분리해서 적어둬';
+    return _pickPhr([
+      '나중에 다시 읽으면 다르게 보일 거야. 사실이랑 너의 해석은 분리해서 적어둬',
+      '관계는 시간이 지나야 보여. 지금 결론 안 내려도 돼',
+      '서운한 거 적는 것만으로도 풀려. 그 사람한테 보낼 필요는 없어'
+    ]);
   if(r(/돈|투자|매매|손실|수익|코인|주식|살까|구매|쇼핑/i))
-    return '24시간만 미뤄봐. 내일도 같은 마음이면 그땐 진짜';
+    return _pickPhr([
+      '24시간만 미뤄봐. 내일도 같은 마음이면 그땐 진짜',
+      '돈 쓰는 결정은 잠 한 번 자고 다시. 잠깐 묵혀두자',
+      '가격 옆에 "왜 사고 싶은지" 한 줄 적어보면 의외로 자기가 답을 알아'
+    ]);
   if(r(/우울|불안|힘들|지쳤|망했|무서|싫|짜증|화나|스트레스/i))
-    return '이 감정도 정보야. 뭐가 트리거였는지만 적어두면 다음에 미리 알아챌 수 있어';
+    return _pickPhr([
+      '이 감정도 정보야. 뭐가 트리거였는지만 적어두면 다음에 미리 알아챌 수 있어',
+      '쏟아냈으면 일단 됐어. 지금은 그 감정 자체로 충분해',
+      '쓴 만큼 머리 밖으로 나가. 더 적어도 돼'
+    ]);
   if(r(/뿌듯|좋|행복|성공|해냈|기쁘|감사|만족/i))
-    return '좋았던 거 조건들 적어둬. 시간 / 장소 / 누구랑 / 직전에 뭐 했는지';
+    return _pickPhr([
+      '좋았던 거 조건들 적어둬. 시간 / 장소 / 누구랑 / 직전에 뭐 했는지',
+      '이런 메모는 보물이야. 흔들릴 때 다시 와서 읽어줘',
+      '좋은 감정도 기록할 가치 있어. 자주 그래줘'
+    ]);
   if(r(/아이디어|생각났|해보고 ?싶|만들고 ?싶|시도/i))
-    return '5분짜리 첫 행동만 정해서 일정에 옮겨놔. 안 그러면 휘발돼';
+    return _pickPhr([
+      '5분짜리 첫 행동만 정해서 일정에 옮겨놔. 안 그러면 휘발돼',
+      '아이디어는 휘발성 강해. 지금 적어둔 거 잘했어',
+      '실행할 거 1개만 골라서 내일 날짜에 박아넣어보자'
+    ]);
   if(r(/후회|반성|실수|또|왜 ?그랬|할걸/i))
-    return '평가는 그만. 다음엔 어떻게 다르게 할지 한 줄로';
+    return _pickPhr([
+      '평가는 그만. 다음엔 어떻게 다르게 할지 한 줄로',
+      '실수했다는 거 인정한 것도 잘한 거야. 같은 실수 안 하면 그걸로 됐어',
+      '후회의 핵심만 적어두면 다음에 알아채. 자책은 도움 안 돼'
+    ]);
   if(r(/계획|목표|시작|할거|해야지|할것/i))
-    return '계획은 작을수록 살아남아. 24시간 안에 할 수 있는 거 하나만';
-  return '글로 옮긴 순간 절반은 정리된 거야. 나중에 다시 읽으면 그때 너가 좀 더 나아가 있을 듯';
+    return _pickPhr([
+      '계획은 작을수록 살아남아. 24시간 안에 할 수 있는 거 하나만',
+      '시작이 작아야 다음 날 또 해. 너무 거창하게 잡지 마',
+      '진짜 첫 단계 하나만 찾아서 일정에 옮겨놓자'
+    ]);
+  return _pickPhr([
+    '글로 옮긴 순간 절반은 정리된 거야. 나중에 다시 읽으면 너가 좀 더 나아가 있을 듯',
+    '적어두면 잊혀도 안 잊혀. 그게 메모의 힘이야',
+    '오늘 너가 적은 것도 미래의 너한테는 위로가 될 수 있어'
+  ]);
 }
 
 function renderMemo(root){
