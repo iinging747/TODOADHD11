@@ -570,7 +570,7 @@ body.dark .select{background-image:url("data:image/svg+xml;utf8,<svg xmlns='http
 .btn-ghost:hover{background:var(--ink);color:var(--paper)}
 
 .list{display:flex;flex-direction:column;gap:0}
-.row{display:grid;grid-template-columns:24px 1fr auto auto;gap:12px;align-items:flex-start;padding:14px 0;border-bottom:1px solid var(--hairline-soft)}
+.row{display:grid;grid-template-columns:24px 1fr auto auto auto;gap:10px;align-items:flex-start;padding:14px 0;border-bottom:1px solid var(--hairline-soft)}
 .row:last-child{border-bottom:0}
 .row .ic{font-size:16px;line-height:1;text-align:center;margin-top:2px;color:var(--ink-soft);width:24px;height:24px;display:grid;place-items:center}
 .row .body{min-width:0}
@@ -5957,7 +5957,86 @@ function scheduleDailyReminders(){
       pushNotify('🌙 오늘 중요 미완료', `${hotUndone.length}개 남았어. 내일로 옮길지 정하자`);
       sessionStorage.setItem('eve_'+todayKey(), '1');
     }
+
+    // 5. 사용자가 직접 설정한 알림 (task.notify = 분 단위 offset)
+    const todayK = todayKey();
+    const tomorrowK = dkey(dateAdd(now, 1));
+    (store.tasks||[]).forEach(t => {
+      if(t.done || t.notify == null || t.notifyFired) return;
+      if(t.date !== todayK && t.date !== tomorrowK) return;
+      if(!t.time) return;
+      const [th, tm] = t.time.split(':').map(Number);
+      const taskDate = new Date(t.date + 'T00:00:00');
+      taskDate.setHours(th, tm, 0, 0);
+      const notifyAt = taskDate.getTime() - (+t.notify) * 60 * 1000;
+      const nowMs = Date.now();
+      // Fire within a 90-second window after the scheduled notify time
+      if(nowMs >= notifyAt && nowMs <= notifyAt + 90 * 1000){
+        const beforeLabel = (+t.notify) === 0 ? '지금'
+          : (+t.notify) >= 1440 ? `${Math.floor((+t.notify)/1440)}일 전`
+          : (+t.notify) >= 60 ? `${Math.floor((+t.notify)/60)}시간 전`
+          : `${+t.notify}분 전`;
+        pushNotify(`🔔 ${t.text}`, `${beforeLabel} · ${t.time}`);
+        t.notifyFired = true;
+        saveStore('tasks');
+      }
+    });
   }, 60 * 1000); // 1분마다 체크 (정밀도 위해)
+}
+
+/* User-set per-task notification — opens a small picker */
+function setTaskNotify(id){
+  const t = store.tasks.find(x => String(x.id) === String(id));
+  if(!t) return;
+  if(!t.time){
+    toast('시간이 있어야 알림 설정 가능 (일정 시간 먼저)');
+    return;
+  }
+  const opts = [
+    { label:'끄기',     v:null },
+    { label:'정시',     v:0 },
+    { label:'5분 전',   v:5 },
+    { label:'15분 전',  v:15 },
+    { label:'30분 전',  v:30 },
+    { label:'1시간 전', v:60 },
+    { label:'3시간 전', v:180 },
+    { label:'하루 전',  v:1440 }
+  ];
+  const currentIdx = (() => {
+    if(t.notify == null) return 0;
+    const idx = opts.findIndex(o => o.v === +t.notify);
+    return idx >= 0 ? idx : 0;
+  })();
+  const choice = prompt(
+    `"${t.text}"\n알림 시간을 골라줘 — 숫자 입력:\n\n` +
+    opts.map((o, i) => `${i}. ${o.label}${i === currentIdx ? ' ← 현재' : ''}`).join('\n'),
+    String(currentIdx)
+  );
+  if(choice == null) return;
+  const idx = parseInt(choice, 10);
+  if(isNaN(idx) || idx < 0 || idx >= opts.length){ toast('0~7 사이 숫자를 입력해줘'); return; }
+  if(opts[idx].v == null){
+    delete t.notify;
+    delete t.notifyFired;
+    toast('알림 꺼졌어');
+  } else {
+    t.notify = opts[idx].v;
+    t.notifyFired = false;
+    // Permission check
+    if(notifyPermission() === 'default'){
+      requestNotifyPermission();
+    } else if(notifyPermission() === 'denied'){
+      toast('브라우저에서 알림 차단됨 — 설정에서 풀어줘');
+    }
+    if(!store.settings?.notify){
+      store.settings = store.settings || {};
+      store.settings.notify = true;
+    }
+    if(typeof scheduleDailyReminders === 'function') scheduleDailyReminders();
+    toast(`알림: ${opts[idx].label} ✦`);
+  }
+  saveStore('tasks');
+  renderDrawer();
 }
 
 /* ============ HEALTH ============ */
@@ -7157,7 +7236,7 @@ function renderSettings(root){
         <div class="setting-row">
           <div class="setting-info">
             <div class="setting-title">푸시 알림</div>
-            <div class="setting-desc">중요(🔥) 일정 30분 전 · 외출 일정 1시간 전 · 아침/저녁 미완료 알림</div>
+            <div class="setting-desc">자동: 중요(🔥) 30분 전 · 외출(약속/미팅) 1시간 전 · 아침/저녁 미완료. 직접 설정: 일정 카드의 🔕 버튼을 눌러 5분~하루 전 알림 추가</div>
             <div class="setting-status ${perm==='granted'?'ok':perm==='denied'?'bad':'pending'}">
               상태: ${perm==='granted' ? '✓ 허용됨' : perm==='denied' ? '✗ 차단됨 (브라우저 설정에서 해제 필요)' : perm==='unsupported' ? '✗ 이 브라우저 미지원' : '대기 중 (아래 버튼 눌러줘)'}
             </div>
@@ -7599,7 +7678,13 @@ function renderDrawer(){
   $('#drawerDate').innerHTML=`${selectedDate.getMonth()+1}월 ${selectedDate.getDate()}일 <span class="day-name">${weekdaysKR[selectedDate.getDay()]}</span>`;
   $('#drawerBody').innerHTML=`
     <p class="label-eyebrow">${k===todayKey()?'오늘 할 일':'그 날 할 일'} <span class="right">${done}/${list.length}${list.length > 1 ? ` <button type="button" data-delall="${k}" style="margin-left:8px;background:transparent;border:0;color:var(--rose);font-family:var(--fui);font-size:10.5px;letter-spacing:.18em;cursor:pointer">전체 삭제</button>` : ''}</span></p>
-    ${list.length?`<div class="list" id="taskList">${list.map(t=>`
+    ${list.length?`<div class="list" id="taskList">${list.map(t=>{
+      const notifLabel = t.notify == null ? null
+        : t.notify === 0 ? '정시'
+        : t.notify >= 1440 ? `${Math.floor(t.notify/1440)}일 전`
+        : t.notify >= 60 ? `${Math.floor(t.notify/60)}시간 전`
+        : `${t.notify}분 전`;
+      return `
       <div class="row ${t.done?'done':''}" data-tid="${t.id}">
         <div class="ic">${stickerEmoji(t.type||'fallback')}</div>
         <div class="body">
@@ -7607,12 +7692,15 @@ function renderDrawer(){
           <div class="meta">
             <span class="tag ${t.priority===1?'hot':t.priority===2?'mid':'lo'}">${safe(t.priorityLabel||'')}</span>
             ${t.recurrence?`<span class="tag rec">${safe(t.recurrence.label)}</span>`:''}
+            ${notifLabel?`<span class="tag rec" style="color:var(--rose);border-color:var(--rose-soft)">🔔 ${safe(notifLabel)}</span>`:''}
           </div>
           ${t.reason?`<p class="why">${safe(t.reason)}</p>`:''}
         </div>
+        <button type="button" class="del" data-notify="${t.id}" aria-label="알림 설정" title="알림 설정" style="color:${notifLabel?'var(--rose)':'var(--ink-muted)'}">${notifLabel?'🔔':'🔕'}</button>
         <button type="button" class="del" data-del="${t.id}" aria-label="일정 삭제" title="삭제">삭제</button>
         <input type="checkbox" class="check" ${t.done?'checked':''} data-toggle="${t.id}"/>
-      </div>`).join('')}</div>`:'<p class="empty">이 날은 비어있어. 일부러 비워둬도 괜찮아.</p>'}
+      </div>`;
+    }).join('')}</div>`:'<p class="empty">이 날은 비어있어. 일부러 비워둬도 괜찮아.</p>'}
     <div class="add-inline">
       <input id="qTask" placeholder="이 날짜에 빠르게 추가…"/>
       <button id="qAdd">Add</button>
@@ -7627,6 +7715,7 @@ function renderDrawer(){
   $$('#drawerBody [data-toggle]').forEach(b=>b.onchange=()=>toggleTask(b.dataset.toggle));
   $$('#drawerBody [data-del]').forEach(b=>b.onclick=()=>deleteTask(b.dataset.del));
   $$('#drawerBody [data-delall]').forEach(b=>b.onclick=()=>deleteAllOnDay(b.dataset.delall));
+  $$('#drawerBody [data-notify]').forEach(b=>b.onclick=()=>setTaskNotify(b.dataset.notify));
   $('#qAdd').onclick=quickAddDrawer;
   $('#qTask').addEventListener('keydown',e=>{if(e.key==='Enter')quickAddDrawer()});
 }
