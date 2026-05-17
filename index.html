@@ -2927,9 +2927,251 @@ function setupVoiceInput(){
     voiceRecog.start();
   };
 }
+/* ===== Chat/conversation detection (KakaoTalk and similar) =====
+   Auto-strips metadata and extracts the core event (place + activity). */
+const KAKAO_META_RX = /\[[^\]\n]+\]\s*\[(?:오전|오후)\s*\d{1,2}:\d{2}\]/g;
+const CHAT_META_RX  = /^\s*\d{1,2}:\d{2}\s+[^\s]{1,20}\s+/gm;
+
+function isChatPaste(raw){
+  if(!raw) return false;
+  const km = raw.match(KAKAO_META_RX) || [];
+  if(km.length >= 2) return true;
+  // Generic: lots of short lines, conversational
+  const lines = raw.split('\n').filter(l => l.trim());
+  if(lines.length >= 6 && lines.filter(l => l.length < 30).length >= lines.length * 0.6) return true;
+  return false;
+}
+
+function stripChatMeta(raw){
+  const out = raw
+    .replace(KAKAO_META_RX, ' ')
+    .replace(CHAT_META_RX, ' ')
+    .split('\n')
+    .map(line => line.trim())
+    // Drop pure emoji/giggle lines & noise
+    .filter(line => {
+      if(!line) return false;
+      if(/^[ㅋㅎㅠㅜㅗㅁㄱㅡㅣ\s.…~^!?]+$/.test(line)) return false;
+      if(/^사진(\s*\d+장)?$/.test(line)) return false;
+      if(/^이모티콘$/.test(line)) return false;
+      if(/^https?:\/\/\S+$/.test(line)) return false;  // bare URLs alone — drop
+      return true;
+    })
+    .join(' ');
+  return out.replace(/\s+/g, ' ').trim();
+}
+
+/* Korean place + activity vocabulary used to summarize a long chat into a single title */
+const PLACE_DICT = {
+  '삼청동':'삼청동','북촌':'북촌','국현미':'국립현대미술관','국립현대미술관':'국립현대미술관',
+  '강남':'강남','홍대':'홍대','이태원':'이태원','성수':'성수','연남':'연남','한남':'한남',
+  '잠실':'잠실','신촌':'신촌','명동':'명동','종로':'종로','광화문':'광화문','을지로':'을지로',
+  '여의도':'여의도','경복궁':'경복궁','인사동':'인사동','이대':'이대','대학로':'대학로',
+  '익선동':'익선동','연희동':'연희동','망원':'망원','합정':'합정','상수':'상수','반포':'반포',
+  '롯데월드':'롯데월드','에버랜드':'에버랜드','한강':'한강','남산':'남산','북악산':'북악산',
+  '서촌':'서촌','을왕리':'을왕리','부산':'부산','제주':'제주','경주':'경주','전주':'전주'
+};
+const ACTIVITY_PATTERNS = [
+  [/전시|미술관|박물관|갤러리|국현미|국립현대미술관/, '전시'],
+  [/공연|콘서트|뮤지컬|연극/, '공연'],
+  [/영화|시사회/, '영화'],
+  [/와인|와인바|위스키|바\s*가|술 한잔/, '와인'],
+  [/카페|커피|디저트|브런치/, '카페'],
+  [/점심|밥|식사|저녁|디너|런치/, '식사'],
+  [/쇼룸|쇼핑|편집샵|편집숍/, '쇼핑'],
+  [/사진|촬영|화보/, '사진'],
+  [/산책|걷기/, '산책'],
+  [/운동|헬스|러닝|요가|필라테스/, '운동'],
+  [/스터디|공부/, '공부'],
+  [/회의|미팅|상담/, '미팅']
+];
+
+function summarizeChat(body){
+  const places = [];
+  Object.keys(PLACE_DICT).forEach(k => {
+    if(body.includes(k) && !places.includes(PLACE_DICT[k])) places.push(PLACE_DICT[k]);
+  });
+  const acts = [];
+  ACTIVITY_PATTERNS.forEach(([rx, name]) => {
+    if(rx.test(body) && !acts.includes(name)) acts.push(name);
+  });
+  let title = '';
+  if(places.length && acts.length){
+    title = places.slice(0,2).join('·') + ' ' + acts.slice(0,4).join('·');
+  } else if(places.length){
+    title = places.slice(0,2).join('·') + ' 약속';
+  } else if(acts.length){
+    title = acts.slice(0,4).join('·');
+  } else {
+    title = '약속';
+  }
+  return title.slice(0, 30);
+}
+
+/* Pull a "with whom" hint from chat speaker names (if names appear in [Name] meta) */
+function chatPeopleHint(raw){
+  const names = new Set();
+  const re = /\[([^\]\n]{1,15})\]\s*\[(?:오전|오후)\s*\d{1,2}:\d{2}\]/g;
+  let m;
+  while((m = re.exec(raw)) !== null){
+    const n = m[1].trim();
+    if(n && !/^(나|me|you)$/i.test(n)) names.add(n);
+  }
+  return [...names].slice(0,3);
+}
+
+async function handleChatPasteWithAI(raw, apiKey){
+  const status = (msg, isErr) => {
+    let el = document.getElementById('parseStatus');
+    if(!el){
+      el = document.createElement('p');
+      el.id = 'parseStatus';
+      el.style.cssText = 'margin:10px 0 0;font-family:var(--fb);font-size:13px;color:var(--ink-soft)';
+      const btn = document.getElementById('parseBtn');
+      if(btn && btn.parentNode) btn.parentNode.appendChild(el);
+    }
+    el.textContent = msg;
+    el.style.color = isErr ? 'var(--rose)' : 'var(--ink-soft)';
+  };
+  const today = todayKey();
+  const dow = ['일','월','화','수','목','금','토'][nowKST().getDay()];
+  const yr = nowKST().getFullYear();
+  const prompt = `다음은 카톡/대화 텍스트입니다. **약속의 핵심**만 30자 이내 한국어로 추출하세요.
+대화 본문 전체를 일정 텍스트로 절대 넣지 마세요. "장소 + 활동" 형태로 압축.
+
+오늘: ${today} (${dow}요일)
+
+대화:
+"""
+${raw}
+"""
+
+규칙:
+- 같은 흐름의 약속은 1개 일정으로 통합
+- 메타([이름] [시간]) 정보는 무시. 대화 본문에서만
+- 날짜 명시 없으면 가까운 토요일 또는 그 다음 약속 가능한 날 추정
+- 시간 없으면 null
+- priority 2 기본
+- location 필드에 장소 명시
+
+**JSON 배열만** 반환 (코드블록 표시 없이):
+[{"date":"YYYY-MM-DD","time":"HH:MM 또는 null","text":"30자 이내","priority":2,"location":"장소"}]`;
+
+  status('AI 분석 중…');
+  try{
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-6', max_tokens: 1024,
+        messages: [{ role:'user', content: prompt }]
+      })
+    });
+    if(!resp.ok){ throw new Error('API ' + resp.status); }
+    const data = await resp.json();
+    const text = (data.content||[]).filter(b=>b.type==='text').map(b=>b.text).join('\n');
+    const match = text.match(/\[[\s\S]*\]/);
+    if(!match) throw new Error('AI 응답에서 일정을 찾지 못함');
+    const events = JSON.parse(match[0]);
+    if(!Array.isArray(events) || events.length === 0){
+      status('대화에서 일정을 찾지 못했어요.', true); return false;
+    }
+    const labels = {1:'🔥 이건 진짜 우선',2:'⚡ 금방 끝나',3:'🌱 천천히 가도 돼'};
+    const made = events.filter(e => e && e.date && /^\d{4}-\d{2}-\d{2}$/.test(e.date)).map(e => {
+      const lvl = (e.priority===1||e.priority===2||e.priority===3) ? e.priority : 2;
+      const txt = (e.text||'약속').toString().slice(0,30);
+      return {
+        id: Date.now() + Math.random(),
+        date: e.date,
+        time: e.time || timeFor(0, {level:lvl}),
+        text: txt,
+        type: stickerType(txt + ' ' + (e.location||'')),
+        done: false,
+        priority: lvl,
+        priorityLabel: labels[lvl],
+        reason: e.location ? `장소: ${e.location} · 대화에서 AI 추출` : '대화에서 AI 추출',
+        createdAt: Date.now()
+      };
+    });
+    if(!made.length){ status('유효한 날짜가 없어요.', true); return false; }
+    store.tasks = [...store.tasks, ...made];
+    saveStore('tasks');
+    selectedDate = new Date(made[0].date);
+    cursor = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1);
+    view = 'calendar';
+    render();
+    toast(`AI가 ${made.length}개 정리했어 ✦`);
+    return true;
+  } catch(e){
+    console.warn('chat AI error', e);
+    status('AI 호출 실패: ' + e.message + ' (룰 기반으로 대체합니다)', true);
+    return false;
+  }
+}
+
+function handleChatPasteRuleBased(raw){
+  const body = stripChatMeta(raw);
+  if(!body || body.length < 5){ toast('대화에서 추출할 내용이 없어'); return; }
+  const title = summarizeChat(body);
+  const people = chatPeopleHint(raw);
+  const r = resolveDates(body);
+  const timeHint = extractTime(body);
+  // If no date keyword found, default to upcoming Saturday (typical for casual plans)
+  let date;
+  if(r.hadKeyword && r.dates.length){
+    date = r.dates[0];
+  } else {
+    date = thisDow(6); // upcoming Saturday
+  }
+  const p = priorityOf(title, dkey(date));
+  const reason = people.length
+    ? `${people.join('·')}님과 · 대화에서 정리됨 (수정 가능)`
+    : '대화에서 정리됨 (수정 가능)';
+  const task = {
+    id: Date.now() + Math.random(),
+    date: dkey(date),
+    time: timeHint || timeFor(0, p),
+    text: title,
+    type: stickerType(title),
+    done: false,
+    priority: p.level,
+    priorityLabel: p.label,
+    reason,
+    createdAt: Date.now()
+  };
+  store.tasks.push(task);
+  saveStore('tasks');
+  selectedDate = date;
+  cursor = new Date(date.getFullYear(), date.getMonth(), 1);
+  view = 'calendar';
+  render();
+  toast(`"${title}"로 정리했어 ✦`);
+}
+
+async function handleChatPaste(raw){
+  // If we have an Anthropic key available (admin or not), prefer AI for accuracy
+  let apiKey = '';
+  try{ apiKey = (localStorage.getItem('admin_api_key')||'').trim(); }catch(_){}
+  if(apiKey && apiKey.startsWith('sk-ant-')){
+    const ok = await handleChatPasteWithAI(raw, apiKey);
+    if(ok) return;
+  }
+  handleChatPasteRuleBased(raw);
+}
+
 function parseSchedule(){
   const raw = $('#bulkInput').value.trim();
   if(!raw) return;
+  // Detect chat paste — strip metadata and extract core event(s) instead of treating each line as a task
+  if(isChatPaste(raw)){
+    handleChatPaste(raw);
+    return;
+  }
   const chunks = splitIntents(raw);
   const made = [];
 
