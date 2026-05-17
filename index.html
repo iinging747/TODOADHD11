@@ -6656,6 +6656,11 @@ function healthAdvice(){
   const weights = store.health?.weights || [];
   const moods = (store.diaries||[]);
   const focusLog = (store.focusLog||[]).filter(f => f.kind !== 'break');
+  const sleeps = store.health?.sleeps || [];
+  const recentNightSleeps = sleeps.filter(s => s.type === 'night' && s.date >= last7K);
+  const avgSleepMs = recentNightSleeps.length
+    ? recentNightSleeps.reduce((a,s) => a + (+s.duration || 0), 0) / recentNightSleeps.length : 0;
+  const avgSleepH = avgSleepMs / 3600000;
 
   const last7Ex = exercise.filter(e => e.date >= last7K);
   const last7Min = last7Ex.reduce((a,e)=>a+(+e.min||0), 0);
@@ -6701,6 +6706,18 @@ function healthAdvice(){
     } else if(dailyAvg >= 25){
       advice.push(`🎯 일주일 집중 시간 ${last7Focus}분 — 균형 잡힌 페이스. 작은 사이클 계속 쌓아가자.`);
     }
+  }
+
+  if(recentNightSleeps.length === 0){
+    advice.push('🌙 일주일 본수면 기록이 없어. 한 줄이라도 적어두면 컨디션의 원인이 보여.');
+  } else if(avgSleepH < 6){
+    advice.push(`🌙 최근 평균 수면 ${avgSleepH.toFixed(1)}시간 — 만성적 부족. 단 1시간만 더 자도 집중·감정에 큰 영향. 취침 시간 30분 앞당기는 거 추천.`);
+  } else if(avgSleepH > 9.5){
+    advice.push(`🌙 최근 평균 수면 ${avgSleepH.toFixed(1)}시간 — 약간 많은 편. 컨디션이 무겁다면 일정한 기상 시간부터 잡아봐.`);
+  } else if(avgSleepH >= 7 && avgSleepH <= 8.5){
+    advice.push(`🌙 평균 수면 ${avgSleepH.toFixed(1)}시간 — 이상적인 구간 ♡`);
+  } else {
+    advice.push(`🌙 평균 수면 ${avgSleepH.toFixed(1)}시간 — 무난한 편, 7~8시간 목표로 가자.`);
   }
 
   if(weights.length >= 2){
@@ -6825,6 +6842,30 @@ function renderHealth(root){
   const sups = store.health?.supplements || [];
   const fastHours = store.settings?.fastingHours || 16;
   const foods = (store.health?.foods || []).filter(f => f.date === tk);
+  // ===== Sleep =====
+  const sleeps = (store.health?.sleeps || []).slice().sort((a,b) => (b.wakeAt||0) - (a.wakeAt||0));
+  const last7Start = dateAdd(nowKST(), -7);
+  const last7K = dkey(last7Start);
+  const recentNights = sleeps.filter(s => s.type === 'night' && s.date >= last7K);
+  const avgMs = recentNights.length
+    ? recentNights.reduce((a,s) => a + (+s.duration || 0), 0) / recentNights.length : 0;
+  const avgH = Math.floor(avgMs / 3600000);
+  const avgM = Math.floor((avgMs % 3600000) / 60000);
+  const todayNight = sleeps.find(s => s.type === 'night' && s.date === tk);
+  const todayNaps = sleeps.filter(s => s.type === 'nap' && s.date === tk);
+  const todayNapMin = todayNaps.reduce((a,n) => a + Math.round((+n.duration||0)/60000), 0);
+  const pendingSleep = store.health?.pendingSleepAt;
+  const fmtClock = ts => {
+    if(!ts) return '—';
+    const d = new Date(ts);
+    return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  };
+  const fmtDuration = ms => {
+    if(!ms || ms <= 0) return '0시간';
+    const h = Math.floor(ms / 3600000);
+    const m = Math.floor((ms % 3600000) / 60000);
+    return (h ? `${h}시간 ` : '') + `${m}분`;
+  };
   const todayBurnedKcal = exercise.filter(e => e.date === tk).reduce((a,e) => a + (+e.calories || 0), 0);
   const todayEatenKcal = foods.reduce((a,f) => a + (+f.calories || 0), 0);
   const dailyGoal = tdeeKcal();
@@ -7080,6 +7121,67 @@ function renderHealth(root){
           ※ 몸무게는 위쪽 "몸무게 기록"에서 — 최신 값이 자동으로 적용돼요 (현재 ${userWeightKg()}kg)<br>
           ※ Mifflin-St Jeor 공식 기반 추정치. 실제와 약 ±10% 차이 가능.
         </p>
+      </div>
+
+      <!-- SLEEP -->
+      <div class="paper">
+        <p class="label-eyebrow">🌙 수면 <span class="right">${recentNights.length ? `최근 7일 평균 ${avgH}시간 ${avgM}분` : '아직 기록 없음'}</span></p>
+
+        ${todayNight ? `
+          <div style="padding:12px 14px;background:var(--paper-soft);border-radius:3px;margin-bottom:14px">
+            <div style="font-family:var(--fb);font-weight:500;font-size:14px;color:var(--ink)">오늘 본수면: ${fmtClock(todayNight.sleepAt)} ~ ${fmtClock(todayNight.wakeAt)} · ${fmtDuration(todayNight.duration)}</div>
+            ${todayNight.notes?`<div style="font-family:var(--fb);font-weight:400;font-size:13px;color:var(--ink-soft);margin-top:4px;font-style:italic">${safe(todayNight.notes)}</div>`:''}
+          </div>
+        ` : ''}
+
+        ${pendingSleep ? `
+          <div style="padding:12px 14px;background:var(--rose-soft);border-radius:3px;margin-bottom:14px">
+            <div style="font-family:var(--fb);font-weight:500;font-size:14px;color:var(--ink)">🌜 ${fmtClock(pendingSleep)} 부터 자는 중…</div>
+            <button class="btn btn-primary" id="wakeNowBtn" style="margin-top:10px">방금 일어났어요 →</button>
+          </div>
+        ` : `
+          <button class="btn btn-ghost" id="sleepNowBtn" style="margin-bottom:14px">🌜 지금 자러 간다</button>
+        `}
+
+        <p class="label-eyebrow" style="font-size:11px;margin-top:14px">본수면 직접 입력</p>
+        <div class="row2">
+          <div class="field"><label>잠든 시각</label><input class="input" id="sleepAt" type="datetime-local"/></div>
+          <div class="field"><label>일어난 시각</label><input class="input" id="wakeAt" type="datetime-local"/></div>
+        </div>
+        <button class="btn btn-primary" id="addNightSleep">기록 →</button>
+
+        <div class="divider"></div>
+
+        <p class="label-eyebrow" style="font-size:11px">💤 낮잠 <span class="right">오늘 ${todayNaps.length}회 · ${todayNapMin}분</span></p>
+        <div class="row2">
+          <div class="field"><label>낮잠 시간 (분)</label><input class="input" id="napMin" type="number" min="1" placeholder="예: 30"/></div>
+          <div class="field"><label>메모 (선택)</label><input class="input" id="napNote" placeholder="컨디션 등"/></div>
+        </div>
+        <button class="btn btn-primary" id="addNap">낮잠 기록 →</button>
+
+        ${sleeps.length ? `
+          <div class="divider"></div>
+          <p class="label-eyebrow" style="font-size:11px">최근 기록 <span class="right">최신 7개</span></p>
+          <div style="display:flex;flex-direction:column;gap:6px">
+            ${sleeps.slice(0,7).map(s => {
+              const realIdx = (store.health?.sleeps||[]).indexOf(s);
+              return `<div style="display:flex;justify-content:space-between;align-items:flex-start;padding:6px 0;border-bottom:1px solid var(--hairline-soft)">
+                <div style="flex:1;min-width:0">
+                  <div style="font-family:var(--fb);font-weight:500;font-size:13.5px;color:var(--ink)">
+                    ${s.type === 'night' ? '🌙 본수면' : '💤 낮잠'} · ${safe(s.date)}
+                  </div>
+                  <div style="font-family:var(--fb);font-weight:400;font-size:13px;color:var(--ink-soft);margin-top:2px">
+                    ${s.type === 'night'
+                      ? `${fmtClock(s.sleepAt)} ~ ${fmtClock(s.wakeAt)} · ${fmtDuration(s.duration)}`
+                      : `${fmtDuration(s.duration)}${s.sleepAt ? ' · ' + fmtClock(s.sleepAt) + ' 시작' : ''}`}
+                  </div>
+                  ${s.notes?`<div style="font-family:var(--fb);font-weight:400;font-size:12.5px;color:var(--ink-soft);margin-top:3px;font-style:italic">${safe(s.notes)}</div>`:''}
+                </div>
+                <button class="sup-del" data-sleepdel="${realIdx}">삭제</button>
+              </div>`;
+            }).join('')}
+          </div>
+        ` : ''}
       </div>
 
       <!-- FASTING -->
@@ -7432,6 +7534,99 @@ function renderHealth(root){
     store.health.foods = store.health.foods.filter(f => f !== target);
     saveStore('health'); render();
   });
+
+  // ===== Sleep handlers =====
+  function ensureSleepsArr(){
+    if(!store.health) store.health = {water:{}, exercise:[], fasting:{}, supplements:[], weights:[], foods:[], sleeps:[]};
+    if(!store.health.sleeps) store.health.sleeps = [];
+  }
+  function saveSleepEntry(sleepAt, wakeAt, type, notes){
+    if(!sleepAt || !wakeAt) return false;
+    const sAt = +sleepAt, wAt = +wakeAt;
+    if(wAt <= sAt) return false;
+    const duration = wAt - sAt;
+    ensureSleepsArr();
+    const wakeDate = new Date(wAt);
+    const dateKey = `${wakeDate.getFullYear()}-${pad(wakeDate.getMonth()+1)}-${pad(wakeDate.getDate())}`;
+    store.health.sleeps.push({
+      date: dateKey, type, sleepAt: sAt, wakeAt: wAt, duration,
+      notes: notes || '', at: Date.now()
+    });
+    saveStore('health');
+    return true;
+  }
+
+  const sleepNowBtn = $('#sleepNowBtn');
+  if(sleepNowBtn) sleepNowBtn.onclick = () => {
+    ensureSleepsArr();
+    store.health.pendingSleepAt = Date.now();
+    saveStore('health'); render();
+    toast('🌜 잘 자요');
+  };
+
+  const wakeNowBtn = $('#wakeNowBtn');
+  if(wakeNowBtn) wakeNowBtn.onclick = () => {
+    if(!store.health?.pendingSleepAt) return;
+    const sleepAt = store.health.pendingSleepAt;
+    const wakeAt = Date.now();
+    const ok = saveSleepEntry(sleepAt, wakeAt, 'night', '');
+    if(!ok){ toast('수면 시간이 너무 짧아요'); return; }
+    delete store.health.pendingSleepAt;
+    saveStore('health'); render();
+    const hours = Math.round((wakeAt - sleepAt) / 360000) / 10;
+    toast(`☀️ ${hours}시간 잤어요`);
+  };
+
+  const addNightBtn = $('#addNightSleep');
+  if(addNightBtn) addNightBtn.onclick = () => {
+    const s = $('#sleepAt').value;
+    const w = $('#wakeAt').value;
+    if(!s || !w){ toast('잠든 시각과 일어난 시각 둘 다 입력해줘'); return; }
+    const sAt = new Date(s).getTime();
+    const wAt = new Date(w).getTime();
+    if(wAt <= sAt){ toast('일어난 시각이 잠든 시각보다 뒤여야 해요'); return; }
+    const ok = saveSleepEntry(sAt, wAt, 'night', '');
+    if(!ok){ toast('수면 기록 실패'); return; }
+    render();
+    toast('수면 기록 ♡');
+  };
+
+  const addNapBtn = $('#addNap');
+  if(addNapBtn) addNapBtn.onclick = () => {
+    const min = parseInt($('#napMin').value, 10);
+    if(!min || min < 1){ toast('낮잠 시간을 분 단위로 입력해줘'); return; }
+    const notes = ($('#napNote').value || '').trim();
+    const wakeAt = Date.now();
+    const sleepAt = wakeAt - min * 60 * 1000;
+    const ok = saveSleepEntry(sleepAt, wakeAt, 'nap', notes);
+    if(!ok){ toast('낮잠 기록 실패'); return; }
+    render();
+    toast(`💤 ${min}분 낮잠 기록`);
+  };
+
+  $$('#main [data-sleepdel]').forEach(b => b.onclick = () => {
+    const i = +b.dataset.sleepdel;
+    if(!confirm('이 수면 기록을 지울까요?')) return;
+    store.health.sleeps.splice(i, 1);
+    saveStore('health'); render();
+  });
+
+  // Pre-fill datetime-local inputs with reasonable defaults
+  (() => {
+    const sa = $('#sleepAt'), wa = $('#wakeAt');
+    if(!sa || !wa) return;
+    if(!sa.value && !wa.value){
+      const now = new Date();
+      const yest = new Date(now);
+      yest.setDate(yest.getDate() - 1);
+      yest.setHours(23, 30, 0, 0);
+      const today6 = new Date(now);
+      today6.setHours(7, 0, 0, 0);
+      const toLocal = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+      sa.value = toLocal(yest);
+      wa.value = toLocal(today6);
+    }
+  })();
 
   // ===== Body info save =====
   const bodySaveBtn = $('#bodySave');
