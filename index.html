@@ -2654,13 +2654,16 @@ function titleFrom(text){
   // Strip any leftover leading conjunction/particle
   t = t.replace(/^\s*(그리고|그러고|또한|또|그래서|그러면|그럼|에|는|을|를|이|가|와|과|도|만|에서|에게|로|으로)\s*/, '');
 
+  // Trailing copula endings — strip cleanly (don't turn into "이기"/"기")
+  t = t.replace(/(?:이고|이며|이지|이야|이라|이라고|이거든|이네|이지뭐|이잖아)$/, '');
   // Clean trailing action connectors
   t = t
     .replace(/하고$/, '')
     .replace(/가서$/, ' 가기')
     .replace(/와서$/, ' 오기')
     .replace(/먹고$/, ' 먹기')
-    .replace(/고$/, '기');
+    // Generic 고 → 기 (action -> noun), but only when preceded by Korean syllable
+    .replace(/([가-힣])고$/, '$1기');
 
   // Remove leading particles
   t = t.replace(/^(에|는|을|를|이|가|와|과|도|만|에서|에게|로|으로)\s+/, '');
@@ -4633,11 +4636,23 @@ function renderMood(root){
   const todayPhotos = Array.isArray(today.photos) ? today.photos : [];
   const pattern = moodPatternAdvice();
 
-  // Past entries (latest 30)
-  const past = (store.diaries||[])
-    .filter(d => d.date !== todayKey() && ((d.text && d.text.trim()) || (Array.isArray(d.mood) && d.mood.length) || (Array.isArray(d.photos) && d.photos.length)))
-    .sort((a,b) => b.date.localeCompare(a.date))
-    .slice(0, 30);
+  // Past entries — filter by tab (week / month / all), and respect collapse state
+  const diaryView = store._diaryView || 'recent'; // 'recent' | 'week' | 'month' | 'all'
+  const diaryCollapsed = !!store._diaryCollapsed;
+  const tk2 = todayKey();
+  const now2 = nowKST();
+  const wsK = (() => { const w = new Date(now2); w.setDate(w.getDate() - w.getDay()); return dkey(w); })();
+  const msK = `${now2.getFullYear()}-${pad(now2.getMonth()+1)}`;
+  const allPast = (store.diaries||[])
+    .filter(d => d.date !== tk2 && ((d.text && d.text.trim()) || (Array.isArray(d.mood) && d.mood.length) || (Array.isArray(d.photos) && d.photos.length)))
+    .sort((a,b) => b.date.localeCompare(a.date));
+  const filteredPast = (() => {
+    if(diaryView === 'week') return allPast.filter(d => d.date >= wsK);
+    if(diaryView === 'month') return allPast.filter(d => (d.date||'').startsWith(msK));
+    if(diaryView === 'all') return allPast;
+    return allPast.slice(0, 30); // recent
+  })();
+  const past = diaryCollapsed ? [] : filteredPast;
 
   root.innerHTML = `
     <div class="hero"><h1 class="hero-title">DIARY</h1><span class="hero-script">today</span></div>
@@ -4698,9 +4713,19 @@ function renderMood(root){
         </div>
       ` : ''}
 
+      <div style="height:18px"></div>
+      <div style="display:flex;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:14px">
+        <p class="label-eyebrow" style="margin:0;flex:1;min-width:0">📖 지난 일기 <span class="right">${filteredPast.length}개${diaryView !== 'all' && allPast.length > filteredPast.length ? ` / 전체 ${allPast.length}` : ''}</span></p>
+        <button type="button" id="diaryCollapseToggle" style="background:transparent;border:1px solid var(--hairline);border-radius:3px;padding:5px 10px;font-family:var(--fui);font-size:10.5px;letter-spacing:.16em;color:var(--ink-soft);cursor:pointer">${diaryCollapsed ? '▾ 펼치기' : '▴ 접기'}</button>
+      </div>
+      ${!diaryCollapsed ? `
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin:-6px 0 14px">
+        ${[['recent','최근 30개'],['week','이번 주'],['month','이번 달'],['all','전체']].map(([v,l]) => `
+          <button type="button" data-diaryview="${v}" style="background:${diaryView===v?'var(--ink)':'transparent'};color:${diaryView===v?'var(--paper)':'var(--ink-soft)'};border:1px solid ${diaryView===v?'var(--ink)':'var(--hairline)'};border-radius:999px;padding:5px 12px;font-family:var(--fui);font-size:10.5px;letter-spacing:.16em;cursor:pointer">${l}</button>
+        `).join('')}
+      </div>
+      ` : ''}
       ${past.length ? `
-        <div style="height:18px"></div>
-        <p class="label-eyebrow" style="max-width:none">📖 지난 일기 <span class="right">${past.length}개${(store.diaries||[]).length > past.length+1 ? ` (전체 ${(store.diaries||[]).length}개)` : ''}</span></p>
         <div style="display:flex;flex-direction:column;gap:14px">
           ${past.map(d => {
             const moodTags = Array.isArray(d.mood) ? d.mood : (d.mood ? [d.mood] : []);
@@ -4720,7 +4745,7 @@ function renderMood(root){
             </div>`;
           }).join('')}
         </div>
-      ` : ''}
+      ` : (!diaryCollapsed ? `<p class="empty" style="margin:14px 0">${diaryView === 'week' ? '이번 주에 작성된 지난 일기 없음' : diaryView === 'month' ? '이번 달에 작성된 지난 일기 없음' : '아직 지난 일기 없음'}</p>` : '')}
     </div>
   `;
 
@@ -4852,6 +4877,21 @@ function renderMood(root){
     const entry = store.diaries.find(d => d.date === date);
     const p = entry?.photos?.[+idxStr];
     if(p) openLightbox(p.data, p.caption);
+  });
+
+  // Diary collapse toggle
+  const collapseBtn = $('#diaryCollapseToggle');
+  if(collapseBtn) collapseBtn.onclick = () => {
+    store._diaryCollapsed = !store._diaryCollapsed;
+    saveStore('__meta');
+    render();
+  };
+
+  // Diary view tabs (recent/week/month/all)
+  $$('#main [data-diaryview]').forEach(b => b.onclick = () => {
+    store._diaryView = b.dataset.diaryview;
+    saveStore('__meta');
+    render();
   });
 }
 
