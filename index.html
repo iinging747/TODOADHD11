@@ -7033,6 +7033,29 @@ function caloriesBurned(entry){
   if(!entry || !entry.min) return 0;
   return Math.round(metFor(entry.type, entry.subtype) * userWeightKg() * (entry.min / 60));
 }
+
+/* Get stored calories or compute on-the-fly for old entries */
+function exerciseKcal(entry){
+  if(entry && entry.calories != null && !isNaN(+entry.calories)) return +entry.calories;
+  return caloriesBurned(entry);
+}
+
+/* One-time migration: fill calories for existing exercise records */
+function migrateExerciseCalories(){
+  if(!store.health?.exercise || !store.health.exercise.length) return false;
+  let changed = 0;
+  store.health.exercise.forEach(e => {
+    if(e.calories == null && e.min){
+      e.calories = caloriesBurned(e);
+      changed++;
+    }
+  });
+  if(changed){
+    saveStore('health');
+    return changed;
+  }
+  return false;
+}
 /* Body fat % classification — gender-specific (ACE/ACSM/대한비만학회 reference) */
 function classifyBodyFat(pct, sex){
   if(pct == null || isNaN(pct)) return null;
@@ -7244,6 +7267,8 @@ function renderHealth(root){
   const fasting = store.health?.fasting || {};
   const sups = store.health?.supplements || [];
   const fastHours = store.settings?.fastingHours || 16;
+  // One-time migration: ensure all old exercise records have calories filled in
+  migrateExerciseCalories();
   const foods = (store.health?.foods || []).filter(f => f.date === tk);
   // ===== Sleep =====
   const sleeps = (store.health?.sleeps || []).slice().sort((a,b) => (b.wakeAt||0) - (a.wakeAt||0));
@@ -7269,7 +7294,15 @@ function renderHealth(root){
     const m = Math.floor((ms % 3600000) / 60000);
     return (h ? `${h}시간 ` : '') + `${m}분`;
   };
-  const todayBurnedKcal = exercise.filter(e => e.date === tk).reduce((a,e) => a + (+e.calories || 0), 0);
+  const todayBurnedKcal = exercise.filter(e => e.date === tk).reduce((a,e) => a + exerciseKcal(e), 0);
+  // Weekly + monthly burn aggregates
+  const _weekStart = nowKST(); _weekStart.setDate(_weekStart.getDate() - _weekStart.getDay());
+  const _wsK = dkey(_weekStart);
+  const _monthPrefix = tk.slice(0, 7);
+  const weekBurnedKcal = exercise.filter(e => e.date >= _wsK).reduce((a,e) => a + exerciseKcal(e), 0);
+  const monthBurnedKcal = exercise.filter(e => (e.date||'').startsWith(_monthPrefix)).reduce((a,e) => a + exerciseKcal(e), 0);
+  const weekBurnedMin = exercise.filter(e => e.date >= _wsK).reduce((a,e) => a + (+e.min || 0), 0);
+  const monthBurnedMin = exercise.filter(e => (e.date||'').startsWith(_monthPrefix)).reduce((a,e) => a + (+e.min || 0), 0);
   const todayEatenKcal = foods.reduce((a,f) => a + (+f.calories || 0), 0);
   const dailyGoal = tdeeKcal();
   const balanceKcal = todayEatenKcal - todayBurnedKcal;
@@ -7344,7 +7377,24 @@ function renderHealth(root){
 
       <!-- EXERCISE -->
       <div class="paper">
-        <p class="label-eyebrow">이번 주 운동 <span class="right">${weekExercise.length}회</span></p>
+        <p class="label-eyebrow">이번 주 운동 <span class="right">${weekExercise.length}회 · ${weekBurnedMin}분 · <b style="color:var(--rose)">−${weekBurnedKcal} kcal</b></span></p>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:0 0 14px;text-align:center">
+          <div style="padding:8px;background:var(--paper-soft);border-radius:3px">
+            <div style="font-family:var(--fui);font-size:9.5px;letter-spacing:.16em;color:var(--ink-muted);text-transform:uppercase">오늘</div>
+            <div style="font-family:var(--fd);font-weight:500;font-size:18px;color:var(--rose)">−${todayBurnedKcal}</div>
+            <div style="font-family:var(--fui);font-size:9px;color:var(--ink-muted);text-transform:uppercase">kcal</div>
+          </div>
+          <div style="padding:8px;background:var(--paper-soft);border-radius:3px">
+            <div style="font-family:var(--fui);font-size:9.5px;letter-spacing:.16em;color:var(--ink-muted);text-transform:uppercase">이번 주</div>
+            <div style="font-family:var(--fd);font-weight:500;font-size:18px;color:var(--rose)">−${weekBurnedKcal}</div>
+            <div style="font-family:var(--fui);font-size:9px;color:var(--ink-muted);text-transform:uppercase">${weekBurnedMin}분</div>
+          </div>
+          <div style="padding:8px;background:var(--paper-soft);border-radius:3px">
+            <div style="font-family:var(--fui);font-size:9.5px;letter-spacing:.16em;color:var(--ink-muted);text-transform:uppercase">이번 달</div>
+            <div style="font-family:var(--fd);font-weight:500;font-size:18px;color:var(--rose)">−${monthBurnedKcal}</div>
+            <div style="font-family:var(--fui);font-size:9px;color:var(--ink-muted);text-transform:uppercase">${monthBurnedMin}분</div>
+          </div>
+        </div>
         <div class="exercise-dots">
           ${[0,1,2,3,4,5,6].map(i => {
             const day = dateAdd(weekStart, i);
@@ -7418,9 +7468,10 @@ function renderHealth(root){
           <div style="display:flex;flex-direction:column;gap:8px">
             ${exercise.slice(-5).reverse().map((e, idxRev) => {
               const realIdx = exercise.length - 1 - idxRev;
+              const _kcal = exerciseKcal(e);
               return `<div style="display:flex;justify-content:space-between;align-items:flex-start;padding:8px 0;border-bottom:1px solid var(--hairline-soft)">
                 <div style="flex:1;min-width:0">
-                  <div style="font-family:var(--fb);font-weight:500;font-size:14px;color:var(--ink)">${safe(e.type||'운동')}${e.subtype?` · ${safe(e.subtype)}`:''}${e.calories?` <span style="color:var(--rose);font-weight:600">· ${e.calories} kcal</span>`:''}</div>
+                  <div style="font-family:var(--fb);font-weight:500;font-size:14px;color:var(--ink)">${safe(e.type||'운동')}${e.subtype?` · ${safe(e.subtype)}`:''}${_kcal?` <span style="color:var(--rose);font-weight:600">· −${_kcal} kcal</span>`:''}</div>
                   <div style="font-family:var(--fb);font-weight:400;font-size:13.5px;color:var(--ink-soft);margin-top:2px">
                     ${e.date}${e.min?` · ${e.min}분`:''}${e.km?` · ${e.km}km`:''}${e.distance?` · ${e.distance}m`:''}${e.sets?` · ${e.sets}세트`:''}${e.reps?` × ${e.reps}회`:''}${e.weight?` · ${e.weight}kg`:''}${e.muscle?` · ${safe(e.muscle)}`:''}${e.pace?` · 페이스 ${e.pace}`:''}
                   </div>
@@ -8959,7 +9010,7 @@ function renderReport(root){
           <div class="report-cell">
             <div class="report-label">운동</div>
             <div class="report-num">${weekExercise.length}<span class="report-unit">회</span></div>
-            <div class="report-sub">${weekExercise.reduce((a,b)=>a+(b.min||0),0)}분</div>
+            <div class="report-sub">${weekExercise.reduce((a,b)=>a+(b.min||0),0)}분 · −${weekExercise.reduce((a,b)=>a + exerciseKcal(b), 0)} kcal</div>
           </div>
         </div>
 
