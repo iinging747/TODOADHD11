@@ -7705,10 +7705,14 @@ function renderClients(root){
     <div class="hero"><h1 class="hero-title">PEOPLE</h1><span class="hero-script">contacts</span></div>
     <div class="section-wrap">
 
-      <div style="display:flex;gap:6px;margin-bottom:14px">
-        ${tabBtn('personal', '사적 관계', personals.length, tab==='personal')}
-        ${tabBtn('work',     '업무 관계', works.length,     tab==='work')}
+      <div style="display:flex;gap:6px;margin-bottom:8px">
+        ${tabBtn('personal', '👤 사적 관계', personals.length, tab==='personal')}
+        ${tabBtn('work',     '💼 업무 관계', works.length,     tab==='work')}
       </div>
+      <p style="margin:0 0 14px;font-family:var(--fb);font-weight:400;font-size:12px;color:var(--ink-muted);font-style:italic;line-height:1.5">
+        ${tab === 'personal' ? '친구·가족·연인 — 생일 알림 등' : '거래처·동료·고객 — 마지막 연락일·연락처'}
+        · 카드 옆 "${tab === 'personal' ? '🏢 업무로' : '👤 사적으로'}" 버튼으로 옮길 수 있어
+      </p>
 
       ${tab === 'personal' ? `
         ${upcomingBdays.length ? `
@@ -7748,7 +7752,10 @@ function renderClients(root){
                   ${lastMet!=null?`<p class="why">마지막 만남: ${c.lastMet} (${lastMet}일 전)</p>`:''}
                   ${c.memo?`<p class="why">${safe(c.memo)}</p>`:''}
                 </div>
-                <button class="del" data-delcl="${realIdx}">삭제</button></div>`;
+                <div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end">
+                  <button type="button" data-movekind="${realIdx}" data-tokind="work" style="background:transparent;color:var(--ink-soft);border:1px solid var(--hairline);font-family:var(--fui);font-size:9.5px;letter-spacing:.16em;padding:3px 8px;border-radius:3px;cursor:pointer">🏢 업무로</button>
+                  <button class="del" data-delcl="${realIdx}">삭제</button>
+                </div></div>`;
             }).join('')}</div>`:'<p class="empty" style="margin-top:14px">저장된 사람이 없어.</p>'}
         </div>
       ` : `
@@ -7792,7 +7799,10 @@ function renderClients(root){
                   ${lastMet!=null?`<p class="why">마지막 연락: ${c.lastMet} (${lastMet}일 전)</p>`:''}
                   ${c.memo?`<p class="why">${safe(c.memo)}</p>`:''}
                 </div>
-                <button class="del" data-delcl="${realIdx}">삭제</button></div>`;
+                <div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end">
+                  <button type="button" data-movekind="${realIdx}" data-tokind="personal" style="background:transparent;color:var(--ink-soft);border:1px solid var(--hairline);font-family:var(--fui);font-size:9.5px;letter-spacing:.16em;padding:3px 8px;border-radius:3px;cursor:pointer">👤 사적으로</button>
+                  <button class="del" data-delcl="${realIdx}">삭제</button>
+                </div></div>`;
             }).join('')}</div>`:'<p class="empty" style="margin-top:14px">저장된 업무 관계가 없어.</p>'}
         </div>
       `}
@@ -7844,6 +7854,26 @@ function renderClients(root){
     if(!confirm('이 사람을 삭제할까요?')) return;
     store.clients.splice(+b.dataset.delcl, 1);
     saveStore('clients'); render();
+  });
+  // Move between personal/work tabs
+  $$('[data-movekind]').forEach(b => b.onclick = () => {
+    const idx = +b.dataset.movekind;
+    const toKind = b.dataset.tokind;
+    const c = store.clients[idx];
+    if(!c) return;
+    c.kind = toKind;
+    // When moving to work: drop birthday (doesn't apply); rel → role if not set
+    if(toKind === 'work'){
+      if(c.birthday) delete c.birthday;
+      if(!c.role && c.rel){ c.role = c.rel; delete c.rel; }
+    } else {
+      // Moving to personal: convert role → rel if helpful
+      if(!c.rel && c.role){ c.rel = c.role; delete c.role; }
+    }
+    saveStore('clients');
+    window._peopleTab = toKind;
+    render();
+    toast(`${c.name} → ${toKind === 'work' ? '업무' : '사적'}으로 이동`);
   });
 }
 
@@ -9378,6 +9408,9 @@ function renderHealth(root){
         </div>
         <div id="exFields"></div>
         <div id="exKcalPreview" style="margin:8px 0;padding:8px 12px;background:var(--paper-soft);border-radius:3px;font-family:var(--fb);font-weight:500;font-size:14px;color:var(--ink-soft);text-align:center"></div>
+        <div class="field"><label>칼로리 직접 입력 (선택) <span style="font-family:var(--fb);font-weight:300;font-size:11px;color:var(--ink-muted);letter-spacing:0;text-transform:none;font-style:italic;margin-left:4px">— 비우면 자동 계산</span></label>
+          <input class="input" id="exKcalManual" type="number" min="0" placeholder="예: 250 (워치/앱에서 본 정확한 값)"/>
+        </div>
         <button class="btn btn-primary" id="exAdd">오늘 운동 기록 →</button>
 
         ${(() => {
@@ -10251,11 +10284,17 @@ function renderHealth(root){
     const subtype = txtOrNull('exSubtype'); if(subtype) entry.subtype = subtype;
     const pace = txtOrNull('exPace'); if(pace) entry.pace = pace;
     const notes = txtOrNull('exNotes'); if(notes) entry.notes = notes;
-    // Auto-compute calories burned
-    entry.calories = caloriesBurned(entry);
+    // Manual override takes priority; else auto-compute
+    const manualKcal = numOrNull('exKcalManual');
+    if(manualKcal != null && manualKcal >= 0){
+      entry.calories = Math.round(manualKcal);
+      entry.kcalManual = true;
+    } else {
+      entry.calories = caloriesBurned(entry);
+    }
     store.health.exercise.push(entry);
     saveStore('health'); render();
-    toast(entry.calories > 0 ? `운동 기록 · −${entry.calories} kcal ♡` : '운동 기록 ♡');
+    toast(entry.calories > 0 ? `운동 기록 · −${entry.calories} kcal ♡${entry.kcalManual?' (직접입력)':''}` : '운동 기록 ♡');
   };
 
   $$('#main [data-exdel]').forEach(b => b.onclick = () => {
