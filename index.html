@@ -100,6 +100,11 @@ html,body{margin:0;padding:0}
 @media all and (display-mode: standalone){
   .mobile-bar{padding-top:max(10px, env(safe-area-inset-top))}
 }
+@keyframes pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.02); box-shadow: 0 0 0 4px rgba(232,155,74,.3); }
+}
+
 body{
   min-height:100vh;
   font-family:var(--fb);font-weight:400;color:var(--ink);font-size:15.5px;line-height:1.6;
@@ -1291,6 +1296,13 @@ body.dark .toast{background:var(--ink);color:var(--bg)}
 
     <p class="auth-error" id="authError" hidden></p>
 
+    <div id="inappWarn" hidden style="margin:14px 0 0;padding:14px 14px;background:#FFF2E5;border:1.5px solid #E89B4A;border-radius:6px;font-family:var(--fb);font-size:13.5px;line-height:1.6;color:#5C3A0A">
+      <p style="margin:0 0 8px;font-weight:700;font-size:14.5px">⚠️ 카톡/SNS 내장 브라우저에서 열렸어요</p>
+      <p style="margin:0 0 10px;color:#7A4A0F">Google이 인앱 브라우저에서의 로그인을 차단해요. <b>외부 브라우저(Chrome·Safari·삼성인터넷)에서 열어주세요.</b></p>
+      <div id="inappActions" style="display:flex;gap:8px;flex-wrap:wrap"></div>
+      <p style="margin:10px 0 0;font-size:12px;color:#8A5C20">💡 안 되면: 카톡 우측 상단 ⋯ → "다른 브라우저로 열기"</p>
+    </div>
+
     <p class="auth-foot" style="margin-top:18px">
       처음이라면 자동으로 계정이 만들어져. 기존 사용자는 그대로 들어가져.
     </p>
@@ -1582,6 +1594,11 @@ function toggleTheme(){
 applyTheme(getInitialTheme());
 // Theme buttons (gate + sidebar)
 const _gateTheme = $('#gateTheme'); if(_gateTheme) _gateTheme.addEventListener('click', toggleTheme);
+
+/* Run in-app browser detection right after DOM is ready */
+if(typeof setupInAppBrowserWarning === 'function'){
+  setupInAppBrowserWarning();
+}
 
 /* Privacy policy modal — supports 'view' (close-only) and 'consent' (must agree) modes */
 function showPrivacyModal(mode){
@@ -1968,6 +1985,86 @@ async function sDel(key){
 /* ============ Auth (Firebase Google login) ============ */
 let currentFbUser = null; // Firebase User object
 let currentAccessToken = null; // Google OAuth token (memory only - never persisted)
+
+/* ===== In-app browser detection (KakaoTalk, FB, Insta, Line, Naver, Daum, etc.) =====
+   Google blocks OAuth in these → disallowed_useragent. Guide user to open externally. */
+function detectInAppBrowser(){
+  const ua = (navigator.userAgent || '').toLowerCase();
+  // Known in-app browsers
+  const patterns = [
+    { test: /kakaotalk/, name: '카카오톡' },
+    { test: /fb_iab|fbav|fban/, name: 'Facebook' },
+    { test: /instagram/, name: 'Instagram' },
+    { test: /line\/[\d.]+/, name: 'LINE' },
+    { test: /naver\(inapp/, name: '네이버' },
+    { test: /daumapps/, name: '다음' },
+    { test: /everytimeapp/, name: '에브리타임' },
+    { test: /whatsapp|micromessenger|wechat/, name: '메신저' },
+    // Generic WebView (Android)
+    { test: /; wv\)/, name: '인앱 브라우저' }
+  ];
+  for(const p of patterns){
+    if(p.test.test(ua)) return p.name;
+  }
+  return null;
+}
+
+function setupInAppBrowserWarning(){
+  const detected = detectInAppBrowser();
+  if(!detected) return;
+  const warn = document.getElementById('inappWarn');
+  const actions = document.getElementById('inappActions');
+  if(!warn || !actions) return;
+  warn.hidden = false;
+  const currentUrl = location.href.replace(/^https?:\/\//, '');
+
+  const isAndroid = /android/i.test(navigator.userAgent);
+  const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+
+  let html = '';
+  // Android: intent URL forces Chrome
+  if(isAndroid){
+    const intentUrl = `intent://${currentUrl}#Intent;scheme=https;package=com.android.chrome;end`;
+    html += `<a href="${intentUrl}" style="background:#E89B4A;color:#fff;text-decoration:none;border:0;border-radius:6px;padding:10px 14px;font-family:var(--fb);font-weight:700;font-size:13.5px;cursor:pointer;display:inline-block">📱 Chrome으로 열기</a>`;
+    const samsungIntent = `intent://${currentUrl}#Intent;scheme=https;package=com.sec.android.app.sbrowser;end`;
+    html += `<a href="${samsungIntent}" style="background:#5C3A0A;color:#fff;text-decoration:none;border:0;border-radius:6px;padding:10px 14px;font-family:var(--fb);font-weight:700;font-size:13.5px;cursor:pointer;display:inline-block">🌐 삼성인터넷으로 열기</a>`;
+  } else if(isIOS){
+    // iOS Chrome URL scheme (works if Chrome installed)
+    const chromeUrl = location.href.replace(/^https/, 'googlechromes').replace(/^http/, 'googlechrome');
+    html += `<a href="${chromeUrl}" style="background:#E89B4A;color:#fff;text-decoration:none;border:0;border-radius:6px;padding:10px 14px;font-family:var(--fb);font-weight:700;font-size:13.5px;cursor:pointer;display:inline-block">📱 Chrome으로 열기</a>`;
+  }
+  // Universal: copy URL
+  html += `<button type="button" id="inappCopy" style="background:#fff;color:#5C3A0A;border:1.5px solid #E89B4A;border-radius:6px;padding:10px 14px;font-family:var(--fb);font-weight:700;font-size:13.5px;cursor:pointer">📋 주소 복사</button>`;
+  actions.innerHTML = html;
+
+  const copyBtn = document.getElementById('inappCopy');
+  if(copyBtn) copyBtn.onclick = async () => {
+    try{
+      await navigator.clipboard.writeText(location.href);
+      copyBtn.textContent = '✓ 복사됨! 외부 브라우저에 붙여넣기';
+      copyBtn.style.background = '#5C3A0A';
+      copyBtn.style.color = '#fff';
+    } catch(e){
+      copyBtn.textContent = '복사 실패';
+    }
+  };
+
+  // Disable Google sign-in button to prevent confusion
+  const gBtn = document.getElementById('googleSignInBtn');
+  if(gBtn){
+    gBtn.style.opacity = '0.5';
+    gBtn.style.cursor = 'not-allowed';
+    gBtn.onclick = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      // Highlight banner
+      warn.style.animation = 'none';
+      warn.offsetHeight;
+      warn.style.animation = 'pulse 0.4s 2';
+      return false;
+    };
+  }
+}
 
 async function signInWithGoogle(){
   const provider = new firebase.auth.GoogleAuthProvider();
