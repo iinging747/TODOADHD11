@@ -3289,18 +3289,27 @@ function renderMonth(root){
     // Mood emoji for this day
     const dayDiary = (store.diaries||[]).find(d=>d.date===k);
     const moodEmoji = dayDiary && dayDiary.mood?.length ? moodToEmoji(dayDiary.mood[0]) : '';
-    // Cycle marker (female + enabled only)
+    // Cycle marker (female + enabled only) — placed top-left so it doesn't clash with mood emoji (top-right)
     let cycleMark = '';
     if(showCycle && (_cInfo || _cStarts.length)){
-      const ph = cyclePhaseOn(d, _cInfo || { avgCycle: cycleAvgFromHistory().avg, periodLen: store.health?.cycle?.periodLen||5, ovuDay: Math.max(10, cycleAvgFromHistory().avg - 14), realStart: _cStarts[0] });
-      if(ph.phase === 'period'){
-        cycleMark = `<span style="position:absolute;bottom:3px;right:4px;width:6px;height:6px;border-radius:50%;background:#D14B5C;box-shadow:0 0 0 1px rgba(255,255,255,.6)" title="생리"></span>`;
-      } else if(ph.phase === 'ovulation'){
-        cycleMark = `<span style="position:absolute;bottom:2px;right:3px;font-size:9px;line-height:1;color:#C49A3A" title="배란일">✦</span>`;
+      const _avg = cycleAvgFromHistory().avg;
+      const ph = cyclePhaseOn(d, _cInfo || { avgCycle: _avg, periodLen: store.health?.cycle?.periodLen||5, ovuDay: Math.max(10, _avg - 14), realStart: _cStarts[0] });
+      // Also check if this day is the predicted next-period start (cd === 1 of next predicted cycle)
+      const isPredictedStart = _cInfo && dkey(d) === _cInfo.nextPeriodKey && !ph.manual;
+      const isPredictedOvu   = _cInfo && dkey(d) === _cInfo.ovuKey && !ph.manual;
+
+      if(ph.manual && ph.phase === 'period'){
+        cycleMark = `<span style="position:absolute;top:3px;left:4px;font-size:11px;line-height:1" title="생리 (직접 기록)">🩸</span>`;
+      } else if(isPredictedStart){
+        cycleMark = `<span style="position:absolute;top:3px;left:3px;width:10px;height:10px;border-radius:50%;background:#D14B5C;border:1.5px dashed #fff;box-shadow:0 0 0 1px #D14B5C" title="다음 생리 예정"></span>`;
+      } else if(ph.phase === 'period'){
+        cycleMark = `<span style="position:absolute;top:4px;left:4px;width:8px;height:8px;border-radius:50%;background:#D14B5C;opacity:.85" title="생리 예상"></span>`;
+      } else if(isPredictedOvu || ph.phase === 'ovulation'){
+        cycleMark = `<span style="position:absolute;top:1px;left:2px;font-size:13px;line-height:1;color:#C49A3A;font-weight:700" title="배란 예정일">✦</span>`;
       } else if(ph.phase === 'fertile'){
-        cycleMark = `<span style="position:absolute;bottom:3px;right:4px;width:5px;height:5px;border-radius:50%;background:#E89A6F;opacity:.7" title="가임기"></span>`;
+        cycleMark = `<span style="position:absolute;top:4px;left:4px;width:7px;height:7px;border-radius:50%;background:#E89A6F;opacity:.7" title="가임기"></span>`;
       } else if(ph.phase === 'pms'){
-        cycleMark = `<span style="position:absolute;bottom:3px;right:4px;width:5px;height:5px;border-radius:50%;background:#9B6BA8;opacity:.55" title="PMS"></span>`;
+        cycleMark = `<span style="position:absolute;top:4px;left:4px;width:6px;height:6px;border-radius:50%;background:#9B6BA8;opacity:.55" title="PMS"></span>`;
       }
     }
     cells.push(`<button class="${cls.join(' ')}" data-date="${k}" ${other?'data-other="1"':''} style="position:relative">
@@ -7424,9 +7433,15 @@ function prefLabel(p){
 /* CLIENTS */
 function renderClients(root){
   const tk = todayKey();
-  // Compute upcoming birthdays (within 30 days)
+  // Backward compat: entries without kind default to 'personal'
+  const all = (store.clients||[]).map(c => ({ ...c, kind: c.kind || 'personal' }));
+  const tab = (window._peopleTab) || 'personal';
+  const personals = all.filter(c => c.kind === 'personal');
+  const works = all.filter(c => c.kind === 'work');
+
+  // Upcoming birthdays — PERSONAL ONLY
   const upcomingBdays = [];
-  (store.clients||[]).forEach((c, idx) => {
+  personals.forEach((c) => {
     if(!c.birthday) return;
     const [bm, bd] = c.birthday.split('-').map(Number);
     if(!bm || !bd) return;
@@ -7434,57 +7449,130 @@ function renderClients(root){
     let next = new Date(now.getFullYear(), bm-1, bd);
     if(next < now) next = new Date(now.getFullYear()+1, bm-1, bd);
     const diff = Math.ceil((next - now) / 86400000);
-    if(diff <= 30) upcomingBdays.push({name: c.name, diff, date: next, idx});
+    if(diff <= 30) upcomingBdays.push({ name: c.name, diff, date: next });
   });
   upcomingBdays.sort((a,b) => a.diff - b.diff);
+
+  // Long-no-contact (work) — flag entries with lastContact > 30d
+  const staleWork = works.filter(w => {
+    if(!w.lastMet) return false;
+    const d = Math.floor((new Date(tk) - new Date(w.lastMet)) / 86400000);
+    return d >= 30;
+  }).map(w => ({ ...w, days: Math.floor((new Date(tk) - new Date(w.lastMet)) / 86400000) })).sort((a,b)=>b.days - a.days);
+
+  const tabBtn = (id, label, count, active) =>
+    `<button type="button" data-peopletab="${id}" style="flex:1;background:${active?'var(--ink)':'transparent'};color:${active?'var(--paper)':'var(--ink-soft)'};border:1px solid ${active?'var(--ink)':'var(--hairline)'};border-radius:3px;padding:9px 0;font-family:var(--fui);font-size:11px;letter-spacing:.22em;text-transform:uppercase;cursor:pointer">${label} <span style="opacity:.7;margin-left:4px">${count}</span></button>`;
 
   root.innerHTML=`
     <div class="hero"><h1 class="hero-title">PEOPLE</h1><span class="hero-script">contacts</span></div>
     <div class="section-wrap">
-      ${upcomingBdays.length ? `
-        <div class="paper" style="border-left:3px solid var(--rose)">
-          <p class="label-eyebrow">🎂 다가오는 생일 <span class="right">${upcomingBdays.length}명 · 30일 이내</span></p>
-          <div style="display:flex;flex-direction:column;gap:6px">
-            ${upcomingBdays.map(b => `
-              <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;background:var(--paper-soft);border-radius:3px">
-                <div style="font-family:var(--fb);font-weight:500;font-size:14.5px">${safe(b.name)} <span style="font-family:var(--fui);font-size:10.5px;letter-spacing:.12em;color:var(--ink-muted);margin-left:6px">${b.date.getMonth()+1}/${b.date.getDate()}</span></div>
-                <div style="font-family:var(--fd);font-size:18px;font-weight:500;color:${b.diff<=7?'var(--rose)':'var(--ink)'}">${b.diff===0?'오늘 🎉':b.diff===1?'내일':'D-'+b.diff}</div>
-              </div>
-            `).join('')}
-          </div>
-        </div>
-        <div style="height:18px"></div>
-      ` : ''}
 
-      <div class="paper">
-        <p class="label-eyebrow">👤 사람 / 관계 추가</p>
-        <div class="field"><label>이름</label><input class="input" id="clName" placeholder="이름 또는 회사"/></div>
-        <div class="row2">
-          <div class="field"><label>생일 (월-일, 선택)</label><input class="input" id="clBday" placeholder="예: 05-21" maxlength="5"/></div>
-          <div class="field"><label>관계 (선택)</label><input class="input" id="clRel" placeholder="친구·가족·연인·동료"/></div>
-        </div>
-        <div class="field"><label>마지막 만남 (선택)</label><input class="input" id="clLastMet" type="date"/></div>
-        <div class="field"><label>메모 (현재 진행·취향·주의할 점)</label><textarea class="textarea" id="clMemo" placeholder="짧게라도 적어두기"></textarea></div>
-        <button class="btn btn-primary" id="clAdd">저장 →</button>
-        ${store.clients.length?`<div class="divider"></div>
-          <p class="label-eyebrow" style="font-size:11px">저장된 사람들 <span class="right">${store.clients.length}명</span></p>
-          <div class="list">${store.clients.map((c,i)=>{
-            const lastMet = c.lastMet ? Math.floor((new Date(tk)-new Date(c.lastMet))/86400000) : null;
-            return `<div class="row"><div class="ic">${stickerEmoji('client')}</div>
-              <div class="body">
-                <p class="ttl">${safe(c.name||'-')}${c.rel?` <span style="font-family:var(--fui);font-size:10.5px;letter-spacing:.12em;color:var(--ink-muted);margin-left:6px">${safe(c.rel)}</span>`:''}${c.birthday?` <span style="font-family:var(--fb);font-size:12px;color:var(--rose);margin-left:6px">🎂 ${safe(c.birthday)}</span>`:''}</p>
-                ${lastMet!=null?`<p class="why">마지막 만남: ${c.lastMet} (${lastMet}일 전)</p>`:''}
-                ${c.memo?`<p class="why">${safe(c.memo)}</p>`:''}
-              </div>
-              <button class="del" data-delcl="${i}">삭제</button></div>`;
-          }).join('')}</div>`:'<p class="empty" style="margin-top:14px">저장된 사람이 없어.</p>'}
+      <div style="display:flex;gap:6px;margin-bottom:14px">
+        ${tabBtn('personal', '사적 관계', personals.length, tab==='personal')}
+        ${tabBtn('work',     '업무 관계', works.length,     tab==='work')}
       </div>
+
+      ${tab === 'personal' ? `
+        ${upcomingBdays.length ? `
+          <div class="paper" style="border-left:3px solid var(--rose)">
+            <p class="label-eyebrow">🎂 다가오는 생일 <span class="right">${upcomingBdays.length}명 · 30일 이내</span></p>
+            <div style="display:flex;flex-direction:column;gap:6px">
+              ${upcomingBdays.map(b => `
+                <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;background:var(--paper-soft);border-radius:3px">
+                  <div style="font-family:var(--fb);font-weight:500;font-size:14.5px">${safe(b.name)} <span style="font-family:var(--fui);font-size:10.5px;letter-spacing:.12em;color:var(--ink-muted);margin-left:6px">${b.date.getMonth()+1}/${b.date.getDate()}</span></div>
+                  <div style="font-family:var(--fd);font-size:18px;font-weight:500;color:${b.diff<=7?'var(--rose)':'var(--ink)'}">${b.diff===0?'오늘 🎉':b.diff===1?'내일':'D-'+b.diff}</div>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+          <div style="height:18px"></div>
+        ` : ''}
+
+        <div class="paper">
+          <p class="label-eyebrow">👤 사적 관계 추가 <span class="right" style="font-family:var(--fb);font-size:11px;color:var(--ink-muted)">친구·가족·연인</span></p>
+          <div class="field"><label>이름 / 별명</label><input class="input" id="clName" placeholder="예: 지수, 엄마"/></div>
+          <div class="row2">
+            <div class="field"><label>생일 (월-일, 선택)</label><input class="input" id="clBday" placeholder="예: 05-21" maxlength="5"/></div>
+            <div class="field"><label>관계 (선택)</label><input class="input" id="clRel" placeholder="친구·가족·연인"/></div>
+          </div>
+          <div class="field"><label>마지막 만남 (선택)</label><input class="input" id="clLastMet" type="date"/></div>
+          <div class="field"><label>메모 (취향·기억할 거)</label><textarea class="textarea" id="clMemo" placeholder="좋아하는 거·진행 중인 이슈 등"></textarea></div>
+          <button class="btn btn-primary" id="clAdd" data-kind="personal">저장 →</button>
+
+          ${personals.length?`<div class="divider"></div>
+            <p class="label-eyebrow" style="font-size:11px">저장된 사람들 <span class="right">${personals.length}명</span></p>
+            <div class="list">${personals.map((c)=>{
+              const realIdx = all.indexOf(c);
+              const lastMet = c.lastMet ? Math.floor((new Date(tk)-new Date(c.lastMet))/86400000) : null;
+              return `<div class="row"><div class="ic">${stickerEmoji('client')}</div>
+                <div class="body">
+                  <p class="ttl">${safe(c.name||'-')}${c.rel?` <span style="font-family:var(--fui);font-size:10.5px;letter-spacing:.12em;color:var(--ink-muted);margin-left:6px">${safe(c.rel)}</span>`:''}${c.birthday?` <span style="font-family:var(--fb);font-size:12px;color:var(--rose);margin-left:6px">🎂 ${safe(c.birthday)}</span>`:''}</p>
+                  ${lastMet!=null?`<p class="why">마지막 만남: ${c.lastMet} (${lastMet}일 전)</p>`:''}
+                  ${c.memo?`<p class="why">${safe(c.memo)}</p>`:''}
+                </div>
+                <button class="del" data-delcl="${realIdx}">삭제</button></div>`;
+            }).join('')}</div>`:'<p class="empty" style="margin-top:14px">저장된 사람이 없어.</p>'}
+        </div>
+      ` : `
+        ${staleWork.length ? `
+          <div class="paper" style="border-left:3px solid #C49A3A">
+            <p class="label-eyebrow">📨 한참 연락 안 한 사람 <span class="right">${staleWork.length}명 · 30일 이상</span></p>
+            <div style="display:flex;flex-direction:column;gap:6px">
+              ${staleWork.slice(0,5).map(w => `
+                <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;background:var(--paper-soft);border-radius:3px">
+                  <div style="font-family:var(--fb);font-weight:500;font-size:14.5px">${safe(w.name)}${w.role?` <span style="font-family:var(--fui);font-size:10.5px;letter-spacing:.12em;color:var(--ink-muted);margin-left:6px">${safe(w.role)}</span>`:''}</div>
+                  <div style="font-family:var(--fui);font-size:11px;letter-spacing:.16em;color:#C49A3A">${w.days}일 전</div>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+          <div style="height:18px"></div>
+        ` : ''}
+
+        <div class="paper">
+          <p class="label-eyebrow">💼 업무 관계 추가 <span class="right" style="font-family:var(--fb);font-size:11px;color:var(--ink-muted)">거래처·동료·고객</span></p>
+          <div class="row2">
+            <div class="field"><label>이름</label><input class="input" id="wkName" placeholder="예: 김대리, 박이사"/></div>
+            <div class="field"><label>회사 / 직책 (선택)</label><input class="input" id="wkRole" placeholder="예: ㈜A사 디자이너"/></div>
+          </div>
+          <div class="row2">
+            <div class="field"><label>연락처 (선택)</label><input class="input" id="wkContact" placeholder="이메일·전화·카톡 ID"/></div>
+            <div class="field"><label>마지막 연락 (선택)</label><input class="input" id="wkLastMet" type="date"/></div>
+          </div>
+          <div class="field"><label>메모 (진행 중·주의할 점·이력)</label><textarea class="textarea" id="wkMemo" placeholder="짧게라도 적어두기"></textarea></div>
+          <button class="btn btn-primary" id="wkAdd">저장 →</button>
+
+          ${works.length?`<div class="divider"></div>
+            <p class="label-eyebrow" style="font-size:11px">저장된 사람들 <span class="right">${works.length}명</span></p>
+            <div class="list">${works.map((c)=>{
+              const realIdx = all.indexOf(c);
+              const lastMet = c.lastMet ? Math.floor((new Date(tk)-new Date(c.lastMet))/86400000) : null;
+              return `<div class="row"><div class="ic">${stickerEmoji('client')}</div>
+                <div class="body">
+                  <p class="ttl">${safe(c.name||'-')}${c.role?` <span style="font-family:var(--fui);font-size:10.5px;letter-spacing:.12em;color:var(--ink-muted);margin-left:6px">${safe(c.role)}</span>`:''}</p>
+                  ${c.contact?`<p class="why" style="font-family:var(--fb);color:var(--ink-soft)">📞 ${safe(c.contact)}</p>`:''}
+                  ${lastMet!=null?`<p class="why">마지막 연락: ${c.lastMet} (${lastMet}일 전)</p>`:''}
+                  ${c.memo?`<p class="why">${safe(c.memo)}</p>`:''}
+                </div>
+                <button class="del" data-delcl="${realIdx}">삭제</button></div>`;
+            }).join('')}</div>`:'<p class="empty" style="margin-top:14px">저장된 업무 관계가 없어.</p>'}
+        </div>
+      `}
     </div>
   `;
-  $('#clAdd').onclick=()=>{
-    const n=$('#clName').value.trim();if(!n){toast('이름 적어줘');return;}
+  // Tab switching
+  $$('#main [data-peopletab]').forEach(b => b.onclick = () => {
+    window._peopleTab = b.dataset.peopletab;
+    render();
+  });
+  // Personal add
+  const addP = $('#clAdd');
+  if(addP) addP.onclick = () => {
+    const n = $('#clName').value.trim();
+    if(!n){ toast('이름 적어줘'); return; }
     const bday = $('#clBday').value.trim();
     const entry = {
+      kind: 'personal',
       name: n,
       memo: $('#clMemo').value.trim(),
       rel: $('#clRel').value.trim(),
@@ -7493,15 +7581,31 @@ function renderClients(root){
     };
     if(/^\d{2}-\d{2}$/.test(bday)) entry.birthday = bday;
     store.clients.unshift(entry);
-    saveStore('clients');
-    render();
+    saveStore('clients'); render();
     toast(`${n} 저장됨`);
   };
-  $$('[data-delcl]').forEach(b=>b.onclick=()=>{
+  // Work add
+  const addW = $('#wkAdd');
+  if(addW) addW.onclick = () => {
+    const n = $('#wkName').value.trim();
+    if(!n){ toast('이름 적어줘'); return; }
+    const entry = {
+      kind: 'work',
+      name: n,
+      role: $('#wkRole').value.trim(),
+      contact: $('#wkContact').value.trim(),
+      lastMet: $('#wkLastMet').value || '',
+      memo: $('#wkMemo').value.trim(),
+      addedAt: Date.now()
+    };
+    store.clients.unshift(entry);
+    saveStore('clients'); render();
+    toast(`${n} 저장됨`);
+  };
+  $$('[data-delcl]').forEach(b => b.onclick = () => {
     if(!confirm('이 사람을 삭제할까요?')) return;
-    store.clients.splice(+b.dataset.delcl,1);
-    saveStore('clients');
-    render();
+    store.clients.splice(+b.dataset.delcl, 1);
+    saveStore('clients'); render();
   });
 }
 
