@@ -105,6 +105,29 @@ html,body{margin:0;padding:0}
   50% { transform: scale(1.02); box-shadow: 0 0 0 4px rgba(232,155,74,.3); }
 }
 
+/* Accessibility — large text mode */
+body.a11y-large { font-size: 17.5px; }
+body.a11y-large .label-eyebrow { font-size: 13px; }
+body.a11y-large .input, body.a11y-large .textarea, body.a11y-large .select { font-size: 17px; padding: 13px 16px; }
+body.a11y-large .nav-item { font-size: 16.5px; padding: 12px 4px 12px 16px; }
+body.a11y-large .btn { padding: 14px 24px; font-size: 14px; }
+
+/* Accessibility — colorblind-friendly palette (deuteranopia/protanopia safe) */
+body.a11y-cb {
+  --rose: #D67A4A;   /* warm orange instead of pink-red */
+  --rose-soft: #F4D1B8;
+  --olive: #1C7A8B;  /* teal instead of olive-green */
+  --olive-soft: #BCDDE3;
+  --indigo: #4F5BD5; /* blue accent */
+}
+body.a11y-cb.dark {
+  --rose: #E89770;
+  --rose-soft: #5C3A22;
+  --olive: #5BA8B8;
+  --olive-soft: #1C3A40;
+  --indigo: #8A93E0;
+}
+
 body{
   min-height:100vh;
   font-family:var(--fb);font-weight:400;color:var(--ink);font-size:15.5px;line-height:1.6;
@@ -1319,6 +1342,49 @@ body.dark .toast{background:var(--ink);color:var(--bg)}
   </div>
 </div>
 
+<!-- ===== Meditation overlay ===== -->
+<div id="meditationOverlay" hidden style="position:fixed;inset:0;z-index:80;background:linear-gradient(180deg,#1a1410 0%,#3a2818 100%);display:none;flex-direction:column;align-items:center;justify-content:center;color:#FAF3E2;padding:20px">
+  <div id="meditationOrb" style="width:200px;height:200px;border-radius:50%;background:radial-gradient(circle at 35% 35%,#E8D78A,#7AB058 60%,#3A6028);box-shadow:0 0 80px rgba(170,220,150,.6);transition:transform 4s ease-in-out;margin-bottom:40px"></div>
+  <div id="meditationPhase" style="font-family:'Cormorant',serif;font-weight:400;font-size:42px;letter-spacing:.04em;margin-bottom:8px">시작하기</div>
+  <div id="meditationCount" style="font-family:'Albert Sans',sans-serif;font-size:14px;letter-spacing:.2em;text-transform:uppercase;opacity:.7">잠시 후…</div>
+  <div id="meditationTotal" style="position:absolute;top:24px;left:24px;font-family:'Albert Sans',sans-serif;font-size:12px;letter-spacing:.2em;opacity:.5"></div>
+  <button type="button" id="meditationStop" style="position:absolute;top:24px;right:24px;background:transparent;border:1px solid rgba(250,243,226,.4);color:#FAF3E2;border-radius:999px;padding:6px 14px;font-family:'Albert Sans',sans-serif;font-size:11px;letter-spacing:.2em;cursor:pointer">닫기 ✕</button>
+</div>
+
+<!-- ===== Schedule search modal ===== -->
+<div id="searchModal" hidden style="position:fixed;inset:0;z-index:55;background:rgba(45,38,32,.6);display:none;place-items:flex-start;padding:60px 18px 18px;overflow:auto">
+  <div style="background:var(--paper);background-image:var(--paper-grain-strong);max-width:560px;width:100%;border-radius:6px;padding:18px 22px 22px;border:1px solid var(--hairline);box-shadow:var(--shadow-page)">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+      <span style="font-size:22px">🔍</span>
+      <input type="search" id="searchInput" placeholder="일정·메모·일기 검색… (예: 회의, 다음주, 마감)" autocomplete="off" style="flex:1;background:var(--paper-soft);border:1.5px solid var(--hairline);border-radius:4px;padding:12px 14px;font-family:var(--fb);font-size:16px;color:var(--ink);outline:none"/>
+      <button type="button" id="searchClose" style="background:transparent;border:0;color:var(--ink-soft);font-size:20px;cursor:pointer;padding:4px 8px">✕</button>
+    </div>
+    <div id="searchResults" style="max-height:60vh;overflow-y:auto"></div>
+    <p style="margin:14px 0 0;font-family:var(--fui);font-size:10.5px;letter-spacing:.16em;color:var(--ink-muted);text-align:center">Esc로 닫기 · ↵ 첫 결과로 이동</p>
+  </div>
+</div>
+
+<!-- ===== Shortcut help modal ===== -->
+<div id="shortcutModal" hidden style="position:fixed;inset:0;z-index:55;background:rgba(45,38,32,.6);display:none;place-items:center;padding:18px;overflow:auto">
+  <div style="background:var(--paper);background-image:var(--paper-grain-strong);max-width:420px;width:100%;border-radius:6px;padding:24px 22px;border:1px solid var(--hairline);box-shadow:var(--shadow-page)">
+    <p class="label-eyebrow">⌨️ 키보드 단축키</p>
+    <table style="width:100%;border-collapse:collapse;font-family:var(--fb);font-size:14px;color:var(--ink);margin:8px 0 14px">
+      <tr><td style="padding:8px 4px;font-weight:600">/&nbsp;&nbsp;또는 Ctrl+K</td><td>일정 검색</td></tr>
+      <tr><td style="padding:8px 4px;font-weight:600">T</td><td>오늘로</td></tr>
+      <tr><td style="padding:8px 4px;font-weight:600">N</td><td>새 일정 추가</td></tr>
+      <tr><td style="padding:8px 4px;font-weight:600">C</td><td>달력</td></tr>
+      <tr><td style="padding:8px 4px;font-weight:600">F</td><td>뽀모도로</td></tr>
+      <tr><td style="padding:8px 4px;font-weight:600">M</td><td>메모</td></tr>
+      <tr><td style="padding:8px 4px;font-weight:600">D</td><td>감정 일기</td></tr>
+      <tr><td style="padding:8px 4px;font-weight:600">H</td><td>건강 체크</td></tr>
+      <tr><td style="padding:8px 4px;font-weight:600">R</td><td>리포트</td></tr>
+      <tr><td style="padding:8px 4px;font-weight:600">?</td><td>이 안내</td></tr>
+      <tr><td style="padding:8px 4px;font-weight:600">Esc</td><td>모달/검색 닫기</td></tr>
+    </table>
+    <button type="button" class="btn btn-primary" id="closeShortcutModal" style="width:100%">알겠어요</button>
+  </div>
+</div>
+
 <div id="apiKeyGuideModal" hidden style="position:fixed;inset:0;z-index:55;background:rgba(45,38,32,.6);display:none;place-items:center;padding:18px;overflow:auto">
   <div style="background:var(--paper);background-image:var(--paper-grain-strong);max-width:560px;width:100%;border-radius:4px;padding:28px 26px;max-height:88vh;overflow-y:auto;border:1px solid var(--hairline);box-shadow:var(--shadow-page)">
     <p class="label-eyebrow">📘 Anthropic API 키 발급 가이드</p>
@@ -1574,6 +1640,17 @@ const dayNamesKR = ['일','월','화','수','목','금','토'];
 const weekdaysKR = ['SUN','MON','TUE','WED','THU','FRI','SAT'];
 
 /* ============ Theme (must come early) ============ */
+/* Apply a11y options early (before render) */
+function applyA11y(){
+  try{
+    document.body.classList.toggle('a11y-large', localStorage.getItem('a11y_large') === '1');
+    document.body.classList.toggle('a11y-cb',    localStorage.getItem('a11y_cb')    === '1');
+  }catch(_){}
+}
+// Run once now and again on DOM ready
+applyA11y();
+document.addEventListener('DOMContentLoaded', applyA11y);
+
 function getInitialTheme(){
   try{
     const saved = localStorage.getItem('todoadhd_theme');
@@ -1599,6 +1676,142 @@ const _gateTheme = $('#gateTheme'); if(_gateTheme) _gateTheme.addEventListener('
 if(typeof setupInAppBrowserWarning === 'function'){
   setupInAppBrowserWarning();
 }
+
+/* ===== Global search ===== */
+function openSearch(){
+  const m = document.getElementById('searchModal');
+  if(!m) return;
+  m.hidden = false; m.style.display = 'grid';
+  const inp = document.getElementById('searchInput');
+  if(inp){ inp.value = ''; inp.focus(); }
+  renderSearchResults('');
+}
+function closeSearch(){
+  const m = document.getElementById('searchModal');
+  if(!m) return;
+  m.hidden = true; m.style.display = 'none';
+}
+function renderSearchResults(q){
+  const box = document.getElementById('searchResults');
+  if(!box) return;
+  q = (q||'').trim().toLowerCase();
+  if(!q){
+    box.innerHTML = '<p style="text-align:center;padding:24px 12px;color:var(--ink-muted);font-family:var(--fb);font-size:13.5px">검색어를 입력하면 결과가 떠요</p>';
+    return;
+  }
+  const hits = [];
+  (store.tasks||[]).forEach(t => {
+    const hay = (t.text + ' ' + (t.reason||'') + ' ' + (t.priorityLabel||'')).toLowerCase();
+    if(hay.includes(q)) hits.push({ kind:'일정', icon:'📅', date:t.date, title:t.text, sub:`${t.date}${t.time?' · '+t.time:''}${t.done?' · 완료':''}`, action:()=>{ closeSearch(); selectedDate=new Date(t.date); cursor=new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1); view='calendar'; render(); openDrawer(); }});
+  });
+  (store.memos||[]).forEach(m => {
+    if((m.text||'').toLowerCase().includes(q)) hits.push({ kind:'메모', icon:'📝', title:(m.text||'').slice(0,60), sub:new Date(m.savedAt||0).toLocaleDateString('ko-KR'), action:()=>{ closeSearch(); view='memo'; render(); }});
+  });
+  (store.diaries||[]).forEach(d => {
+    if((d.text||'').toLowerCase().includes(q) || ((d.mood||[]).join(' ')).toLowerCase().includes(q))
+      hits.push({ kind:'일기', icon:'📖', title:(d.text||'(감정만)').slice(0,60), sub:d.date+(d.mood?.length?` · ${d.mood.join('·')}`:''), action:()=>{ closeSearch(); view='mood'; render(); }});
+  });
+  if(!hits.length){
+    box.innerHTML = '<p style="text-align:center;padding:24px 12px;color:var(--ink-muted);font-family:var(--fb);font-size:13.5px">결과 없음</p>';
+    return;
+  }
+  box.innerHTML = hits.slice(0, 30).map((h, i) => `
+    <div data-searchidx="${i}" style="display:flex;gap:12px;align-items:flex-start;padding:10px 12px;border-bottom:1px solid var(--hairline-soft);cursor:pointer;border-radius:4px" onmouseover="this.style.background='var(--paper-soft)'" onmouseout="this.style.background='transparent'">
+      <div style="font-size:18px;flex-shrink:0;margin-top:2px">${h.icon}</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-family:var(--fb);font-weight:500;font-size:14.5px;color:var(--ink);line-height:1.4">${safe(h.title)}</div>
+        <div style="font-family:var(--fui);font-size:11px;letter-spacing:.12em;color:var(--ink-muted);margin-top:3px;text-transform:uppercase">${safe(h.kind)} · ${safe(h.sub||'')}</div>
+      </div>
+    </div>
+  `).join('');
+  box._hits = hits;
+  box.querySelectorAll('[data-searchidx]').forEach(el => {
+    el.onclick = () => { hits[+el.dataset.searchidx].action(); };
+  });
+}
+
+/* Global keyboard shortcuts */
+document.addEventListener('keydown', (e) => {
+  // Skip when typing in form fields
+  const tag = (e.target.tagName || '').toLowerCase();
+  const isTyping = tag === 'input' || tag === 'textarea' || tag === 'select' || e.target.isContentEditable;
+
+  // Esc — close modals
+  if(e.key === 'Escape'){
+    const sm = document.getElementById('searchModal');
+    if(sm && !sm.hidden){ closeSearch(); return; }
+    document.querySelectorAll('[id$="Modal"]').forEach(m => {
+      if(!m.hidden && m.dataset.mode !== 'consent'){ m.hidden = true; m.style.display = 'none'; }
+    });
+    return;
+  }
+
+  // Ctrl/Cmd+K → search (always works)
+  if((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k'){
+    e.preventDefault();
+    openSearch();
+    return;
+  }
+
+  if(isTyping) return;
+
+  // / → search
+  if(e.key === '/'){
+    e.preventDefault();
+    openSearch();
+    return;
+  }
+  // ? → shortcut help
+  if(e.key === '?'){
+    const m = document.getElementById('shortcutModal');
+    if(m){ m.hidden = false; m.style.display = 'grid'; }
+    return;
+  }
+
+  // Single-letter shortcuts (no modifier)
+  if(e.ctrlKey || e.metaKey || e.altKey || e.shiftKey) return;
+  const k = e.key.toLowerCase();
+  const shortcuts = {
+    't': () => { if(!currentFbUser && !guestMode) return; selectedDate=nowKST(); cursor=new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1); view='calendar'; render(); },
+    'n': () => { view='add'; render(); setTimeout(()=>{ const ta=$('#bulkInput'); if(ta) ta.focus(); }, 100); },
+    'c': () => { view='calendar'; render(); },
+    'f': () => { view='focus'; render(); },
+    'm': () => { view='memo'; render(); },
+    'd': () => { view='mood'; render(); },
+    'h': () => { view='health'; render(); },
+    'r': () => { view='report'; render(); }
+  };
+  if(shortcuts[k] && (currentFbUser || guestMode)){
+    e.preventDefault();
+    shortcuts[k]();
+  }
+});
+
+// Wire search modal interactions
+(function setupSearch(){
+  const inp = document.getElementById('searchInput');
+  const close = document.getElementById('searchClose');
+  const modal = document.getElementById('searchModal');
+  if(inp){
+    inp.addEventListener('input', () => renderSearchResults(inp.value));
+    inp.addEventListener('keydown', (e) => {
+      if(e.key === 'Enter'){
+        const box = document.getElementById('searchResults');
+        const hits = box && box._hits;
+        if(hits && hits.length) hits[0].action();
+      }
+    });
+  }
+  if(close) close.onclick = closeSearch;
+  if(modal){
+    modal.addEventListener('click', (e) => { if(e.target === modal) closeSearch(); });
+  }
+  const closeShort = document.getElementById('closeShortcutModal');
+  if(closeShort) closeShort.onclick = () => {
+    const m = document.getElementById('shortcutModal');
+    if(m){ m.hidden = true; m.style.display = 'none'; }
+  };
+})();
 
 /* Privacy policy modal — supports 'view' (close-only) and 'consent' (must agree) modes */
 function showPrivacyModal(mode){
@@ -2971,6 +3184,33 @@ function renderMonth(root){
         </div>
       </div>
       <div class="divider"></div>
+      ${(()=>{
+        const tk = todayKey();
+        const m = (store.missions && store.missions[tk]) || ['','',''];
+        return `<div class="brief-block">
+          <h3>🎯 오늘의 작은 미션 3가지</h3>
+          <p style="margin:0 0 10px;font-family:var(--fb);font-weight:400;font-size:13.5px;color:var(--ink-soft);line-height:1.65">큰 거 말고 진짜 5~15분 안에 끝낼 수 있는 거. 다 체크하면 오늘 끝.</p>
+          ${[0,1,2].map(i => `
+            <div style="display:flex;gap:8px;align-items:center;margin-bottom:6px">
+              <input type="checkbox" data-missiondone="${i}" ${m[i] && m[i].startsWith('✓') ? 'checked' : ''} style="margin-top:0;flex-shrink:0;accent-color:var(--olive)"/>
+              <input class="input" data-missionidx="${i}" placeholder="작은 거 ${i+1}" value="${safe(m[i] ? m[i].replace(/^✓\s*/, '') : '')}" style="background:transparent;border:0;border-bottom:1px solid var(--hairline-soft);padding:6px 0;font-size:14.5px;${m[i]&&m[i].startsWith('✓')?'text-decoration:line-through;color:var(--ink-muted);':''}"/>
+            </div>
+          `).join('')}
+        </div>
+        <div class="divider"></div>`;
+      })()}
+      ${(()=>{
+        const tk = todayKey();
+        const p = (store.praiseDiary && store.praiseDiary[tk]) || ['','',''];
+        return `<div class="brief-block">
+          <h3>🌟 오늘 잘한 거 3가지 (칭찬 일기)</h3>
+          <p style="margin:0 0 10px;font-family:var(--fb);font-weight:400;font-size:13.5px;color:var(--ink-soft);line-height:1.65">아무리 작아도 OK. 일어난 거, 밥 먹은 거도 잘한 거. 자기 칭찬 연습.</p>
+          ${[0,1,2].map(i => `
+            <input class="input" data-praiseidx="${i}" placeholder="잘한 거 ${i+1}" value="${safe(p[i]||'')}" style="background:transparent;border:0;border-bottom:1px solid var(--hairline-soft);padding:6px 0;font-size:14.5px;margin-bottom:6px"/>
+          `).join('')}
+        </div>
+        <div class="divider"></div>`;
+      })()}
       <div class="brief-block">
         <h3>이번 달 메모</h3>
         <textarea class="textarea" id="monthNotes" style="background:transparent;border:0;padding:0;min-height:60px" placeholder="이번 달, 흘려보내지 말고 적어둘 것들…">${safe(store.monthNotes[monthNotesK]||'')}</textarea>
@@ -2990,6 +3230,54 @@ function renderMonth(root){
   });
   const wb=$('#weatherBtn'); if(wb) wb.onclick=loadWeather;
   $('#monthNotes').oninput=()=>{ store.monthNotes[monthNotesK]=$('#monthNotes').value; saveStore(); };
+
+  // 🎯 오늘의 미션 — 텍스트 + 체크
+  const _tk = todayKey();
+  store.missions = store.missions || {};
+  store.praiseDiary = store.praiseDiary || {};
+  let _missionT;
+  $$('[data-missionidx]').forEach(inp => {
+    inp.oninput = () => {
+      clearTimeout(_missionT);
+      _missionT = setTimeout(() => {
+        const arr = (store.missions[_tk] || ['','','']).slice();
+        $$('[data-missionidx]').forEach(ii => {
+          const i = +ii.dataset.missionidx;
+          const cb = document.querySelector(`[data-missiondone="${i}"]`);
+          const isDone = cb && cb.checked;
+          arr[i] = ii.value.trim() ? (isDone ? '✓ ' : '') + ii.value.trim() : '';
+        });
+        store.missions[_tk] = arr;
+        saveStore('__meta');
+      }, 600);
+    };
+  });
+  $$('[data-missiondone]').forEach(cb => cb.onchange = () => {
+    const arr = (store.missions[_tk] || ['','','']).slice();
+    const i = +cb.dataset.missiondone;
+    const inp = document.querySelector(`[data-missionidx="${i}"]`);
+    const txt = (inp?.value || '').trim();
+    if(!txt) return;
+    arr[i] = (cb.checked ? '✓ ' : '') + txt;
+    store.missions[_tk] = arr;
+    saveStore('__meta');
+    render();
+    if(cb.checked) toast('미션 완료 ✨');
+  });
+
+  // 🌟 칭찬 일기
+  let _praiseT;
+  $$('[data-praiseidx]').forEach(inp => {
+    inp.oninput = () => {
+      clearTimeout(_praiseT);
+      _praiseT = setTimeout(() => {
+        const arr = (store.praiseDiary[_tk] || ['','','']).slice();
+        arr[+inp.dataset.praiseidx] = inp.value.trim();
+        store.praiseDiary[_tk] = arr;
+        saveStore('__meta');
+      }, 800);
+    };
+  });
 }
 function renderWeek(root){
   const base=new Date(selectedDate);
@@ -4394,6 +4682,15 @@ function renderFocus(root){
           </div>
           <p style="margin:14px 0 0;font-family:var(--fb);font-weight:400;font-size:12.5px;color:var(--ink-muted);font-style:italic;text-align:center">버튼 누르면 바로 카운트 시작</p>
           <button class="btn btn-ghost" id="fStart" hidden></button>
+
+          <div class="divider" style="margin:24px 0"></div>
+          <p class="big-cap">🧘 명상 / 호흡</p>
+          <p style="margin:6px 0 12px;font-family:var(--fb);font-weight:400;font-size:13px;color:var(--ink-soft);text-align:center;line-height:1.6">4-7-8 호흡 패턴 — 4초 들이마시고 · 7초 멈추고 · 8초 내쉬기</p>
+          <div class="timer-buttons">
+            <button class="btn btn-ghost meditation-btn" data-meditation="3">3분 호흡</button>
+            <button class="btn btn-ghost meditation-btn" data-meditation="5">5분 명상</button>
+            <button class="btn btn-ghost meditation-btn" data-meditation="10">10분 명상</button>
+          </div>
         ` : `
           <div class="timer-buttons">
             <button class="btn btn-ghost" id="fSkip">${phase==='break' ? '쉬는 시간 건너뛰기' : '여기서 멈추기'}</button>
@@ -4435,6 +4732,9 @@ function renderFocus(root){
       focusLabel = $('#focusLabel')?.value.trim() || '';
       startPomodoro(dur);
     });
+    $$('.meditation-btn').forEach(b => b.onclick = () => {
+      startMeditation(+b.dataset.meditation);
+    });
     $('#fStart').onclick = () => {
       focusLabel = $('#focusLabel')?.value.trim() || '';
       startPomodoro(focusDuration);
@@ -4448,6 +4748,69 @@ function renderFocus(root){
       else { stopFocus(); toast('중단했어. 괜찮아'); }
     };
   }
+}
+
+/* ===== Meditation timer (4-7-8 breathing pattern) ===== */
+let _medTimer = null;
+function startMeditation(totalMin){
+  const overlay = document.getElementById('meditationOverlay');
+  if(!overlay) return;
+  overlay.hidden = false;
+  overlay.style.display = 'flex';
+  const orb = document.getElementById('meditationOrb');
+  const phaseEl = document.getElementById('meditationPhase');
+  const countEl = document.getElementById('meditationCount');
+  const totalEl = document.getElementById('meditationTotal');
+  totalEl.textContent = `${totalMin}분 명상 · 4-7-8 호흡`;
+
+  const phases = [
+    { name: '🌬️ 들이마셔', sec: 4, scale: 1.4 },
+    { name: '🫁 멈춰',     sec: 7, scale: 1.4 },
+    { name: '🌊 내쉬어',   sec: 8, scale: 0.85 }
+  ];
+  const cycleSec = 4 + 7 + 8;
+  const totalSec = totalMin * 60;
+  let elapsed = 0;
+  let phaseIdx = 0;
+  let phaseRemain = phases[0].sec;
+  let runStart = Date.now();
+
+  function tick(){
+    if(elapsed >= totalSec){
+      finish();
+      return;
+    }
+    phaseEl.textContent = phases[phaseIdx].name;
+    countEl.textContent = phaseRemain + '초';
+    orb.style.transform = `scale(${phases[phaseIdx].scale})`;
+    orb.style.transitionDuration = phases[phaseIdx].sec + 's';
+    elapsed++;
+    phaseRemain--;
+    if(phaseRemain <= 0){
+      phaseIdx = (phaseIdx + 1) % phases.length;
+      phaseRemain = phases[phaseIdx].sec;
+    }
+  }
+  function finish(){
+    if(_medTimer){ clearInterval(_medTimer); _medTimer = null; }
+    phaseEl.textContent = '✨ 완료';
+    countEl.textContent = `${totalMin}분 명상 끝`;
+    gentleChime();
+    // Log meditation as a focus cycle (kind: 'meditation')
+    store.focusLog = store.focusLog || [];
+    store.focusLog.push({ date: todayKey(), min: totalMin, kind: 'meditation', at: Date.now() });
+    saveStore('focusLog');
+    setTimeout(() => stopMeditation(), 2400);
+  }
+  tick();
+  _medTimer = setInterval(tick, 1000);
+
+  document.getElementById('meditationStop').onclick = stopMeditation;
+}
+function stopMeditation(){
+  if(_medTimer){ clearInterval(_medTimer); _medTimer = null; }
+  const overlay = document.getElementById('meditationOverlay');
+  if(overlay){ overlay.hidden = true; overlay.style.display = 'none'; }
 }
 
 /* Short tick beep for countdown (10s..1s) — louder/shorter than completion beep */
@@ -6955,6 +7318,16 @@ function scheduleDailyReminders(){
     if(h === 21 && m < 5 && hotUndone.length && !sessionStorage.getItem('eve_'+todayKey())){
       pushNotify('🌙 오늘 중요 미완료', `${hotUndone.length}개 남았어. 내일로 옮길지 정하자`);
       sessionStorage.setItem('eve_'+todayKey(), '1');
+    }
+
+    // 4b. 저녁 22시 — 오늘 일기 안 썼으면 부드럽게 한 번
+    if(h === 22 && m < 5 && !sessionStorage.getItem('diary_'+todayKey())){
+      const todayDiary = (store.diaries||[]).find(d => d.date === todayKey());
+      const hasContent = todayDiary && ((todayDiary.text && todayDiary.text.trim()) || (todayDiary.mood && todayDiary.mood.length));
+      if(!hasContent){
+        pushNotify('📖 오늘 한 줄', '오늘 어땠어? 한 단어라도 적어두면 다음에 너가 고마워해');
+      }
+      sessionStorage.setItem('diary_'+todayKey(), '1');
     }
 
     // 5b. 영양제 알림 — 등록 시간 도래 + 아직 미복용
@@ -9488,10 +9861,58 @@ function renderSettings(root){
 
       <div style="height:18px"></div>
 
+      <div class="paper">
+        <p class="label-eyebrow">♿ 접근성 & 표시</p>
+        <div class="setting-row">
+          <div class="setting-info">
+            <div class="setting-title">큰 글씨 모드</div>
+            <div class="setting-desc">본문/입력칸/메뉴 글자 키우기</div>
+          </div>
+          <label class="toggle">
+            <input type="checkbox" id="a11yLargeToggle" ${localStorage.getItem('a11y_large')==='1'?'checked':''}>
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+        <div class="divider"></div>
+        <div class="setting-row">
+          <div class="setting-info">
+            <div class="setting-title">색약 친화 모드</div>
+            <div class="setting-desc">빨강·녹색 대신 주황·청록으로 (적록색약 대응)</div>
+          </div>
+          <label class="toggle">
+            <input type="checkbox" id="a11yCbToggle" ${localStorage.getItem('a11y_cb')==='1'?'checked':''}>
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+        <div class="divider"></div>
+        <p class="label-eyebrow" style="font-size:11px;margin-top:8px">⌨️ 키보드 단축키</p>
+        <p style="margin:6px 0 0;font-family:var(--fb);font-weight:400;font-size:13px;color:var(--ink-soft);line-height:1.7">
+          <b>/</b> 또는 <b>Ctrl+K</b> — 일정 검색<br>
+          <b>T</b> — 오늘로 이동 · <b>N</b> — 새 일정 추가<br>
+          <b>M</b> — 메모 · <b>D</b> — 일기 · <b>F</b> — 뽀모도로<br>
+          <b>?</b> — 단축키 안내 · <b>Esc</b> — 닫기
+        </p>
+      </div>
+
+      <div style="height:18px"></div>
+
       <div class="paper-soft">
         <p class="label-eyebrow">법적 고지</p>
         <p style="margin:0 0 10px;font-family:var(--fb);font-weight:400;font-size:13px;line-height:1.7;color:var(--ink-soft)">${store.privacyAcceptedAt ? `처리방침 동의일: ${new Date(store.privacyAcceptedAt).toLocaleDateString('ko-KR')}` : '아직 동의 기록 없음'}</p>
         <button type="button" class="btn btn-ghost" id="openPrivacy">개인정보처리방침 보기</button>
+      </div>
+
+      <div style="height:18px"></div>
+
+      <div class="paper-soft">
+        <p class="label-eyebrow">☕ 후원 / 의견</p>
+        <p style="margin:0 0 10px;font-family:var(--fb);font-weight:400;font-size:13.5px;line-height:1.7;color:var(--ink-soft)">이 다이어리가 너의 하루에 작게라도 도움이 됐다면, 따뜻한 응원 한 잔 보내줄 수 있어요. 또는 새 기능 아이디어·버그 제보 환영.</p>
+        <div style="display:flex;flex-wrap:wrap;gap:8px">
+          <a href="mailto:iinging747@gmail.com?subject=정신차려%20피드백" class="btn btn-ghost" style="text-decoration:none">📧 의견 보내기</a>
+          <a href="https://www.buymeacoffee.com/" target="_blank" rel="noopener" class="btn btn-ghost" style="text-decoration:none">☕ 커피 한 잔</a>
+          <a href="https://toss.me/" target="_blank" rel="noopener" class="btn btn-ghost" style="text-decoration:none">💝 토스 송금</a>
+        </div>
+        <p style="margin:10px 0 0;font-family:var(--fb);font-weight:400;font-size:12px;color:var(--ink-muted);line-height:1.5">※ 후원 링크는 개발자가 설정한 본인의 페이지로 연결됨</p>
       </div>
 
     </div>
@@ -9514,6 +9935,20 @@ function renderSettings(root){
       toast('알림 꺼졌어');
     }
     render();
+  };
+
+  // A11y toggles
+  const a11yL = $('#a11yLargeToggle');
+  if(a11yL) a11yL.onchange = (e) => {
+    try{ localStorage.setItem('a11y_large', e.target.checked ? '1' : '0'); }catch(_){}
+    applyA11y();
+    toast(e.target.checked ? '큰 글씨 켜짐' : '큰 글씨 꺼짐');
+  };
+  const a11yCb = $('#a11yCbToggle');
+  if(a11yCb) a11yCb.onchange = (e) => {
+    try{ localStorage.setItem('a11y_cb', e.target.checked ? '1' : '0'); }catch(_){}
+    applyA11y();
+    toast(e.target.checked ? '색약 모드 켜짐' : '색약 모드 꺼짐');
   };
 
   $('#soundToggle').onchange = (e) => {
