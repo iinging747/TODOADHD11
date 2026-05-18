@@ -1522,6 +1522,7 @@ body.dark .toast{background:var(--ink);color:var(--bg)}
       <h4>마음</h4>
       <button class="nav-item" data-view="mood"><span class="ico">06</span>감정 일기</button>
       <button class="nav-item" data-view="memo"><span class="ico">07</span>메모</button>
+      <button class="nav-item" data-view="habits"><span class="ico">07b</span>습관 트래커</button>
     </nav>
     <nav class="nav-section">
       <h4>건강</h4>
@@ -2356,7 +2357,7 @@ function defaultStore(){
  * Firestore docs have a 1MB limit, so each big array is its own doc.
  * Reads/writes are debounced + only changed tables are pushed.
  */
-const STORE_TABLES = ['tasks','spends','invests','routes','clients','wishes','diaries','focusLog','memos','works','studies'];
+const STORE_TABLES = ['tasks','spends','invests','routes','clients','wishes','diaries','focusLog','memos','works','studies','habits','subscriptions'];
 
 function userDocRef(){
   if(!currentFbUser) throw new Error('no user');
@@ -3066,6 +3067,7 @@ function render(){
   else if(view==='study') renderStudy(m);
   else if(view==='mood') renderMood(m);
   else if(view==='memo') renderMemo(m);
+  else if(view==='habits') renderHabits(m);
   else if(view==='money') renderMoney(m);
   else if(view==='invest') renderInvest(m);
   else if(view==='route') renderRoute(m);
@@ -3339,6 +3341,44 @@ function renderAdd(root){
         </div>
       </div>
       <div style="height:18px"></div>
+      <div class="paper">
+        <p class="label-eyebrow">📅 D-day 추가 <span class="right">중요한 날 카운트다운</span></p>
+        <p style="margin:6px 0 12px;font-family:var(--fb);font-weight:400;font-size:13.5px;color:var(--ink-soft);line-height:1.65">시험·여행·생일·기념일 등 — 매일 며칠 남았는지 보여줘요.</p>
+        <div class="row2">
+          <div class="field"><label>제목</label><input class="input" id="ddayTitle" placeholder="예: 시험, 여행, 결혼식"/></div>
+          <div class="field"><label>날짜</label><input class="input" id="ddayDate" type="date"/></div>
+        </div>
+        <button class="btn btn-primary" id="ddayAdd">D-day 추가 →</button>
+        ${(() => {
+          const dd = (store.tasks||[]).filter(t => t.isDday).sort((a,b) => a.date.localeCompare(b.date));
+          if(!dd.length) return '';
+          return `<div class="divider"></div>
+            <p class="label-eyebrow" style="font-size:11px">현재 D-day <span class="right">${dd.length}개</span></p>
+            ${dd.map(t => {
+              const d = new Date(t.date+'T00:00:00');
+              const diff = Math.ceil((d - new Date(todayKey()+'T00:00:00')) / 86400000);
+              const tag = diff > 0 ? `D-${diff}` : diff === 0 ? 'D-DAY' : `D+${Math.abs(diff)}`;
+              return `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--hairline-soft)">
+                <div><b style="font-family:var(--fd);font-size:18px;color:${diff===0?'var(--rose)':diff>0?'var(--ink)':'var(--ink-muted)'}">${tag}</b> <span style="margin-left:8px;font-size:14px">${safe(t.text)}</span> <span style="font-family:var(--fui);font-size:10.5px;letter-spacing:.12em;color:var(--ink-muted);margin-left:6px">${t.date}</span></div>
+                <button type="button" data-ddaydel="${t.id}" class="sup-del">삭제</button>
+              </div>`;
+            }).join('')}`;
+        })()}
+      </div>
+
+      <div style="height:18px"></div>
+      <div class="paper">
+        <p class="label-eyebrow">📥 캘린더 ICS 가져오기 <span class="right">구글 캘린더 등</span></p>
+        <p style="margin:6px 0 12px;font-family:var(--fb);font-weight:400;font-size:13.5px;color:var(--ink-soft);line-height:1.65">다른 캘린더에서 export한 <b>.ics 파일</b>을 올리면 일정으로 등록돼요. (Google Calendar → 설정 → 캘린더 내보내기)</p>
+        <div class="field">
+          <label>ICS 파일 선택</label>
+          <input type="file" id="icsInput" accept=".ics,text/calendar" style="font-family:var(--fb);font-size:13.5px;color:var(--ink-soft)"/>
+        </div>
+        <button class="btn btn-primary" id="icsImport">파일에서 가져오기 →</button>
+        <p id="icsStatus" style="margin:8px 0 0;font-family:var(--fb);font-size:13px;color:var(--ink-soft);min-height:1em"></p>
+      </div>
+
+      <div style="height:18px"></div>
       <div class="paper-soft">
         <p class="label-eyebrow">분해 규칙</p>
         <p style="margin:0 0 8px;font-family:var(--fb);font-weight:400;font-size:14.5px;line-height:1.7;color:var(--ink-soft)">·  카톡·메모·머릿속 와다다 그대로 붙여넣어도 잡담/감탄사 자동으로 거름</p>
@@ -3407,6 +3447,72 @@ function renderAdd(root){
   `;
   $('#parseBtn').onclick = parseSchedule;
   setupVoiceInput();
+
+  // D-day add
+  const ddayBtn = $('#ddayAdd');
+  if(ddayBtn) ddayBtn.onclick = () => {
+    const title = ($('#ddayTitle').value || '').trim();
+    const date = ($('#ddayDate').value || '').trim();
+    if(!title || !date){ toast('제목·날짜 둘 다 적어줘'); return; }
+    const p = priorityOf(title, date);
+    store.tasks.push({
+      id: Date.now()+Math.random(),
+      date, time: '', text: title.slice(0,30),
+      type: stickerType(title), done:false,
+      priority: 1, priorityLabel: '🔥 D-day',
+      reason: 'D-day · 카운트다운',
+      isDday: true,
+      createdAt: Date.now()
+    });
+    saveStore('tasks');
+    $('#ddayTitle').value = ''; $('#ddayDate').value = '';
+    toast(`D-day 추가: ${title}`);
+    render();
+  };
+  $$('#main [data-ddaydel]').forEach(b => b.onclick = () => {
+    const id = b.dataset.ddaydel;
+    if(!confirm('이 D-day를 삭제할까요?')) return;
+    store.tasks = store.tasks.filter(x => String(x.id) !== String(id));
+    saveStore('tasks');
+    render();
+  });
+
+  // ICS import
+  const icsBtn = $('#icsImport');
+  if(icsBtn) icsBtn.onclick = async () => {
+    const f = $('#icsInput')?.files?.[0];
+    const status = $('#icsStatus');
+    const setS = (msg, err) => { if(status){ status.textContent = msg; status.style.color = err ? 'var(--rose)' : 'var(--ink-soft)'; } };
+    if(!f){ setS('파일을 골라줘', true); return; }
+    setS('파싱 중…');
+    try{
+      const text = await f.text();
+      const events = parseICS(text);
+      if(!events.length){ setS('일정을 찾지 못함', true); return; }
+      const made = events.map(e => {
+        const p = { level:2, label:'⚡ 일반', why:'ICS에서 가져옴' };
+        return {
+          id: Date.now()+Math.random(),
+          date: e.date,
+          time: e.time || '',
+          text: (e.title || '일정').slice(0,40),
+          type: stickerType(e.title || ''),
+          done: false,
+          priority: 2,
+          priorityLabel: p.label,
+          reason: 'ICS 가져옴' + (e.location ? ' · '+e.location : ''),
+          createdAt: Date.now()
+        };
+      });
+      store.tasks = [...store.tasks, ...made];
+      saveStore('tasks');
+      setS(`✓ ${made.length}개 일정 가져옴`);
+      toast(`ICS에서 ${made.length}개 추가됨`);
+    } catch(err){
+      console.warn('ICS error', err);
+      setS('파싱 실패: ' + err.message, true);
+    }
+  };
   if(isAdmin()){
     const btn = $('#adminParseBtn');
     if(btn) btn.onclick = adminParsePhoto;
@@ -6294,9 +6400,77 @@ function renderMoney(root){
   const spendAdvice = spendGoal ? spendGoalAdvice(spendGoal, monthOut, dIn, dAll) : null;
   const incomeAdvice = incomeGoal ? incomeGoalAdvice(incomeGoal, monthIn, dIn, dAll) : null;
 
+  // ===== Category budgets + subscriptions =====
+  store.subscriptions = store.subscriptions || [];
+  const budgets = store.settings?.budgets || {};
+  const monthCatTotals = {};
+  monthSpends.filter(s => s.kind === 'out').forEach(s => {
+    const cat = s.cat || s.kind || '기타';
+    monthCatTotals[cat] = (monthCatTotals[cat]||0) + Number(s.amount||0);
+  });
+  const totalSubs = store.subscriptions.reduce((a,s) => a + Number(s.amount||0), 0);
+
+  // Pre-build top cards as HTML strings — injected into existing section-wrap below
+  const _subsCardHtml = `
+    <div class="paper">
+      <p class="label-eyebrow">🔁 정기 결제 / 고정비 <span class="right">월 ${totalSubs.toLocaleString()}원</span></p>
+      ${store.subscriptions.length ? `
+        <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:14px">
+          ${store.subscriptions.map((s, i) => `
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;background:var(--paper-soft);border-radius:3px">
+              <div style="font-family:var(--fb);font-weight:500;font-size:14px;color:var(--ink)">${safe(s.name)} <span style="font-family:var(--fui);font-size:10.5px;letter-spacing:.12em;color:var(--ink-muted);margin-left:6px">매월 ${s.day||1}일</span></div>
+              <div style="display:flex;gap:8px;align-items:center">
+                <span style="font-family:var(--fd);font-weight:500;font-size:15px;color:var(--rose)">−${Number(s.amount).toLocaleString()}원</span>
+                <button type="button" data-subdel="${i}" class="sup-del">삭제</button>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      ` : '<p class="empty" style="margin:10px 0">아직 등록한 정기 결제 없음 — 넷플릭스·핸드폰·헬스장 같은 거</p>'}
+      <div class="row2">
+        <div class="field"><label>이름</label><input class="input" id="subName" placeholder="예: 넷플릭스"/></div>
+        <div class="field"><label>월 금액</label><input class="input" id="subAmount" type="number" min="0" placeholder="13500"/></div>
+      </div>
+      <div class="row2">
+        <div class="field"><label>매월 결제일 (1~31)</label><input class="input" id="subDay" type="number" min="1" max="31" placeholder="15"/></div>
+        <div class="field" style="display:flex;align-items:flex-end"><button class="btn btn-primary" id="subAdd" style="width:100%">추가 →</button></div>
+      </div>
+    </div>
+    <div style="height:18px"></div>
+    <div class="paper">
+      <p class="label-eyebrow">💰 카테고리별 예산 한도 <span class="right">이번 달</span></p>
+      <p style="margin:6px 0 12px;font-family:var(--fb);font-weight:400;font-size:13.5px;color:var(--ink-soft);line-height:1.65">예산 정해두면 초과 시 빨간 경고. 정해두면 자기 조절 쉬워져요.</p>
+      ${Object.keys(budgets).length ? `
+        <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:14px">
+          ${Object.entries(budgets).map(([cat, limit]) => {
+            const spent = monthCatTotals[cat] || 0;
+            const pct = limit > 0 ? Math.min(100, (spent/limit) * 100) : 0;
+            const over = spent > limit;
+            return `<div>
+              <div style="display:flex;justify-content:space-between;font-family:var(--fb);font-size:13.5px;margin-bottom:4px">
+                <span><b>${safe(cat)}</b></span>
+                <span style="color:${over?'var(--rose)':'var(--ink-soft)'}">${spent.toLocaleString()} / ${(+limit).toLocaleString()}원 ${over?'⚠':''}<button type="button" data-budgetdel="${safe(cat)}" style="background:transparent;border:0;color:var(--ink-muted);font-size:11px;margin-left:6px;cursor:pointer">✕</button></span>
+              </div>
+              <div style="height:8px;background:var(--paper-soft);border-radius:999px;overflow:hidden">
+                <div style="height:100%;width:${pct}%;background:${over?'var(--rose)':'linear-gradient(90deg,#A8D078,#5BA040)'};transition:width .4s"></div>
+              </div>
+            </div>`;
+          }).join('')}
+        </div>
+      ` : ''}
+      <div class="row2">
+        <div class="field"><label>카테고리</label><input class="input" id="budgetCat" placeholder="예: 식비, 카페, 옷"/></div>
+        <div class="field"><label>월 한도 (원)</label><input class="input" id="budgetLimit" type="number" min="0" placeholder="300000"/></div>
+      </div>
+      <button class="btn btn-primary" id="budgetAdd">예산 추가 →</button>
+    </div>
+    <div style="height:18px"></div>
+  `;
+
   root.innerHTML=`
     <div class="hero"><h1 class="hero-title">BUDGET</h1><span class="hero-script">ledger</span></div>
     <div class="section-wrap">
+      ${_subsCardHtml}
 
       <!-- MONTHLY GOAL CARD -->
       <div class="paper">
@@ -6481,6 +6655,48 @@ function renderMoney(root){
       }
       saveStore(); render();
     }
+  });
+
+  // Subscriptions
+  const subAddBtn = $('#subAdd');
+  if(subAddBtn) subAddBtn.onclick = () => {
+    const name = ($('#subName').value || '').trim();
+    const amount = parseFloat($('#subAmount').value);
+    const day = parseInt($('#subDay').value || '1', 10);
+    if(!name || !amount){ toast('이름과 금액 입력'); return; }
+    store.subscriptions = store.subscriptions || [];
+    store.subscriptions.push({ id: Date.now()+Math.random(), name, amount, day, addedAt: Date.now() });
+    saveStore('subscriptions');
+    render();
+    toast(`정기 결제 추가: ${name}`);
+  };
+  $$('#main [data-subdel]').forEach(b => b.onclick = () => {
+    const i = +b.dataset.subdel;
+    if(!confirm('이 정기 결제를 삭제할까요?')) return;
+    store.subscriptions.splice(i, 1);
+    saveStore('subscriptions');
+    render();
+  });
+
+  // Budgets
+  const budgetAddBtn = $('#budgetAdd');
+  if(budgetAddBtn) budgetAddBtn.onclick = () => {
+    const cat = ($('#budgetCat').value || '').trim();
+    const limit = parseFloat($('#budgetLimit').value);
+    if(!cat || !limit){ toast('카테고리와 한도 입력'); return; }
+    store.settings = store.settings || {};
+    store.settings.budgets = store.settings.budgets || {};
+    store.settings.budgets[cat] = limit;
+    saveStore('__meta');
+    render();
+    toast(`${cat} 예산: ${limit.toLocaleString()}원`);
+  };
+  $$('#main [data-budgetdel]').forEach(b => b.onclick = () => {
+    const cat = b.dataset.budgetdel;
+    if(!confirm(`${cat} 예산을 삭제할까요?`)) return;
+    delete store.settings.budgets[cat];
+    saveStore('__meta');
+    render();
   });
 }
 
@@ -7671,6 +7887,123 @@ function healthAdvice(){
   }
 
   return { advice, summary };
+}
+
+/* ===== ICS parser (minimal but reliable) ===== */
+function parseICS(text){
+  const events = [];
+  // Unfold lines (RFC 5545 line folding)
+  const unfolded = text.replace(/\r?\n[ \t]/g, '');
+  const lines = unfolded.split(/\r?\n/);
+  let cur = null;
+  for(const line of lines){
+    if(line === 'BEGIN:VEVENT'){ cur = {}; continue; }
+    if(line === 'END:VEVENT'){
+      if(cur && cur.date) events.push(cur);
+      cur = null; continue;
+    }
+    if(!cur) continue;
+    const colonIdx = line.indexOf(':');
+    if(colonIdx < 0) continue;
+    const key = line.slice(0, colonIdx);
+    const val = line.slice(colonIdx + 1);
+    if(/^SUMMARY/.test(key)) cur.title = val.replace(/\\,/g,',').replace(/\\;/g,';').replace(/\\n/g,'\n');
+    else if(/^DTSTART/.test(key)){
+      // YYYYMMDDTHHMMSSZ or YYYYMMDD
+      const m = val.match(/^(\d{4})(\d{2})(\d{2})(?:T(\d{2})(\d{2}))?/);
+      if(m){
+        cur.date = `${m[1]}-${m[2]}-${m[3]}`;
+        if(m[4]) cur.time = `${m[4]}:${m[5]}`;
+      }
+    }
+    else if(/^LOCATION/.test(key)) cur.location = val;
+  }
+  return events;
+}
+
+/* ===== Habits tracker (30-day grid) ===== */
+function renderHabits(root){
+  store.habits = store.habits || [];
+  const tk = todayKey();
+  // Build last 30 days array
+  const days = [];
+  for(let i = 29; i >= 0; i--) days.push(dkey(dateAdd(nowKST(), -i)));
+
+  root.innerHTML = `
+    <div class="hero"><h1 class="hero-title">HABITS</h1><span class="hero-script">tracker</span></div>
+    <div class="section-wrap">
+      <div class="paper">
+        <p class="label-eyebrow">새 습관 추가</p>
+        <div class="row2">
+          <div class="field"><label>습관 이름</label><input class="input" id="habitName" placeholder="예: 물 8잔, 영양제, 명상, 일기, 운동"/></div>
+          <div class="field"><label>이모지 (선택)</label><input class="input" id="habitEmoji" maxlength="2" placeholder="💧"/></div>
+        </div>
+        <button class="btn btn-primary" id="habitAdd">습관 추가 →</button>
+      </div>
+
+      ${store.habits.length ? `
+        <div style="height:18px"></div>
+        <div class="paper">
+          <p class="label-eyebrow">최근 30일 <span class="right">${store.habits.length}개 습관</span></p>
+          <div style="display:flex;flex-direction:column;gap:14px;margin-top:8px">
+            ${store.habits.map((h, hi) => {
+              const dones = days.map(d => (h.days||{})[d]);
+              const doneCount = dones.filter(Boolean).length;
+              const streak = (()=>{
+                let s = 0;
+                for(let i = days.length-1; i >= 0; i--){
+                  if((h.days||{})[days[i]]) s++; else break;
+                }
+                return s;
+              })();
+              return `<div>
+                <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px">
+                  <div style="font-family:var(--fb);font-weight:600;font-size:15px;color:var(--ink)">${h.emoji||'·'} ${safe(h.name)}</div>
+                  <div style="font-family:var(--fui);font-size:10.5px;letter-spacing:.16em;color:var(--ink-muted)">${doneCount}/30 · 🔥 ${streak}일 연속 <button type="button" data-habitdel="${hi}" style="background:transparent;border:0;color:var(--rose);font-family:var(--fui);font-size:10px;letter-spacing:.18em;cursor:pointer;margin-left:8px">삭제</button></div>
+                </div>
+                <div style="display:grid;grid-template-columns:repeat(30,1fr);gap:2px">
+                  ${days.map(d => {
+                    const isToday = d === tk;
+                    const done = (h.days||{})[d];
+                    return `<button type="button" data-habit="${hi}" data-day="${d}" title="${d}" style="aspect-ratio:1;background:${done?'var(--olive)':'var(--paper-soft)'};border:1px solid ${isToday?'var(--ink)':'var(--hairline-soft)'};border-radius:3px;cursor:pointer;padding:0;${done?'box-shadow:inset 0 0 0 1px var(--olive-soft)':''}"></button>`;
+                  }).join('')}
+                </div>
+              </div>`;
+            }).join('')}
+          </div>
+        </div>
+      ` : '<div style="height:18px"></div><p class="empty" style="text-align:center">아직 등록한 습관이 없어. 위에서 추가해줘</p>'}
+    </div>
+  `;
+
+  $('#habitAdd').onclick = () => {
+    const name = ($('#habitName').value || '').trim();
+    if(!name){ toast('이름 적어줘'); return; }
+    const emoji = ($('#habitEmoji').value || '').trim();
+    store.habits.push({ id: Date.now()+Math.random(), name, emoji, days: {}, createdAt: Date.now() });
+    saveStore('habits');
+    render();
+    toast(`습관 추가: ${emoji} ${name}`);
+  };
+  $$('#main [data-habit]').forEach(b => b.onclick = () => {
+    const hi = +b.dataset.habit;
+    const d = b.dataset.day;
+    const h = store.habits[hi];
+    if(!h) return;
+    h.days = h.days || {};
+    h.days[d] = !h.days[d];
+    saveStore('habits');
+    render();
+  });
+  $$('#main [data-habitdel]').forEach(b => b.onclick = () => {
+    const hi = +b.dataset.habitdel;
+    const h = store.habits[hi];
+    if(!h) return;
+    if(!confirm(`"${h.name}" 습관을 삭제할까요?`)) return;
+    store.habits.splice(hi, 1);
+    saveStore('habits');
+    render();
+  });
 }
 
 /* ===== MET values (kcal/kg/hr) and calorie helpers ===== */
