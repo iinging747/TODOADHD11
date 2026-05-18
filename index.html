@@ -1533,7 +1533,7 @@ body.dark .toast{background:var(--ink);color:var(--bg)}
       <button class="nav-item" data-view="money"><span class="ico">09</span>가계부</button>
       <button class="nav-item" data-view="invest"><span class="ico">10</span>투자 복기</button>
       <button class="nav-item" data-view="route"><span class="ico">11</span>이동 계산</button>
-      <button class="nav-item" data-view="clients"><span class="ico">12</span>클라이언트</button>
+      <button class="nav-item" data-view="clients"><span class="ico">12</span>사람 / 관계</button>
       <button class="nav-item" data-view="wish"><span class="ico">13</span>위시리스트</button>
     </nav>
     <nav class="nav-section">
@@ -7153,27 +7153,86 @@ function prefLabel(p){
 
 /* CLIENTS */
 function renderClients(root){
+  const tk = todayKey();
+  // Compute upcoming birthdays (within 30 days)
+  const upcomingBdays = [];
+  (store.clients||[]).forEach((c, idx) => {
+    if(!c.birthday) return;
+    const [bm, bd] = c.birthday.split('-').map(Number);
+    if(!bm || !bd) return;
+    const now = nowKST();
+    let next = new Date(now.getFullYear(), bm-1, bd);
+    if(next < now) next = new Date(now.getFullYear()+1, bm-1, bd);
+    const diff = Math.ceil((next - now) / 86400000);
+    if(diff <= 30) upcomingBdays.push({name: c.name, diff, date: next, idx});
+  });
+  upcomingBdays.sort((a,b) => a.diff - b.diff);
+
   root.innerHTML=`
-    <div class="hero"><h1 class="hero-title">CLIENTS</h1><span class="hero-script">contacts</span></div>
+    <div class="hero"><h1 class="hero-title">PEOPLE</h1><span class="hero-script">contacts</span></div>
     <div class="section-wrap">
+      ${upcomingBdays.length ? `
+        <div class="paper" style="border-left:3px solid var(--rose)">
+          <p class="label-eyebrow">🎂 다가오는 생일 <span class="right">${upcomingBdays.length}명 · 30일 이내</span></p>
+          <div style="display:flex;flex-direction:column;gap:6px">
+            ${upcomingBdays.map(b => `
+              <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;background:var(--paper-soft);border-radius:3px">
+                <div style="font-family:var(--fb);font-weight:500;font-size:14.5px">${safe(b.name)} <span style="font-family:var(--fui);font-size:10.5px;letter-spacing:.12em;color:var(--ink-muted);margin-left:6px">${b.date.getMonth()+1}/${b.date.getDate()}</span></div>
+                <div style="font-family:var(--fd);font-size:18px;font-weight:500;color:${b.diff<=7?'var(--rose)':'var(--ink)'}">${b.diff===0?'오늘 🎉':b.diff===1?'내일':'D-'+b.diff}</div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+        <div style="height:18px"></div>
+      ` : ''}
+
       <div class="paper">
-        <p class="label-eyebrow">클라이언트 / 협업자</p>
+        <p class="label-eyebrow">👤 사람 / 관계 추가</p>
         <div class="field"><label>이름</label><input class="input" id="clName" placeholder="이름 또는 회사"/></div>
-        <div class="field"><label>현재 진행 / 다음 연락 / 주의할 점</label><textarea class="textarea" id="clMemo" placeholder="짧게라도 적어두기"></textarea></div>
+        <div class="row2">
+          <div class="field"><label>생일 (월-일, 선택)</label><input class="input" id="clBday" placeholder="예: 05-21" maxlength="5"/></div>
+          <div class="field"><label>관계 (선택)</label><input class="input" id="clRel" placeholder="친구·가족·연인·동료"/></div>
+        </div>
+        <div class="field"><label>마지막 만남 (선택)</label><input class="input" id="clLastMet" type="date"/></div>
+        <div class="field"><label>메모 (현재 진행·취향·주의할 점)</label><textarea class="textarea" id="clMemo" placeholder="짧게라도 적어두기"></textarea></div>
         <button class="btn btn-primary" id="clAdd">저장 →</button>
-        ${store.clients.length?`<div class="divider"></div><div class="list">${store.clients.map((c,i)=>`
-          <div class="row"><div class="ic">${stickerEmoji('client')}</div>
-            <div class="body"><p class="ttl">${safe(c.name||'-')}</p>${c.memo?`<p class="why">${safe(c.memo)}</p>`:''}</div>
-            <button class="del" data-delcl="${i}">삭제</button></div>`).join('')}</div>`:'<p class="empty">저장된 클라이언트가 없어.</p>'}
+        ${store.clients.length?`<div class="divider"></div>
+          <p class="label-eyebrow" style="font-size:11px">저장된 사람들 <span class="right">${store.clients.length}명</span></p>
+          <div class="list">${store.clients.map((c,i)=>{
+            const lastMet = c.lastMet ? Math.floor((new Date(tk)-new Date(c.lastMet))/86400000) : null;
+            return `<div class="row"><div class="ic">${stickerEmoji('client')}</div>
+              <div class="body">
+                <p class="ttl">${safe(c.name||'-')}${c.rel?` <span style="font-family:var(--fui);font-size:10.5px;letter-spacing:.12em;color:var(--ink-muted);margin-left:6px">${safe(c.rel)}</span>`:''}${c.birthday?` <span style="font-family:var(--fb);font-size:12px;color:var(--rose);margin-left:6px">🎂 ${safe(c.birthday)}</span>`:''}</p>
+                ${lastMet!=null?`<p class="why">마지막 만남: ${c.lastMet} (${lastMet}일 전)</p>`:''}
+                ${c.memo?`<p class="why">${safe(c.memo)}</p>`:''}
+              </div>
+              <button class="del" data-delcl="${i}">삭제</button></div>`;
+          }).join('')}</div>`:'<p class="empty" style="margin-top:14px">저장된 사람이 없어.</p>'}
       </div>
     </div>
   `;
   $('#clAdd').onclick=()=>{
-    const n=$('#clName').value.trim();if(!n)return;
-    store.clients.unshift({name:n,memo:$('#clMemo').value.trim()});
-    saveStore();render();
+    const n=$('#clName').value.trim();if(!n){toast('이름 적어줘');return;}
+    const bday = $('#clBday').value.trim();
+    const entry = {
+      name: n,
+      memo: $('#clMemo').value.trim(),
+      rel: $('#clRel').value.trim(),
+      lastMet: $('#clLastMet').value || '',
+      addedAt: Date.now()
+    };
+    if(/^\d{2}-\d{2}$/.test(bday)) entry.birthday = bday;
+    store.clients.unshift(entry);
+    saveStore('clients');
+    render();
+    toast(`${n} 저장됨`);
   };
-  $$('[data-delcl]').forEach(b=>b.onclick=()=>{ store.clients.splice(+b.dataset.delcl,1);saveStore();render(); });
+  $$('[data-delcl]').forEach(b=>b.onclick=()=>{
+    if(!confirm('이 사람을 삭제할까요?')) return;
+    store.clients.splice(+b.dataset.delcl,1);
+    saveStore('clients');
+    render();
+  });
 }
 
 /* WISH */
@@ -8463,6 +8522,46 @@ function renderHealth(root){
         <div id="exKcalPreview" style="margin:8px 0;padding:8px 12px;background:var(--paper-soft);border-radius:3px;font-family:var(--fb);font-weight:500;font-size:14px;color:var(--ink-soft);text-align:center"></div>
         <button class="btn btn-primary" id="exAdd">오늘 운동 기록 →</button>
 
+        ${(() => {
+          // Personal Records: 운동 type별 최고 기록
+          if(!exercise.length) return '';
+          const prs = {};
+          exercise.forEach(e => {
+            if(!e.type) return;
+            if(!prs[e.type]) prs[e.type] = {};
+            const cur = prs[e.type];
+            if(e.km != null && (!cur.km || e.km > cur.km.val)) cur.km = {val: e.km, date: e.date};
+            if(e.distance != null && (!cur.distance || e.distance > cur.distance.val)) cur.distance = {val: e.distance, date: e.date};
+            if(e.min != null && (!cur.min || e.min > cur.min.val)) cur.min = {val: e.min, date: e.date};
+            if(e.weight != null && (!cur.weight || e.weight > cur.weight.val)) cur.weight = {val: e.weight, date: e.date};
+            if(e.sets != null && e.reps != null){
+              const tot = e.sets * e.reps;
+              if(!cur.reps || tot > cur.reps.val) cur.reps = {val: tot, date: e.date};
+            }
+            const k = exerciseKcal(e);
+            if(k && (!cur.kcal || k > cur.kcal.val)) cur.kcal = {val: k, date: e.date};
+          });
+          const prTypes = Object.keys(prs).slice(0, 5);
+          if(!prTypes.length) return '';
+          return `<div class="divider"></div>
+            <p class="label-eyebrow" style="font-size:11px">🏆 종목별 최고 기록 (PR)</p>
+            <div style="display:flex;flex-direction:column;gap:8px">
+              ${prTypes.map(t => {
+                const c = prs[t];
+                const records = [];
+                if(c.km) records.push(`최장 ${c.km.val}km <small style="color:var(--ink-muted)">(${c.km.date})</small>`);
+                if(c.distance) records.push(`최장 ${c.distance.val}m <small style="color:var(--ink-muted)">(${c.distance.date})</small>`);
+                if(c.weight) records.push(`최고 ${c.weight.val}kg <small style="color:var(--ink-muted)">(${c.weight.date})</small>`);
+                if(c.min) records.push(`최장 ${c.min.val}분 <small style="color:var(--ink-muted)">(${c.min.date})</small>`);
+                if(c.kcal) records.push(`최대 ${c.kcal.val}kcal <small style="color:var(--ink-muted)">(${c.kcal.date})</small>`);
+                return `<div style="padding:8px 12px;background:var(--paper-soft);border-radius:3px">
+                  <div style="font-family:var(--fb);font-weight:600;font-size:13.5px;color:var(--ink)">${safe(t)}</div>
+                  <div style="font-family:var(--fb);font-weight:400;font-size:12.5px;color:var(--ink-soft);margin-top:2px;line-height:1.5">${records.join(' · ')}</div>
+                </div>`;
+              }).join('')}
+            </div>`;
+        })()}
+
         ${exercise.length ? `
           <div class="divider"></div>
           <p class="label-eyebrow">최근 기록 <span class="right">최신 5개</span></p>
@@ -8673,6 +8772,82 @@ function renderHealth(root){
               <div style="font-family:var(--fb);font-weight:400;font-size:13.5px;color:var(--ink-soft)">${safe(r.pick)}</div>
             </div>`).join('')}
           </div>
+        </div>
+        <div style="height:18px"></div>`;
+      })()}
+
+      <!-- MEDICATIONS -->
+      ${(() => {
+        const meds = (store.health?.medications || []);
+        return `<div class="paper">
+          <p class="label-eyebrow">💊 약 / 처방 <span class="right">${meds.length}개</span></p>
+          <p style="margin:6px 0 10px;font-family:var(--fb);font-weight:400;font-size:13px;color:var(--ink-soft);line-height:1.6">의사 처방 약·진통제·일반 약 기록. 영양제는 따로 아래에.</p>
+          ${meds.length ? `
+            <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:12px">
+              ${meds.map((m, i) => {
+                const taken = (m.taken||{})[tk];
+                const dose = m.dose ? `${m.dose}` : '';
+                return `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;background:${taken?'var(--olive-soft)':'var(--paper-soft)'};border-radius:3px">
+                  <div style="flex:1;min-width:0">
+                    <div style="font-family:var(--fb);font-weight:500;font-size:14px;color:var(--ink)">${safe(m.name)} ${dose?`<span style="font-family:var(--fui);font-size:11px;color:var(--ink-muted);margin-left:4px">${safe(dose)}</span>`:''} ${m.time?`<span style="font-family:var(--fui);font-size:11px;color:var(--ink-muted);margin-left:4px">${safe(m.time)}</span>`:''}</div>
+                    ${m.notes?`<div style="font-family:var(--fb);font-weight:400;font-size:12.5px;color:var(--ink-soft);margin-top:2px">${safe(m.notes)}</div>`:''}
+                  </div>
+                  <div style="display:flex;gap:6px">
+                    <button type="button" data-medtake="${i}" style="background:${taken?'var(--olive)':'var(--paper)'};color:${taken?'#fff':'var(--ink)'};border:1px solid var(--olive);border-radius:50%;width:28px;height:28px;font-size:14px;cursor:pointer">${taken?'✓':''}</button>
+                    <button type="button" data-meddel="${i}" class="sup-del">삭제</button>
+                  </div>
+                </div>`;
+              }).join('')}
+            </div>
+          ` : ''}
+          <div class="row2">
+            <div class="field"><label>약 이름</label><input class="input" id="medName" placeholder="예: 타이레놀, 비염약"/></div>
+            <div class="field"><label>복용량 / 시간 (선택)</label><input class="input" id="medDose" placeholder="예: 1정 아침저녁"/></div>
+          </div>
+          <div class="field"><label>메모 (처방·증상 등)</label><input class="input" id="medNotes" placeholder="예: 두통 시 1정"/></div>
+          <button class="btn btn-primary" id="medAdd">약 추가 →</button>
+        </div>
+        <div style="height:18px"></div>`;
+      })()}
+
+      <!-- VITALS (혈압·혈당) -->
+      ${(() => {
+        const vitals = (store.health?.vitals || []).slice().sort((a,b) => (b.at||0)-(a.at||0));
+        const recent = vitals.slice(0, 7);
+        return `<div class="paper">
+          <p class="label-eyebrow">🩺 혈압 · 혈당 기록</p>
+          <div class="row2">
+            <div class="field"><label>혈압 (수축기/이완기 mmHg)</label>
+              <div style="display:flex;gap:4px;align-items:center">
+                <input class="input" id="vitalsBpSys" type="number" min="60" max="250" placeholder="120" style="flex:1"/>
+                <span>/</span>
+                <input class="input" id="vitalsBpDia" type="number" min="40" max="150" placeholder="80" style="flex:1"/>
+              </div>
+            </div>
+            <div class="field"><label>혈당 (mg/dL, 선택)</label><input class="input" id="vitalsGlucose" type="number" min="40" max="500" placeholder="공복 90~99 정상"/></div>
+          </div>
+          <div class="field"><label>메모 (식전/식후 등)</label><input class="input" id="vitalsNotes" placeholder="예: 공복, 식후 2시간"/></div>
+          <button class="btn btn-primary" id="vitalsAdd">기록 →</button>
+          ${recent.length ? `
+            <div class="divider"></div>
+            <p class="label-eyebrow" style="font-size:11px">최근 7개</p>
+            <div style="display:flex;flex-direction:column;gap:6px">
+              ${recent.map((v, ri) => {
+                const realIdx = vitals.indexOf(v);
+                const bpRisk = v.bpSys >= 140 || v.bpDia >= 90 ? 'var(--rose)' : (v.bpSys >= 130 || v.bpDia >= 85 ? '#C49A3A' : 'var(--olive)');
+                const gRisk = v.glucose >= 126 ? 'var(--rose)' : (v.glucose >= 100 ? '#C49A3A' : 'var(--olive)');
+                return `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--hairline-soft)">
+                  <div style="font-family:var(--fb);font-size:13.5px">
+                    <span style="font-family:var(--fui);font-size:11px;color:var(--ink-muted);letter-spacing:.12em">${v.date}</span>
+                    ${v.bpSys?`<span style="margin-left:8px;color:${bpRisk};font-weight:600">${v.bpSys}/${v.bpDia} mmHg</span>`:''}
+                    ${v.glucose?`<span style="margin-left:8px;color:${gRisk};font-weight:600">혈당 ${v.glucose}</span>`:''}
+                    ${v.notes?`<span style="margin-left:8px;color:var(--ink-soft);font-style:italic">${safe(v.notes)}</span>`:''}
+                  </div>
+                  <button type="button" data-vitaldel="${realIdx}" class="sup-del">삭제</button>
+                </div>`;
+              }).join('')}
+            </div>
+          ` : ''}
         </div>
         <div style="height:18px"></div>`;
       })()}
@@ -9247,6 +9422,63 @@ function renderHealth(root){
       wa.value = toLocal(today6);
     }
   })();
+
+  // ===== Medications =====
+  function ensureHealth(){
+    if(!store.health) store.health = {water:{}, exercise:[], fasting:{}, supplements:[], weights:[], foods:[], sleeps:[], medications:[], vitals:[]};
+    if(!store.health.medications) store.health.medications = [];
+    if(!store.health.vitals) store.health.vitals = [];
+  }
+  const medAddBtn = $('#medAdd');
+  if(medAddBtn) medAddBtn.onclick = () => {
+    const name = ($('#medName').value||'').trim();
+    if(!name){ toast('약 이름 적어줘'); return; }
+    ensureHealth();
+    store.health.medications.push({
+      name,
+      dose: ($('#medDose').value||'').trim(),
+      notes: ($('#medNotes').value||'').trim(),
+      taken: {},
+      addedAt: Date.now()
+    });
+    saveStore('health'); render();
+    toast(`${name} 추가됨`);
+  };
+  $$('#main [data-medtake]').forEach(b => b.onclick = () => {
+    const i = +b.dataset.medtake;
+    const m = store.health?.medications?.[i];
+    if(!m) return;
+    m.taken = m.taken || {};
+    m.taken[tk] = !m.taken[tk];
+    saveStore('health'); render();
+  });
+  $$('#main [data-meddel]').forEach(b => b.onclick = () => {
+    if(!confirm('이 약을 삭제할까요?')) return;
+    store.health.medications.splice(+b.dataset.meddel, 1);
+    saveStore('health'); render();
+  });
+
+  // ===== Vitals =====
+  const vitalsAddBtn = $('#vitalsAdd');
+  if(vitalsAddBtn) vitalsAddBtn.onclick = () => {
+    const bpSys = parseFloat($('#vitalsBpSys').value);
+    const bpDia = parseFloat($('#vitalsBpDia').value);
+    const glucose = parseFloat($('#vitalsGlucose').value);
+    if(isNaN(bpSys) && isNaN(glucose)){ toast('혈압이나 혈당 중 하나는 입력'); return; }
+    ensureHealth();
+    const entry = { date: tk, at: Date.now(), notes: ($('#vitalsNotes').value||'').trim() };
+    if(!isNaN(bpSys)) entry.bpSys = bpSys;
+    if(!isNaN(bpDia)) entry.bpDia = bpDia;
+    if(!isNaN(glucose)) entry.glucose = glucose;
+    store.health.vitals.push(entry);
+    saveStore('health'); render();
+    toast('기록됨');
+  };
+  $$('#main [data-vitaldel]').forEach(b => b.onclick = () => {
+    if(!confirm('이 기록을 삭제할까요?')) return;
+    store.health.vitals.splice(+b.dataset.vitaldel, 1);
+    saveStore('health'); render();
+  });
 
   // ===== Body info save =====
   const bodySaveBtn = $('#bodySave');
