@@ -7288,6 +7288,14 @@ function renderRoute(root){
             </select>
           </div>
         </div>
+        <div class="row2">
+          <div class="field"><label>도착해야 할 시각 (선택) <span style="font-family:var(--fb);font-weight:300;font-size:11px;color:var(--ink-muted);letter-spacing:0;text-transform:none;font-style:italic;margin-left:6px">— 출발 시각 역산</span></label>
+            <input class="input" id="rtArriveAt" type="time"/>
+          </div>
+          <div class="field"><label>준비 여유 시간 (분)</label>
+            <input class="input" id="rtBuffer" type="number" min="0" max="60" value="${store.settings?.routeBuffer||10}"/>
+          </div>
+        </div>
         <p style="margin:-6px 0 14px;font-family:var(--fb);font-weight:400;font-size:12.5px;color:var(--ink-muted);font-style:italic">한국 내에서는 카카오맵·네이버지도가 환승 정보 더 정확해. 해외는 구글</p>
         <div style="display:flex;gap:8px;flex-wrap:wrap">
           <button class="btn btn-primary" id="rtCalc">⏱ 시간 계산하기</button>
@@ -7402,7 +7410,61 @@ function renderRoute(root){
         times[k] = Math.max(1, Math.round(urbanDist / speeds[k] * 60));
       });
       const fmt = m => m >= 60 ? `${Math.floor(m/60)}시간 ${m%60}분` : `${m}분`;
+
+      // ===== Departure time reverse calc =====
+      const arriveAt = $('#rtArriveAt').value;
+      const buffer = Math.max(0, parseInt($('#rtBuffer').value, 10) || 0);
+      // Save buffer setting
+      if(buffer !== (store.settings?.routeBuffer||10)){
+        store.settings = store.settings || {};
+        store.settings.routeBuffer = buffer;
+        saveStore('__meta');
+      }
+      const currentMode = $('#rtMode').value;
+      const travelMin = times[currentMode] || times['대중교통'];
+      let departureHTML = '';
+      if(arriveAt){
+        const now = new Date();
+        const [ah, am] = arriveAt.split(':').map(Number);
+        const arrive = new Date(now);
+        arrive.setHours(ah, am, 0, 0);
+        if(arrive < now) arrive.setDate(arrive.getDate() + 1); // assume next-day if past
+        const totalMin = travelMin + buffer;
+        const departBy = new Date(arrive.getTime() - totalMin * 60000);
+        const minsUntilDeparture = Math.round((departBy - now) / 60000);
+        const pad2 = n => String(n).padStart(2, '0');
+        const depTimeStr = `${pad2(departBy.getHours())}:${pad2(departBy.getMinutes())}`;
+        let urgencyColor = 'var(--olive)';
+        let urgencyText = '';
+        if(minsUntilDeparture < 0){
+          urgencyColor = '#D14B5C';
+          urgencyText = `🚨 이미 ${Math.abs(minsUntilDeparture)}분 지났어 — 지금 바로 출발해도 ${Math.abs(minsUntilDeparture)}분 늦어`;
+        } else if(minsUntilDeparture <= 5){
+          urgencyColor = '#D14B5C';
+          urgencyText = `🚨 ${minsUntilDeparture}분 안에 출발해야 ${currentMode} 타고 도착 가능!`;
+        } else if(minsUntilDeparture <= 15){
+          urgencyColor = '#C49A3A';
+          urgencyText = `⏰ ${minsUntilDeparture}분 후 출발 — 슬슬 준비해`;
+        } else if(minsUntilDeparture <= 60){
+          urgencyColor = 'var(--ink)';
+          urgencyText = `⏳ ${minsUntilDeparture}분 후 (${Math.floor(minsUntilDeparture/60)>0?Math.floor(minsUntilDeparture/60)+'시간 ':''}${minsUntilDeparture%60}분 후) 출발`;
+        } else {
+          urgencyColor = 'var(--ink-soft)';
+          urgencyText = `${Math.floor(minsUntilDeparture/60)}시간 ${minsUntilDeparture%60}분 후 출발해도 충분`;
+        }
+        departureHTML = `
+          <div style="margin:10px 0 14px;padding:14px 16px;background:${urgencyColor === '#D14B5C' ? '#FBE9EC' : (urgencyColor === '#C49A3A' ? '#FAF1DC' : 'var(--paper-soft)')};border-left:4px solid ${urgencyColor};border-radius:4px">
+            <p style="margin:0 0 6px;font-family:var(--fb);font-weight:600;font-size:15.5px;color:${urgencyColor};line-height:1.5">${urgencyText}</p>
+            <p style="margin:0;font-family:var(--fb);font-weight:400;font-size:13px;color:var(--ink-soft);line-height:1.6">
+              ${arriveAt} 도착하려면 → <b style="color:var(--ink)">${depTimeStr}</b> 출발<br>
+              <span style="font-family:var(--fui);font-size:10.5px;letter-spacing:.14em;color:var(--ink-muted)">${currentMode} ${fmt(travelMin)} + 준비 ${buffer}분 = 총 ${fmt(totalMin)}</span>
+            </p>
+          </div>
+        `;
+      }
+
       result.innerHTML = `
+        ${departureHTML}
         <div class="rt-result-card">
           <p class="label-eyebrow">대략 추정 <span class="right">${urbanDist.toFixed(1)} km</span></p>
           <div class="rt-times">
@@ -7411,9 +7473,15 @@ function renderRoute(root){
             <div class="rt-time"><span class="rt-mode">자전거</span><span class="rt-min">${fmt(times['자전거'])}</span></div>
             <div class="rt-time"><span class="rt-mode">도보</span><span class="rt-min">${fmt(times['도보'])}</span></div>
           </div>
-          <p class="rt-disclaimer">※ 직선거리 + 도시 보정값 기준 추정치. 실시간 교통/환승 시간은 반영 안 됨 — 정확한 시간은 카카오맵·네이버지도로 확인</p>
+          <p class="rt-disclaimer">※ 직선거리 + 도시 보정값 기준 추정치. 정확한 환승/실시간 교통은 카카오맵·네이버지도에서 확인해줘</p>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px">
+            <button type="button" class="btn btn-ghost" id="rtVerifyKakao" style="font-size:11px">카카오맵에서 정확히 확인 ↗</button>
+            <button type="button" class="btn btn-ghost" id="rtVerifyNaver" style="font-size:11px">네이버지도에서 확인 ↗</button>
+          </div>
         </div>
       `;
+      const vk = $('#rtVerifyKakao'); if(vk) vk.onclick = () => openKakao(from, to, currentMode);
+      const vn = $('#rtVerifyNaver'); if(vn) vn.onclick = () => openNaver(from, to, currentMode);
     } catch(e){
       console.warn('geocode error', e);
       result.innerHTML = '<p class="rt-err">위치 서비스 응답이 늦어. 잠시 후 다시 시도해줘</p>';
