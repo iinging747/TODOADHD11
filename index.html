@@ -3170,7 +3170,16 @@ function maybeShowCycleAlert(){
   if(store.daily.cycleAlerts[tk]) return;
 
   let msg = null;
-  if(info.phase === 'ovulation' || info.cycleDay === info.ovuDay){
+  if(info.irregular){
+    // Only manual marks trigger alerts; no D-N/ovulation predictions
+    if(info.phase === 'period'){
+      msg = _pickPhr([
+        '🩸 오늘 생리 중으로 기록돼 있어. 무리하지 마',
+        '🩸 따뜻한 거 챙기고 쉬어가자',
+        '🩸 컨디션 떨어져도 정상이야'
+      ]);
+    }
+  } else if(info.phase === 'ovulation' || info.cycleDay === info.ovuDay){
     msg = _pickPhr([
       '✦ 오늘 배란 예정일이야. 컨디션·체온 살짝 변할 수 있어',
       '✦ 배란일 — 가임 확률 높은 날. 의식해두자',
@@ -9012,6 +9021,7 @@ function cycleInfo(){
   const periodLen = +c.periodLen || 5;
   const stats = cycleAvgFromHistory();
   const avgCycle = stats.avg;
+  const irregular = !!c.irregular;
 
   const today = nowKST();
   today.setHours(0,0,0,0);
@@ -9027,16 +9037,20 @@ function cycleInfo(){
   ovuDate.setDate(ovuDate.getDate() + ovuDay - 1);
 
   let phase;
-  // Check if today is in a manually-marked period day
   const tk = dkey(today);
   const manual = (c.periodDays||{})[tk];
-  if(manual === 'start' || manual === 'day') phase = 'period';
-  else if(cycleDay <= periodLen) phase = 'period';
-  else if(cycleDay === ovuDay) phase = 'ovulation';
-  else if(cycleDay >= ovuDay - 3 && cycleDay <= ovuDay + 1) phase = 'fertile';
-  else if(cycleDay >= avgCycle - 4) phase = 'pms';
-  else if(cycleDay < ovuDay) phase = 'follicular';
-  else phase = 'luteal';
+  if(irregular){
+    // Only manual marks decide phase; no predictions
+    phase = (manual === 'start' || manual === 'day') ? 'period' : 'unknown';
+  } else {
+    if(manual === 'start' || manual === 'day') phase = 'period';
+    else if(cycleDay <= periodLen) phase = 'period';
+    else if(cycleDay === ovuDay) phase = 'ovulation';
+    else if(cycleDay >= ovuDay - 3 && cycleDay <= ovuDay + 1) phase = 'fertile';
+    else if(cycleDay >= avgCycle - 4) phase = 'pms';
+    else if(cycleDay < ovuDay) phase = 'follicular';
+    else phase = 'luteal';
+  }
 
   const calStart = new Date(realStart);
   calStart.setDate(calStart.getDate() - calStart.getDay());
@@ -9047,16 +9061,20 @@ function cycleInfo(){
     nextPeriodKey: dkey(nextPeriodDate),
     ovuKey: dkey(ovuDate),
     calStart,
-    stats
+    stats,
+    irregular
   };
 }
 function cyclePhaseOn(date, info){
-  // 1) Manual mark wins
+  // 1) Manual mark always wins
   const d = new Date(date); d.setHours(0,0,0,0);
   const dk = dkey(d);
   const manual = (store.health?.cycle?.periodDays||{})[dk];
   if(manual === 'start') return { phase:'period', mark:'🩸', manual:true };
   if(manual === 'day')   return { phase:'period', mark:'',    manual:true };
+
+  // If user marked the cycle as 불규칙 → skip predictions entirely
+  if(store.health?.cycle?.irregular) return { phase:'none', mark:'' };
 
   // 2) Otherwise predict based on closest recorded start
   const starts = cycleStarts();
@@ -9812,15 +9830,19 @@ function renderHealth(root){
             <button class="btn btn-primary" id="cycleEnable">🌸 주기 추적 켜기 →</button>
           ` : `
             ${info ? `
-              <div style="padding:14px 16px;background:linear-gradient(135deg,${phases[info.phase].soft} 0%,var(--paper-soft) 100%);border-radius:6px;border-left:3px solid ${phases[info.phase].color};margin-bottom:14px">
+              <div style="padding:14px 16px;background:linear-gradient(135deg,${(phases[info.phase]||phases.luteal).soft} 0%,var(--paper-soft) 100%);border-radius:6px;border-left:3px solid ${(phases[info.phase]||phases.luteal).color};margin-bottom:14px">
                 <div style="font-family:var(--fb);font-weight:600;font-size:16px;color:var(--ink);margin-bottom:4px">
-                  ${phases[info.phase].emoji} 주기 ${info.cycleDay}일째 · <span style="color:${phases[info.phase].color}">${phases[info.phase].label}</span>
+                  ${info.irregular
+                    ? `🌪 불규칙 모드 · ${info.phase === 'period' ? '🩸 오늘 생리 중' : '기록 기반만 표시'}`
+                    : `${(phases[info.phase]||phases.luteal).emoji} 주기 ${info.cycleDay}일째 · <span style="color:${(phases[info.phase]||phases.luteal).color}">${(phases[info.phase]||phases.luteal).label}</span>`}
                 </div>
                 <div style="font-family:var(--fb);font-weight:400;font-size:13.5px;color:var(--ink-soft);line-height:1.6">
-                  ${info.stats.irregular
-                    ? `최근 주기 <b style="color:var(--ink)">${info.stats.min}~${info.stats.max}일</b> 사이 — 불규칙해서 예측 정확도 낮을 수 있어`
-                    : `다음 생리 예정: <b style="color:var(--ink)">${info.nextPeriodKey}</b> (D-${info.daysUntilNext}) · 배란 예정일 ${info.ovuKey}`}<br>
-                  ${cyclePhaseAdvice(info.phase)}
+                  ${info.irregular
+                    ? `예측은 꺼져있어. 캘린더에서 시작일·생리 중을 직접 마킹하면 그것만 표시돼.${info.stats.n>=2 ? `<br>지금까지 기록 기반 ${info.stats.min}~${info.stats.max}일 사이`:''}`
+                    : info.stats.irregular
+                      ? `최근 주기 <b style="color:var(--ink)">${info.stats.min}~${info.stats.max}일</b> 사이 — 자연스럽게 폭이 큰 편이야. 정확도 낮을 수 있어`
+                      : `다음 생리 예정: <b style="color:var(--ink)">${info.nextPeriodKey}</b> (D-${info.daysUntilNext}) · 배란 예정일 ${info.ovuKey}`}<br>
+                  ${info.phase !== 'unknown' ? cyclePhaseAdvice(info.phase) : ''}
                 </div>
               </div>
             ` : `
@@ -9877,11 +9899,26 @@ function renderHealth(root){
 
             <div class="divider"></div>
             <p class="label-eyebrow" style="font-size:11px">기본 설정</p>
-            <div class="row2">
+
+            <div class="setting-row" style="padding:8px 0;border-bottom:1px solid var(--hairline-soft);margin-bottom:10px">
+              <div class="setting-info">
+                <div class="setting-title">🌪 불규칙 주기로 설정</div>
+                <div class="setting-desc">켜면 다음 생리·배란 <b>예측 표시 안 함</b>. 직접 마킹한 날만 캘린더에 보여줘요. 주기가 들쭉날쭉할 때 추천.</div>
+              </div>
+              <label class="toggle">
+                <input type="checkbox" id="cycleIrregularToggle" ${c.irregular?'checked':''}>
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+
+            <div class="row2" ${c.irregular?'style="opacity:.5;pointer-events:none"':''}>
               <div class="field"><label>생리 기간 (일)</label><input class="input" id="cyclePeriodLen" type="number" min="2" max="10" value="${c.periodLen||5}"/></div>
               <div class="field"><label>평균 주기 (수동 입력 · 자동 계산 우선)</label><input class="input" id="cycleAvg" type="number" min="20" max="45" value="${c.avgCycle||28}" placeholder="기록 2개 이상이면 자동"/></div>
             </div>
-            <div style="display:flex;gap:6px;align-items:center;margin-top:6px">
+            <p style="margin:6px 0 0;font-family:var(--fb);font-weight:400;font-size:11.5px;color:var(--ink-muted);font-style:italic;line-height:1.5">
+              ${c.irregular ? '※ 불규칙 모드 — 위 평균 값은 사용 안 함' : '※ 시작일을 2개 이상 마킹하면 자동 평균 계산 (최근 6회)'}
+            </p>
+            <div style="display:flex;gap:6px;align-items:center;margin-top:10px">
               <button class="btn btn-ghost" id="cycleSave" style="flex:1">설정 저장</button>
               <button class="btn btn-ghost" id="cycleDisable" style="font-size:11px;color:var(--rose)">추적 끄기</button>
             </div>
@@ -10571,6 +10608,14 @@ function renderHealth(root){
     if(!isNaN(plen) && plen >= 2 && plen <= 10) store.health.cycle.periodLen = plen;
     saveStore('health'); render();
     toast('설정 저장됨');
+  };
+  const cycleIrregularT = $('#cycleIrregularToggle');
+  if(cycleIrregularT) cycleIrregularT.onchange = (e) => {
+    ensureHealth();
+    store.health.cycle = store.health.cycle || { enabled:true };
+    store.health.cycle.irregular = !!e.target.checked;
+    saveStore('health'); render();
+    toast(e.target.checked ? '🌪 불규칙 모드 — 예측 안 함, 기록한 날만 표시' : '예측 모드로 돌아감');
   };
   const cycleStartedBtn = $('#cycleStartedToday');
   if(cycleStartedBtn) cycleStartedBtn.onclick = () => {
