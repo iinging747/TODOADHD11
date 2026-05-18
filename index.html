@@ -3496,11 +3496,12 @@ function renderAdd(root){
         </div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
           <button class="btn btn-primary" id="parseBtn">쪼개서 저장 →</button>
-          <button class="btn btn-ghost voice-btn" id="voiceBtn" title="음성으로 입력">
-            <span class="voice-icon">🎙</span> 음성으로 말하기
+          <button class="btn voice-btn" id="voiceBtn" title="음성으로 입력 (한국어 자동 인식)" style="background:linear-gradient(135deg,#E8D5FA,#F5E8C8);color:var(--ink);border:1px solid var(--hairline);font-weight:500">
+            <span class="voice-icon">🎙</span> 말하면 자동 저장
           </button>
-          <span class="voice-status" id="voiceStatus"></span>
+          <span class="voice-status" id="voiceStatus" style="font-family:var(--fb);font-size:13px;color:var(--ink-soft);font-style:italic"></span>
         </div>
+        <p style="margin:8px 0 0;font-family:var(--fb);font-weight:400;font-size:12.5px;color:var(--ink-muted);line-height:1.6;font-style:italic">🎙 버튼을 누르고 말하면 한국어 자동 인식 → 끝나면 자동 저장. Chrome·Safari·Edge 지원 (Firefox X)</p>
       </div>
       <div style="height:18px"></div>
       <div class="paper">
@@ -3767,8 +3768,19 @@ function setupVoiceInput(){
       btn.classList.remove('voice-active');
       btn.innerHTML = '<span class="voice-icon">🎙</span> 음성으로 말하기';
       if(!status.textContent.includes('오류') && !status.textContent.includes('권한')){
-        status.textContent = '입력 완료 — 쪼개서 저장 눌러';
-        setTimeout(()=>{ if(status.textContent.includes('입력 완료')) status.textContent=''; }, 4000);
+        const text = ($('#bulkInput').value||'').trim();
+        if(text && text !== initialText.trim()){
+          status.innerHTML = `입력 완료 (${text.length}자) — <b style="color:var(--olive)">자동 저장 중…</b>`;
+          // Auto-trigger the parser/save flow after a short delay
+          setTimeout(() => {
+            const parseBtn = $('#parseBtn');
+            if(parseBtn) parseBtn.click();
+            status.textContent = '';
+          }, 500);
+        } else {
+          status.textContent = '소리가 잡혔지만 글자로 안 됐어 — 다시 시도해줘';
+          setTimeout(()=>{ if(status.textContent.includes('소리가')) status.textContent=''; }, 4000);
+        }
       }
     };
     voiceRecog.start();
