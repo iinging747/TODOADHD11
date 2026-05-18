@@ -1342,13 +1342,18 @@ body.dark .toast{background:var(--ink);color:var(--bg)}
   </div>
 </div>
 
-<!-- ===== Meditation overlay ===== -->
-<div id="meditationOverlay" hidden style="position:fixed;inset:0;z-index:80;background:linear-gradient(180deg,#1a1410 0%,#3a2818 100%);display:none;flex-direction:column;align-items:center;justify-content:center;color:#FAF3E2;padding:20px">
-  <div id="meditationOrb" style="width:200px;height:200px;border-radius:50%;background:radial-gradient(circle at 35% 35%,#E8D78A,#7AB058 60%,#3A6028);box-shadow:0 0 80px rgba(170,220,150,.6);transition:transform 4s ease-in-out;margin-bottom:40px"></div>
-  <div id="meditationPhase" style="font-family:'Cormorant',serif;font-weight:400;font-size:42px;letter-spacing:.04em;margin-bottom:8px">시작하기</div>
-  <div id="meditationCount" style="font-family:'Albert Sans',sans-serif;font-size:14px;letter-spacing:.2em;text-transform:uppercase;opacity:.7">잠시 후…</div>
-  <div id="meditationTotal" style="position:absolute;top:24px;left:24px;font-family:'Albert Sans',sans-serif;font-size:12px;letter-spacing:.2em;opacity:.5"></div>
-  <button type="button" id="meditationStop" style="position:absolute;top:24px;right:24px;background:transparent;border:1px solid rgba(250,243,226,.4);color:#FAF3E2;border-radius:999px;padding:6px 14px;font-family:'Albert Sans',sans-serif;font-size:11px;letter-spacing:.2em;cursor:pointer">닫기 ✕</button>
+<!-- ===== Meditation overlay (improved with stars + ambient pad) ===== -->
+<div id="meditationOverlay" hidden style="position:fixed;inset:0;z-index:80;background:radial-gradient(ellipse at center,#2a1f3a 0%,#150d22 60%,#0a0612 100%);display:none;flex-direction:column;align-items:center;justify-content:center;color:#F0E8FA;padding:20px;overflow:hidden">
+  <canvas id="meditationStars" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none"></canvas>
+  <div id="meditationOrb" style="position:relative;width:240px;height:240px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#E8D5FA 0%,#A088E8 35%,#5E4A9F 65%,#2A1F4F 100%);box-shadow:0 0 120px 40px rgba(160,136,232,.4),inset 0 0 60px rgba(255,255,255,.15);transition:transform 4s cubic-bezier(.4,.0,.2,1);margin-bottom:50px;z-index:2"></div>
+  <div id="meditationPhase" style="font-family:'Cormorant',serif;font-weight:300;font-size:48px;letter-spacing:.06em;margin-bottom:10px;text-shadow:0 0 20px rgba(255,255,255,.3);z-index:2">시작하기</div>
+  <div id="meditationCount" style="font-family:'Albert Sans',sans-serif;font-size:16px;letter-spacing:.3em;text-transform:uppercase;opacity:.6;z-index:2">잠시 후…</div>
+  <div id="meditationProgress" style="position:absolute;bottom:60px;left:50%;transform:translateX(-50%);width:200px;height:2px;background:rgba(240,232,250,.15);border-radius:999px;overflow:hidden;z-index:2">
+    <div id="meditationProgressBar" style="height:100%;width:0%;background:linear-gradient(90deg,#A088E8,#E8D5FA);transition:width 1s linear"></div>
+  </div>
+  <div id="meditationTotal" style="position:absolute;top:24px;left:24px;font-family:'Albert Sans',sans-serif;font-size:11px;letter-spacing:.3em;opacity:.45;z-index:3"></div>
+  <button type="button" id="meditationSoundToggle" style="position:absolute;top:24px;right:140px;background:transparent;border:1px solid rgba(240,232,250,.3);color:#F0E8FA;border-radius:999px;padding:6px 14px;font-family:'Albert Sans',sans-serif;font-size:11px;letter-spacing:.2em;cursor:pointer;z-index:3">🎵 ON</button>
+  <button type="button" id="meditationStop" style="position:absolute;top:24px;right:24px;background:transparent;border:1px solid rgba(240,232,250,.3);color:#F0E8FA;border-radius:999px;padding:6px 14px;font-family:'Albert Sans',sans-serif;font-size:11px;letter-spacing:.2em;cursor:pointer;z-index:3">닫기 ✕</button>
 </div>
 
 <!-- ===== Schedule search modal ===== -->
@@ -4856,8 +4861,114 @@ function renderFocus(root){
   }
 }
 
-/* ===== Meditation timer (4-7-8 breathing pattern) ===== */
+/* ===== Meditation timer (4-7-8 breathing + ambient pad + starfield) ===== */
 let _medTimer = null;
+let _medStarTimer = null;
+let _medCtx = null;
+let _medMaster = null;
+let _medSoundOn = true;
+
+function _medStartAmbient(){
+  if(_medCtx) return;
+  try{
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if(!AC) return;
+    _medCtx = new AC();
+    _medMaster = _medCtx.createGain();
+    _medMaster.gain.value = 0;
+    _medMaster.connect(_medCtx.destination);
+    // Soft pad: 3 detuned sine oscillators + LFO + lowpass filter
+    const root = 110; // A2
+    const intervals = [1, 1.5, 2]; // root, fifth, octave
+    intervals.forEach((mul, i) => {
+      const osc = _medCtx.createOscillator();
+      osc.type = i === 2 ? 'triangle' : 'sine';
+      osc.frequency.value = root * mul;
+      // Subtle detune for warmth
+      const detune = _medCtx.createOscillator();
+      detune.frequency.value = 0.07 + i * 0.03;
+      const detuneGain = _medCtx.createGain();
+      detuneGain.gain.value = 3 + i;
+      detune.connect(detuneGain);
+      detuneGain.connect(osc.detune);
+      const g = _medCtx.createGain();
+      g.gain.value = (i === 0 ? 0.15 : i === 1 ? 0.10 : 0.06);
+      // Lowpass for warmth
+      const filter = _medCtx.createBiquadFilter();
+      filter.type = 'lowpass';
+      filter.frequency.value = 800 + i * 200;
+      filter.Q.value = 1;
+      osc.connect(filter);
+      filter.connect(g);
+      g.connect(_medMaster);
+      osc.start();
+      detune.start();
+    });
+    // Fade in
+    _medMaster.gain.linearRampToValueAtTime(_medSoundOn ? 0.5 : 0, _medCtx.currentTime + 3);
+  }catch(e){ console.warn('meditation audio', e); }
+}
+function _medStopAmbient(){
+  if(_medCtx){
+    try{
+      _medMaster.gain.linearRampToValueAtTime(0, _medCtx.currentTime + 1);
+      setTimeout(() => { try{ _medCtx.close(); }catch(_){} _medCtx = null; }, 1100);
+    }catch(_){ _medCtx = null; }
+  }
+}
+function _medToggleSound(){
+  _medSoundOn = !_medSoundOn;
+  if(_medMaster && _medCtx){
+    _medMaster.gain.linearRampToValueAtTime(_medSoundOn ? 0.5 : 0, _medCtx.currentTime + 0.4);
+  }
+  const btn = document.getElementById('meditationSoundToggle');
+  if(btn) btn.textContent = _medSoundOn ? '🎵 ON' : '🔇 OFF';
+}
+
+function _medStartStars(){
+  const canvas = document.getElementById('meditationStars');
+  if(!canvas) return;
+  const ctx = canvas.getContext('2d');
+  function resize(){
+    canvas.width = window.innerWidth * window.devicePixelRatio;
+    canvas.height = window.innerHeight * window.devicePixelRatio;
+  }
+  resize();
+  window.addEventListener('resize', resize);
+  const stars = [];
+  const starCount = 80;
+  for(let i = 0; i < starCount; i++){
+    stars.push({
+      x: Math.random() * canvas.width,
+      y: Math.random() * canvas.height,
+      r: Math.random() * 1.5 + 0.3,
+      twinkleSpeed: 0.003 + Math.random() * 0.005,
+      twinkleOffset: Math.random() * Math.PI * 2
+    });
+  }
+  function draw(){
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    const t = Date.now() * 0.001;
+    stars.forEach(s => {
+      const alpha = 0.4 + 0.6 * Math.abs(Math.sin(t * s.twinkleSpeed * 200 + s.twinkleOffset));
+      ctx.fillStyle = `rgba(240,232,250,${alpha})`;
+      ctx.beginPath();
+      ctx.arc(s.x, s.y, s.r * window.devicePixelRatio, 0, Math.PI * 2);
+      ctx.fill();
+    });
+  }
+  _medStarTimer = setInterval(draw, 40);
+  draw();
+}
+function _medStopStars(){
+  if(_medStarTimer){ clearInterval(_medStarTimer); _medStarTimer = null; }
+  const canvas = document.getElementById('meditationStars');
+  if(canvas){
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+  }
+}
+
 function startMeditation(totalMin){
   const overlay = document.getElementById('meditationOverlay');
   if(!overlay) return;
@@ -4867,29 +4978,32 @@ function startMeditation(totalMin){
   const phaseEl = document.getElementById('meditationPhase');
   const countEl = document.getElementById('meditationCount');
   const totalEl = document.getElementById('meditationTotal');
+  const progressBar = document.getElementById('meditationProgressBar');
   totalEl.textContent = `${totalMin}분 명상 · 4-7-8 호흡`;
 
+  // Start ambient pad + stars
+  _medStartAmbient();
+  _medStartStars();
+
   const phases = [
-    { name: '🌬️ 들이마셔', sec: 4, scale: 1.4 },
-    { name: '🫁 멈춰',     sec: 7, scale: 1.4 },
-    { name: '🌊 내쉬어',   sec: 8, scale: 0.85 }
+    { name: '들이마셔', sec: 4, scale: 1.5, color: '#A8D5F8' },
+    { name: '잠시 멈춰', sec: 7, scale: 1.5, color: '#E8D5FA' },
+    { name: '내쉬어', sec: 8, scale: 0.75, color: '#F8C8B0' }
   ];
-  const cycleSec = 4 + 7 + 8;
   const totalSec = totalMin * 60;
   let elapsed = 0;
   let phaseIdx = 0;
   let phaseRemain = phases[0].sec;
-  let runStart = Date.now();
 
   function tick(){
-    if(elapsed >= totalSec){
-      finish();
-      return;
-    }
-    phaseEl.textContent = phases[phaseIdx].name;
+    if(elapsed >= totalSec){ finish(); return; }
+    const p = phases[phaseIdx];
+    phaseEl.textContent = p.name;
     countEl.textContent = phaseRemain + '초';
-    orb.style.transform = `scale(${phases[phaseIdx].scale})`;
-    orb.style.transitionDuration = phases[phaseIdx].sec + 's';
+    orb.style.transform = `scale(${p.scale})`;
+    orb.style.transitionDuration = p.sec + 's';
+    orb.style.background = `radial-gradient(circle at 35% 30%,${p.color} 0%,#A088E8 40%,#5E4A9F 70%,#2A1F4F 100%)`;
+    if(progressBar) progressBar.style.width = (elapsed / totalSec * 100) + '%';
     elapsed++;
     phaseRemain--;
     if(phaseRemain <= 0){
@@ -4899,22 +5013,26 @@ function startMeditation(totalMin){
   }
   function finish(){
     if(_medTimer){ clearInterval(_medTimer); _medTimer = null; }
-    phaseEl.textContent = '✨ 완료';
-    countEl.textContent = `${totalMin}분 명상 끝`;
+    phaseEl.textContent = '✨ 잘했어';
+    countEl.textContent = `${totalMin}분 함께 했어`;
+    if(progressBar) progressBar.style.width = '100%';
     gentleChime();
-    // Log meditation as a focus cycle (kind: 'meditation')
     store.focusLog = store.focusLog || [];
     store.focusLog.push({ date: todayKey(), min: totalMin, kind: 'meditation', at: Date.now() });
     saveStore('focusLog');
-    setTimeout(() => stopMeditation(), 2400);
+    setTimeout(() => stopMeditation(), 3500);
   }
   tick();
   _medTimer = setInterval(tick, 1000);
 
   document.getElementById('meditationStop').onclick = stopMeditation;
+  const sToggle = document.getElementById('meditationSoundToggle');
+  if(sToggle) sToggle.onclick = _medToggleSound;
 }
 function stopMeditation(){
   if(_medTimer){ clearInterval(_medTimer); _medTimer = null; }
+  _medStopAmbient();
+  _medStopStars();
   const overlay = document.getElementById('meditationOverlay');
   if(overlay){ overlay.hidden = true; overlay.style.display = 'none'; }
 }
