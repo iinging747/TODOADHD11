@@ -8308,6 +8308,118 @@ function tdeeKcal(){
   return Math.round(bmrKcal() * (mult[activity] || 1.55));
 }
 
+/* ===== Menstrual cycle helpers ===== */
+function cycleInfo(){
+  const c = store.health?.cycle;
+  if(!c || !c.enabled || !c.lastPeriodStart) return null;
+  const avgCycle = +c.avgCycle || 28;
+  const periodLen = +c.periodLen || 5;
+  // Find the most recent cycle start ≤ today by advancing in avgCycle steps
+  const today = nowKST();
+  today.setHours(0,0,0,0);
+  let realStart = new Date(c.lastPeriodStart + 'T00:00:00');
+  if(isNaN(realStart)) return null;
+  while(true){
+    const nextStart = new Date(realStart);
+    nextStart.setDate(nextStart.getDate() + avgCycle);
+    if(nextStart > today) break;
+    realStart = nextStart;
+  }
+  const cycleDay = Math.floor((today - realStart) / 86400000) + 1; // 1-based
+  const ovuDay = Math.max(10, avgCycle - 14); // typical ovulation ~14 days before next period
+  const nextPeriodDate = new Date(realStart);
+  nextPeriodDate.setDate(nextPeriodDate.getDate() + avgCycle);
+  const daysUntilNext = Math.max(0, Math.ceil((nextPeriodDate - today) / 86400000));
+  const ovuDate = new Date(realStart);
+  ovuDate.setDate(ovuDate.getDate() + ovuDay - 1);
+
+  let phase;
+  if(cycleDay <= periodLen) phase = 'period';
+  else if(cycleDay === ovuDay) phase = 'ovulation';
+  else if(cycleDay >= ovuDay - 3 && cycleDay <= ovuDay + 1) phase = 'fertile';
+  else if(cycleDay >= avgCycle - 4) phase = 'pms';
+  else if(cycleDay < ovuDay) phase = 'follicular';
+  else phase = 'luteal';
+
+  // Calendar start: Sunday of the week of realStart (or earlier if realStart already this week)
+  const calStart = new Date(realStart);
+  calStart.setDate(calStart.getDate() - calStart.getDay());
+
+  return {
+    cycleDay, avgCycle, periodLen, ovuDay, phase,
+    realStart, nextPeriodDate, ovuDate, daysUntilNext,
+    nextPeriodKey: dkey(nextPeriodDate),
+    ovuKey: dkey(ovuDate),
+    calStart
+  };
+}
+function cyclePhaseOn(date, info){
+  // Determine which cycle (current or next) this date belongs to
+  const d = new Date(date); d.setHours(0,0,0,0);
+  const avgCycle = info.avgCycle, periodLen = info.periodLen, ovuDay = info.ovuDay;
+  // Find cycle start ≤ this date
+  let cs = new Date(info.realStart);
+  while(true){
+    const next = new Date(cs); next.setDate(next.getDate() + avgCycle);
+    if(next > d) break;
+    cs = next;
+  }
+  // Also handle dates before realStart (previous cycle)
+  while(cs > d){
+    cs.setDate(cs.getDate() - avgCycle);
+  }
+  const cd = Math.floor((d - cs) / 86400000) + 1;
+  if(cd < 1 || cd > avgCycle) return { phase:'none', mark:'' };
+
+  let phase;
+  let mark = '';
+  if(cd <= periodLen){ phase = 'period'; mark = '🩸'; }
+  else if(cd === ovuDay){ phase = 'ovulation'; mark = '✦'; }
+  else if(cd >= ovuDay - 3 && cd <= ovuDay + 1){ phase = 'fertile'; }
+  else if(cd >= avgCycle - 4){ phase = 'pms'; }
+  else if(cd < ovuDay){ phase = 'follicular'; }
+  else phase = 'luteal';
+  return { phase, mark };
+}
+function cyclePhaseAdvice(phase){
+  const tips = {
+    period: [
+      '몸 따뜻하게 + 무리하지 마. 카페인보단 따뜻한 차',
+      '아랫배 따뜻하게 하고 가벼운 스트레칭 정도만',
+      '철분 챙기고 잠 푹 자줘. 무리한 일정은 미루자',
+      '컨디션 떨어져도 정상. 자기한테 좀 다정하게'
+    ],
+    follicular: [
+      '에너지 올라오는 구간. 새 일 시작하기 좋은 때야',
+      '컨디션 가벼울 거야 — 운동·새 도전 잡기 좋은 시기',
+      '집중력 좋은 구간. 미뤘던 거 처리하기'
+    ],
+    fertile: [
+      '에너지 절정 구간. 가임기니까 임신/피임 의식하기',
+      '몸도 마음도 활발해. 중요한 미팅·발표 잡기 좋아',
+      '체온 살짝 오를 수 있어. 컨디션 메모해두면 다음에 도움돼'
+    ],
+    ovulation: [
+      '✦ 배란일 — 가임 확률 높은 날. 의식해줘',
+      '체온·기분 살짝 변할 수 있어. 너무 무리하진 말고',
+      '몸 신호 잘 들어. 골반 쪽 살짝 불편해도 정상'
+    ],
+    luteal: [
+      '서서히 에너지 떨어지는 구간. 일정 좀 줄여도 돼',
+      '단 거 당기면 단백질·견과류로 대체 추천',
+      '잠 더 챙기고 카페인 줄이면 PMS 가벼워져'
+    ],
+    pms: [
+      '🌧️ PMS 구간 — 기분 변동·붓기·예민함 다 정상이야',
+      '결정 미뤄도 돼. 큰일 잡지 말고 회복에 집중',
+      '카페인·짠 거·술은 PMS 키워. 따뜻한 차·산책으로',
+      '예민해진 너 자신한테 좀 너그러워도 돼'
+    ]
+  };
+  const arr = tips[phase] || tips.luteal;
+  return arr[Math.floor(Math.random() * arr.length)];
+}
+
 /* ===== Common food calorie dictionary (Korean + popular meals) =====
    Numbers are typical 1 serving unless otherwise noted */
 const FOOD_DICT = {
@@ -8970,6 +9082,100 @@ function renderHealth(root){
         <div style="height:18px"></div>`;
       })()}
 
+      <!-- CYCLE (female only) -->
+      ${(store.settings?.sex === 'female') ? (() => {
+        const c = store.health?.cycle || {};
+        const enabled = !!c.enabled;
+        const info = cycleInfo();
+        const phases = {
+          period:    { label:'생리 중',  color:'#D14B5C', soft:'#F8DEE2', emoji:'🌹' },
+          follicular:{ label:'난포기',  color:'#7A9F8C', soft:'#E0EAE3', emoji:'🌱' },
+          fertile:   { label:'가임기',  color:'#E89A6F', soft:'#F8E0D2', emoji:'✦'  },
+          ovulation: { label:'배란일',  color:'#C49A3A', soft:'#F5E8C8', emoji:'🥚' },
+          luteal:    { label:'황체기',  color:'#8C7AA8', soft:'#E5DEF0', emoji:'🌙' },
+          pms:       { label:'PMS',     color:'#9B6BA8', soft:'#EDE0F0', emoji:'🌧️' }
+        };
+        return `<div class="paper">
+          <p class="label-eyebrow">🌸 생리 주기 <span class="right">${enabled ? (info ? `D-${info.daysUntilNext} · ${phases[info.phase].label}` : '시작일 입력') : '비활성'}</span></p>
+          <p style="margin:6px 0 12px;font-family:var(--fb);font-weight:400;font-size:13px;color:var(--ink-soft);line-height:1.6">월경·배란·가임기를 달력으로 보여줘요. 끌 수 있어요. <b>이 데이터는 너 기기에만 저장돼.</b></p>
+
+          ${!enabled ? `
+            <button class="btn btn-primary" id="cycleEnable">🌸 주기 추적 켜기 →</button>
+          ` : `
+            ${info ? `
+              <div style="padding:14px 16px;background:linear-gradient(135deg,${phases[info.phase].soft} 0%,var(--paper-soft) 100%);border-radius:6px;border-left:3px solid ${phases[info.phase].color};margin-bottom:14px">
+                <div style="font-family:var(--fb);font-weight:600;font-size:16px;color:var(--ink);margin-bottom:4px">
+                  ${phases[info.phase].emoji} 주기 ${info.cycleDay}일째 · <span style="color:${phases[info.phase].color}">${phases[info.phase].label}</span>
+                </div>
+                <div style="font-family:var(--fb);font-weight:400;font-size:13.5px;color:var(--ink-soft);line-height:1.6">
+                  다음 생리 예정: <b style="color:var(--ink)">${info.nextPeriodKey}</b> (D-${info.daysUntilNext}) · 배란 예정일 ${info.ovuKey}<br>
+                  ${cyclePhaseAdvice(info.phase)}
+                </div>
+              </div>
+
+              <!-- Mini calendar: next 5 weeks -->
+              <p class="label-eyebrow" style="font-size:11px;margin-bottom:6px">5주 캘린더</p>
+              <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-bottom:6px">
+                ${['일','월','화','수','목','금','토'].map(d => `<div style="font-family:var(--fui);font-size:10px;letter-spacing:.14em;color:var(--ink-muted);text-align:center">${d}</div>`).join('')}
+              </div>
+              <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-bottom:14px">
+                ${(() => {
+                  const cells = [];
+                  // Start from Sunday of current week containing realStart, or of today, whichever is earlier
+                  const start = new Date(info.calStart);
+                  for(let i = 0; i < 35; i++){
+                    const d = new Date(start); d.setDate(d.getDate() + i);
+                    const dk = dkey(d);
+                    const day = cyclePhaseOn(d, info);
+                    const ph = phases[day.phase];
+                    const isToday = dk === tk;
+                    cells.push(`<div title="${dk} · ${ph.label}" style="aspect-ratio:1;background:${day.phase==='none'?'var(--paper-soft)':ph.soft};border:1px solid ${isToday?'var(--ink)':'var(--hairline-soft)'};border-radius:3px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:var(--fb);font-size:11px;color:${day.phase==='none'?'var(--ink-muted)':ph.color};font-weight:${isToday?'700':'500'};position:relative">
+                      ${d.getDate()}
+                      ${day.mark ? `<div style="font-size:9px;line-height:1;margin-top:1px">${day.mark}</div>` : ''}
+                    </div>`);
+                  }
+                  return cells.join('');
+                })()}
+              </div>
+
+              <!-- Legend -->
+              <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px;font-family:var(--fb);font-size:11px;color:var(--ink-soft)">
+                ${Object.entries(phases).map(([k,p]) => `<span style="display:inline-flex;align-items:center;gap:4px"><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:${p.soft};border:1px solid ${p.color}"></span>${p.label}</span>`).join('')}
+              </div>
+
+              <button class="btn btn-primary" id="cycleStartedToday" style="margin-bottom:10px">🩸 오늘 생리 시작했어 →</button>
+            ` : ''}
+
+            <div class="divider"></div>
+            <p class="label-eyebrow" style="font-size:11px">주기 설정</p>
+            <div class="row2">
+              <div class="field"><label>지난 생리 시작일</label><input class="input" id="cycleStartDate" type="date" value="${safe(c.lastPeriodStart||'')}"/></div>
+              <div class="field"><label>평균 주기 (일)</label><input class="input" id="cycleAvg" type="number" min="20" max="45" value="${c.avgCycle||28}"/></div>
+            </div>
+            <div class="row2">
+              <div class="field"><label>생리 기간 (일)</label><input class="input" id="cyclePeriodLen" type="number" min="2" max="10" value="${c.periodLen||5}"/></div>
+              <div class="field"><label style="visibility:hidden">_</label>
+                <div style="display:flex;gap:6px;align-items:center;height:42px">
+                  <button class="btn btn-ghost" id="cycleSave" style="flex:1">설정 저장</button>
+                  <button class="btn btn-ghost" id="cycleDisable" style="font-size:11px;color:var(--rose)">끄기</button>
+                </div>
+              </div>
+            </div>
+            ${(c.history && c.history.length) ? `
+              <div class="divider"></div>
+              <p class="label-eyebrow" style="font-size:11px">최근 기록 <span class="right">${c.history.length}회</span></p>
+              <div style="display:flex;flex-direction:column;gap:4px;font-family:var(--fb);font-size:13px;color:var(--ink-soft)">
+                ${c.history.slice(-6).reverse().map((h,i) => `<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid var(--hairline-soft)">
+                  <span>🩸 ${h.start}${h.cycleLen?` <span style="font-family:var(--fui);font-size:10.5px;letter-spacing:.12em;color:var(--ink-muted);margin-left:6px">${h.cycleLen}일 주기</span>`:''}</span>
+                  <button type="button" data-cycledel="${c.history.length-1-i}" class="sup-del">삭제</button>
+                </div>`).join('')}
+              </div>
+            ` : ''}
+          `}
+        </div>
+        <div style="height:18px"></div>`;
+      })() : ''}
+
       <!-- SUPPLEMENTS -->
       <div class="paper">
         <p class="label-eyebrow">영양제 <span class="right">오늘 ${todaySupTakenCount}/${sups.filter(s=>supDueToday(s,tk)).length} 복용</span></p>
@@ -9595,6 +9801,68 @@ function renderHealth(root){
   $$('#main [data-vitaldel]').forEach(b => b.onclick = () => {
     if(!confirm('이 기록을 삭제할까요?')) return;
     store.health.vitals.splice(+b.dataset.vitaldel, 1);
+    saveStore('health'); render();
+  });
+
+  // ===== Cycle tracking (female only) =====
+  const cycleEnableBtn = $('#cycleEnable');
+  if(cycleEnableBtn) cycleEnableBtn.onclick = () => {
+    ensureHealth();
+    store.health.cycle = store.health.cycle || {};
+    store.health.cycle.enabled = true;
+    store.health.cycle.avgCycle = store.health.cycle.avgCycle || 28;
+    store.health.cycle.periodLen = store.health.cycle.periodLen || 5;
+    saveStore('health'); render();
+    toast('🌸 주기 추적 켰어. 시작일 입력해줘');
+  };
+  const cycleDisableBtn = $('#cycleDisable');
+  if(cycleDisableBtn) cycleDisableBtn.onclick = () => {
+    if(!confirm('주기 추적을 끌까요? (저장된 데이터는 남아있어요)')) return;
+    if(store.health?.cycle) store.health.cycle.enabled = false;
+    saveStore('health'); render();
+  };
+  const cycleSaveBtn = $('#cycleSave');
+  if(cycleSaveBtn) cycleSaveBtn.onclick = () => {
+    ensureHealth();
+    store.health.cycle = store.health.cycle || { enabled:true };
+    const start = $('#cycleStartDate').value;
+    const avg = parseInt($('#cycleAvg').value, 10);
+    const plen = parseInt($('#cyclePeriodLen').value, 10);
+    if(start) store.health.cycle.lastPeriodStart = start;
+    if(!isNaN(avg) && avg >= 20 && avg <= 45) store.health.cycle.avgCycle = avg;
+    if(!isNaN(plen) && plen >= 2 && plen <= 10) store.health.cycle.periodLen = plen;
+    saveStore('health'); render();
+    toast('주기 설정 저장됨');
+  };
+  const cycleStartedBtn = $('#cycleStartedToday');
+  if(cycleStartedBtn) cycleStartedBtn.onclick = () => {
+    if(!confirm('오늘을 새 생리 시작일로 기록할까요?')) return;
+    ensureHealth();
+    store.health.cycle = store.health.cycle || { enabled:true, avgCycle:28, periodLen:5 };
+    const c = store.health.cycle;
+    c.history = c.history || [];
+    // Calculate actual cycle length from previous start
+    let cycleLen = null;
+    if(c.lastPeriodStart){
+      const prev = new Date(c.lastPeriodStart);
+      const today = nowKST();
+      cycleLen = Math.round((today - prev) / 86400000);
+      // Update average gradually if reasonable
+      if(cycleLen >= 20 && cycleLen <= 45){
+        const histLens = c.history.filter(h => h.cycleLen).map(h => h.cycleLen);
+        const all = [...histLens, cycleLen].slice(-6);
+        c.avgCycle = Math.round(all.reduce((a,b)=>a+b,0) / all.length);
+      }
+      c.history.push({ start: c.lastPeriodStart, cycleLen });
+    }
+    c.lastPeriodStart = todayKey();
+    saveStore('health'); render();
+    toast(`🩸 기록됨${cycleLen ? ` · 이번 주기 ${cycleLen}일` : ''}`);
+  };
+  $$('#main [data-cycledel]').forEach(b => b.onclick = () => {
+    if(!confirm('이 기록을 지울까요?')) return;
+    const idx = +b.dataset.cycledel;
+    store.health.cycle.history.splice(idx, 1);
     saveStore('health'); render();
   });
 
