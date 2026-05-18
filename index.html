@@ -6662,6 +6662,31 @@ function incomeGoalAdvice(goal, earned, daysIn, daysAll){
   };
 }
 
+/* Supported currencies + last-known KRW conversion rates.
+   We don't hit an FX API live — instead we keep recent rates as defaults and
+   let the user override per-entry. Rates are roughly mid-2025 averages. */
+const SUPPORTED_CURRENCIES = {
+  'KRW': { name: '대한민국 원',   flag:'🇰🇷', symbol:'₩',  defaultRate: 1 },
+  'USD': { name: '미국 달러',     flag:'🇺🇸', symbol:'$',  defaultRate: 1380 },
+  'JPY': { name: '일본 엔',       flag:'🇯🇵', symbol:'¥',  defaultRate: 9.2 },
+  'EUR': { name: '유로',          flag:'🇪🇺', symbol:'€',  defaultRate: 1490 },
+  'CNY': { name: '중국 위안',     flag:'🇨🇳', symbol:'¥',  defaultRate: 190 },
+  'GBP': { name: '영국 파운드',   flag:'🇬🇧', symbol:'£',  defaultRate: 1750 },
+  'VND': { name: '베트남 동',     flag:'🇻🇳', symbol:'₫',  defaultRate: 0.055 },
+  'THB': { name: '태국 바트',     flag:'🇹🇭', symbol:'฿',  defaultRate: 38 },
+  'SGD': { name: '싱가포르 달러', flag:'🇸🇬', symbol:'S$', defaultRate: 1020 },
+  'HKD': { name: '홍콩 달러',     flag:'🇭🇰', symbol:'HK$',defaultRate: 175 },
+  'TWD': { name: '대만 달러',     flag:'🇹🇼', symbol:'NT$',defaultRate: 42 },
+  'AUD': { name: '호주 달러',     flag:'🇦🇺', symbol:'A$', defaultRate: 900 }
+};
+function getFxRate(code){
+  if(code === 'KRW') return 1;
+  // User-saved override?
+  const saved = store.settings?.fxRates?.[code];
+  if(saved && saved > 0) return saved;
+  return SUPPORTED_CURRENCIES[code]?.defaultRate || 1;
+}
+
 function renderMoney(root){
   // Treat entries without kind as expense for backward compat
   const all = (store.spends || []).map(s => ({...s, kind: s.kind || 'out'}));
@@ -6851,15 +6876,33 @@ function renderMoney(root){
         </div>
         <div class="row2">
           <div class="field"><label>항목</label><input class="input" id="spName" placeholder="예: 커피 / 월급 / 알바비"/></div>
-          <div class="field"><label>금액 (원)</label><input class="input" id="spAmt" type="number" placeholder="0"/></div>
+          <div class="field"><label>금액</label><input class="input" id="spAmt" type="number" placeholder="0" step="any"/></div>
         </div>
+        <div class="row2">
+          <div class="field"><label>통화 <span style="font-family:var(--fb);font-weight:300;font-size:11px;color:var(--ink-muted);letter-spacing:0;text-transform:none;font-style:italic;margin-left:4px">— 해외 지출이면 변경</span></label>
+            <select class="select" id="spCur">
+              ${Object.entries(SUPPORTED_CURRENCIES).map(([code, info]) => `<option value="${code}" ${(store.settings?.lastCurrency||'KRW')===code?'selected':''}>${info.flag} ${code} — ${info.name}</option>`).join('')}
+            </select>
+          </div>
+          <div class="field" id="spFxField" style="display:none">
+            <label>환율 <span style="font-family:var(--fb);font-weight:300;font-size:11px;color:var(--ink-muted);letter-spacing:0;text-transform:none;font-style:italic;margin-left:4px" id="spFxNote">1 통화 = X 원</span></label>
+            <input class="input" id="spFxRate" type="number" step="any" placeholder="예: 1380"/>
+          </div>
+        </div>
+        <p id="spKrwPreview" style="margin:-6px 0 10px;font-family:var(--fb);font-weight:500;font-size:13px;color:var(--ink-soft);font-style:italic;min-height:1.4em"></p>
         <button class="btn btn-primary" id="spAdd">기록 →</button>
 
-        ${today.length ? `<div class="divider"></div><div class="list">${today.map((s,i) => `
-          <div class="row"><div class="ic ${s.kind==='in'?'ic-in':'ic-out'}">${s.kind==='in' ? '+' : '−'}</div>
-            <div class="body"><p class="ttl">${safe(s.name||(s.kind==='in'?'수입':'지출'))}</p>
-              <div class="meta"><span class="tag ${s.kind==='in'?'tag-in':''}">${Number(s.amount||0).toLocaleString()}원</span></div></div>
-            <button class="del" data-delsp="${i}">삭제</button></div>`).join('')}</div>` : ''}
+        ${today.length ? `<div class="divider"></div><div class="list">${today.map((s,i) => {
+          const isForeign = s.currency && s.currency !== 'KRW';
+          const originalDisplay = isForeign ? `${(SUPPORTED_CURRENCIES[s.currency]?.symbol || s.currency)}${Number(s.origAmount||s.amount).toLocaleString()}` : '';
+          return `<div class="row"><div class="ic ${s.kind==='in'?'ic-in':'ic-out'}">${s.kind==='in' ? '+' : '−'}</div>
+            <div class="body"><p class="ttl">${safe(s.name||(s.kind==='in'?'수입':'지출'))}${isForeign?` <span style="font-family:var(--fui);font-size:10px;letter-spacing:.14em;color:var(--ink-muted);margin-left:4px">${SUPPORTED_CURRENCIES[s.currency]?.flag||''} ${s.currency}</span>`:''}</p>
+              <div class="meta">
+                <span class="tag ${s.kind==='in'?'tag-in':''}">${Number(s.amount||0).toLocaleString()}원</span>
+                ${isForeign?`<span class="tag" style="font-family:var(--fb);background:var(--paper-soft);color:var(--ink-soft)">${originalDisplay}</span>`:''}
+              </div></div>
+            <button class="del" data-delsp="${i}">삭제</button></div>`;
+        }).join('')}</div>` : ''}
       </div>
       <div style="height:18px"></div>
       <div class="paper-soft">
@@ -6912,20 +6955,78 @@ function renderMoney(root){
     $('#spName').placeholder = currentKind === 'out' ? '예: 커피, 점심, 택시' : '예: 월급, 알바비, 환급';
   });
 
+  // Currency selector: toggle FX rate field + update preview
+  const spCurEl = $('#spCur'), spFxField = $('#spFxField'), spFxNote = $('#spFxNote'), spFxRate = $('#spFxRate'), spAmtEl = $('#spAmt'), spPreview = $('#spKrwPreview');
+  function updateCurrencyUI(){
+    const code = spCurEl.value;
+    const info = SUPPORTED_CURRENCIES[code];
+    if(code === 'KRW'){
+      spFxField.style.display = 'none';
+      spPreview.textContent = '';
+    } else {
+      spFxField.style.display = '';
+      const rate = getFxRate(code);
+      spFxNote.textContent = `1 ${code} ≈ ${rate.toLocaleString('ko-KR', {maximumFractionDigits:4})} 원`;
+      if(!spFxRate.value) spFxRate.value = rate;
+    }
+    updatePreview();
+  }
+  function updatePreview(){
+    const code = spCurEl.value;
+    const amt = parseFloat(spAmtEl.value);
+    if(!amt || amt <= 0){ spPreview.textContent = ''; return; }
+    if(code === 'KRW'){
+      spPreview.textContent = `≈ ${Math.round(amt).toLocaleString()}원`;
+    } else {
+      const rate = parseFloat(spFxRate.value) || getFxRate(code);
+      const krw = Math.round(amt * rate);
+      const info = SUPPORTED_CURRENCIES[code];
+      spPreview.textContent = `${info.symbol}${amt.toLocaleString()} × ${rate.toLocaleString('ko-KR', {maximumFractionDigits:4})} ≈ ${krw.toLocaleString()}원`;
+    }
+  }
+  if(spCurEl){
+    spCurEl.onchange = updateCurrencyUI;
+    spAmtEl.oninput = updatePreview;
+    spFxRate.oninput = updatePreview;
+    updateCurrencyUI();
+  }
+
   $('#spAdd').onclick = () => {
     const n = $('#spName').value.trim();
-    const a = +$('#spAmt').value || 0;
-    if(!a){ toast('금액을 입력해줘'); return; }
-    store.spends = store.spends || [];
-    store.spends.push({
+    const a = parseFloat($('#spAmt').value);
+    if(!a || a <= 0){ toast('금액을 입력해줘'); return; }
+    const code = $('#spCur').value || 'KRW';
+    let krw = a;
+    const entry = {
       date: todayKey(),
       name: n || (currentKind === 'in' ? '수입' : '지출'),
-      amount: a,
-      kind: currentKind
-    });
+      kind: currentKind,
+      currency: code
+    };
+    if(code !== 'KRW'){
+      const rate = parseFloat($('#spFxRate').value) || getFxRate(code);
+      if(!rate || rate <= 0){ toast('환율을 확인해줘'); return; }
+      krw = Math.round(a * rate);
+      entry.origAmount = a;
+      entry.fxRate = rate;
+      // Save rate for next time + remember last-used currency
+      store.settings = store.settings || {};
+      store.settings.fxRates = store.settings.fxRates || {};
+      store.settings.fxRates[code] = rate;
+      store.settings.lastCurrency = code;
+    } else {
+      store.settings = store.settings || {};
+      store.settings.lastCurrency = 'KRW';
+    }
+    entry.amount = krw;
+    store.spends = store.spends || [];
+    store.spends.push(entry);
     saveStore();
     render();
-    toast(currentKind === 'in' ? '수입 기록 ♡' : '지출 기록 ♡');
+    const msg = code === 'KRW'
+      ? (currentKind === 'in' ? '수입 기록 ♡' : '지출 기록 ♡')
+      : `${SUPPORTED_CURRENCIES[code].symbol}${a.toLocaleString()} → ${krw.toLocaleString()}원 기록`;
+    toast(msg);
   };
 
   $$('[data-delsp]').forEach(b => b.onclick = () => {
