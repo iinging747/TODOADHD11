@@ -1683,6 +1683,57 @@ if(typeof setupInAppBrowserWarning === 'function'){
   setupInAppBrowserWarning();
 }
 
+/* Friend-invite landing: when URL has ?invite=NAME show a banner */
+function checkInviteLanding(){
+  try{
+    const params = new URLSearchParams(location.search);
+    const inviter = params.get('invite');
+    if(!inviter) return;
+    const lvl = params.get('lv') || '';
+    const streak = +params.get('streak') || 0;
+    const rate = +params.get('rate') || 0;
+    const focus = +params.get('focus') || 0;
+    const msg = params.get('msg') || '';
+    // Build banner
+    const banner = document.createElement('div');
+    banner.id = 'inviteLanding';
+    banner.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:90;background:linear-gradient(135deg,#FAF5E8 0%,#F5E8FA 100%);border-bottom:1px solid var(--hairline);padding:14px 18px;box-shadow:0 4px 20px rgba(0,0,0,.06);font-family:var(--fb);max-width:100%;display:flex;align-items:flex-start;gap:12px';
+    banner.innerHTML = `
+      <div style="font-size:28px;flex:0 0 36px;line-height:1">💌</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-weight:600;font-size:15.5px;color:var(--ink);margin-bottom:4px"><b>${inviter}</b>님이 응원 보냈어요</div>
+        <div style="font-family:var(--fb);font-weight:400;font-size:13px;color:var(--ink-soft);line-height:1.5">
+          ${lvl ? `현재 레벨 <b style="color:var(--ink)">${decodeURIComponent(lvl)}</b> · ` : ''}
+          ${streak ? `${streak}일 연속 · ` : ''}
+          ${rate ? `이번주 완료율 ${rate}% · ` : ''}
+          ${focus ? `집중 ${focus}분` : ''}
+        </div>
+        ${msg ? `<div style="margin-top:6px;padding:8px 12px;background:rgba(255,255,255,.6);border-radius:4px;font-family:var(--fb);font-style:italic;font-size:13.5px;color:var(--ink);line-height:1.5">"${decodeURIComponent(msg).replace(/[<>]/g,'')}"</div>` : ''}
+        <div style="margin-top:10px;display:flex;gap:6px;flex-wrap:wrap">
+          <button type="button" id="inviteAccept" style="background:var(--ink);color:var(--paper);border:0;border-radius:3px;padding:7px 14px;font-family:var(--fui);font-size:11px;letter-spacing:.16em;cursor:pointer">같이 시작하기 →</button>
+          <button type="button" id="inviteDismiss" style="background:transparent;color:var(--ink-soft);border:1px solid var(--hairline);border-radius:3px;padding:7px 14px;font-family:var(--fui);font-size:11px;letter-spacing:.16em;cursor:pointer">닫기</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(banner);
+    document.getElementById('inviteDismiss').onclick = () => { banner.remove(); };
+    document.getElementById('inviteAccept').onclick = () => {
+      // Save the invite to local friends list for future motivation
+      try{
+        const friends = JSON.parse(localStorage.getItem('invite_friends')||'[]');
+        if(!friends.find(f => f.name === inviter)){
+          friends.push({ name: inviter, at: Date.now(), lvl, streak, rate });
+          localStorage.setItem('invite_friends', JSON.stringify(friends.slice(-20)));
+        }
+      }catch(e){}
+      banner.remove();
+      // Clean URL so it doesn't keep showing
+      try{ history.replaceState(null, '', location.pathname); }catch(e){}
+    };
+  }catch(e){ console.warn('invite landing', e); }
+}
+checkInviteLanding();
+
 /* ===== Global search ===== */
 function openSearch(){
   const m = document.getElementById('searchModal');
@@ -11175,6 +11226,19 @@ function renderReport(root){
       ${renderLevelCard()}
       <div style="height:18px"></div>
 
+      <!-- FRIEND SHARE / INVITE -->
+      <div class="paper" style="background:linear-gradient(135deg,#FAF5E8 0%,#F5E8FA 100%);border-left:3px solid var(--olive)">
+        <p class="label-eyebrow">💌 친구한테 응원 보내기 <span class="right" style="font-family:var(--fb);font-size:11px;color:var(--ink-muted)">URL 공유 · 같이 동기부여</span></p>
+        <p style="margin:6px 0 12px;font-family:var(--fb);font-weight:400;font-size:13.5px;line-height:1.65;color:var(--ink-soft)">너의 레벨·연속·완료율을 카드로 만들어서 친구에게 카톡으로 보낼 수 있어. 친구가 링크 열면 "${(currentFbUser?.displayName||'친구').substring(0,8)}님이 응원 보냈어요"가 떠.</p>
+        <div class="field"><label>같이 보낼 메시지 (선택)</label><textarea class="textarea" id="inviteMsg" placeholder="예: 우리 같이 다이어리 쓰자!" style="min-height:60px"></textarea></div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn btn-primary" id="inviteShareBtn">📤 친구한테 공유</button>
+          <button class="btn btn-ghost" id="inviteCopyBtn">링크만 복사</button>
+        </div>
+        <p id="inviteStatus" style="margin:8px 0 0;font-family:var(--fb);font-size:13px;color:var(--ink-soft);min-height:1em;font-style:italic"></p>
+      </div>
+      <div style="height:18px"></div>
+
       ${achievements.length ? `
         <div class="paper" style="border:1px solid var(--rose-soft);background:linear-gradient(180deg, var(--paper) 0%, var(--rose-soft) 220%)">
           <p class="label-eyebrow" style="color:var(--rose)">🏆 이번 주 목표 달성</p>
@@ -11331,6 +11395,59 @@ function renderReport(root){
     store.goals.week = {};
     saveStore('__meta');
     render();
+  };
+
+  // ===== Friend share/invite =====
+  function buildInviteURL(){
+    const myName = (currentFbUser?.displayName || '나').substring(0, 12);
+    const lvl = getLevelInfo(getPoints());
+    const params = new URLSearchParams({
+      invite: myName,
+      lv: lvl.current.label || lvl.current.key,
+      lvkey: lvl.current.key,
+      streak: String(+(store.streak?.count) || 0),
+      days: String((store.diaries||[]).length + (store.tasks||[]).filter(t=>t.done).length),
+      rate: String(weekRate),
+      focus: String(weekFocusMin),
+      ex: String(weekExercise.length),
+      msg: ($('#inviteMsg')?.value || '').substring(0, 100)
+    });
+    return location.origin + location.pathname + '?' + params.toString();
+  }
+  const shareBtn = $('#inviteShareBtn');
+  if(shareBtn) shareBtn.onclick = async () => {
+    const url = buildInviteURL();
+    const myName = (currentFbUser?.displayName || '나').substring(0, 12);
+    const msg = ($('#inviteMsg')?.value || '').trim();
+    const shareText = `🌱 ${myName}이/가 정신차려 다이어리로 ${weekRate}% 해냈어! ${msg ? `\n\n"${msg}"` : ''}\n\n같이 시작해볼래?`;
+    const statusEl = $('#inviteStatus');
+    if(navigator.share && typeof navigator.share === 'function'){
+      try{
+        await navigator.share({ title: '정신차려 다이어리', text: shareText, url });
+        statusEl.textContent = '✓ 공유 보냈어';
+      }catch(e){
+        if(e.name !== 'AbortError') statusEl.textContent = '공유 취소됨';
+      }
+    } else {
+      // Desktop fallback: copy text + URL
+      try{
+        await navigator.clipboard.writeText(shareText + '\n\n' + url);
+        statusEl.textContent = '✓ 메시지+링크 복사됨 — 친구한테 붙여넣기';
+      }catch(e){
+        statusEl.textContent = '복사 실패. 링크: ' + url;
+      }
+    }
+  };
+  const copyBtn = $('#inviteCopyBtn');
+  if(copyBtn) copyBtn.onclick = async () => {
+    const url = buildInviteURL();
+    const statusEl = $('#inviteStatus');
+    try{
+      await navigator.clipboard.writeText(url);
+      statusEl.textContent = '✓ 링크 복사됨';
+    }catch(e){
+      statusEl.textContent = '복사 실패. 링크: ' + url;
+    }
   };
 }
 
