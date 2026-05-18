@@ -3013,39 +3013,45 @@ function priorityOf(text,date){
   if(d<=1||/마감|제출|보고서|기획서|병원|미팅|회의|상환|결제|예약|시험|면접|발표/.test(text)){
     return {
       level:1,
-      label:_pickPhr(['🔥 이건 진짜 우선','🔥 미루면 안 돼','🔥 지금 손대자','🔥 이거 먼저','🔥 오늘 안에 꼭']),
+      label:_pickPhr(['🔥 이건 진짜 우선','🔥 미루면 안 돼','🔥 지금 손대자','🔥 이거 먼저','🔥 오늘 안에 꼭','🔥 더 미루지 마','🔥 이건 못 미뤄']),
       why:_pickPhr([
-        '마감 가까워서 빨리 잡는 게 마음 편해.',
-        '미루면 진짜 골치 아파지는 거라 우선이야.',
-        '이거 끝내고 나면 다른 일도 가벼워져.',
-        '약속이 걸려있어서 미룰 수가 없어.',
-        '머릿속 차지하고 있는 거 먼저 비워내자.'
+        '마감 가까워서 빨리 잡는 게 마음 편할 거야',
+        '미루면 진짜 골치 아파져 — 그냥 지금 해버리자',
+        '이거 끝내면 다른 거 다 가벼워진다',
+        '약속이 걸려있어서 못 미뤄. 어쩔 수 없이 우선',
+        '머릿속 차지하고 있는 거 먼저 비워야 다른 일이 들어와',
+        '솔직히 이거 때문에 다른 거 손에 안 잡힐 듯',
+        '미뤄두면 더 무거워지는 종류야'
       ])
     };
   }
   if(/5분|짧|전화|연락|확인|정리|답장|메일|이메일/.test(text)){
     return {
       level:2,
-      label:_pickPhr(['⚡ 금방 끝나','⚡ 잠깐이면 돼','⚡ 5분컷','⚡ 후딱 끝내자','⚡ 가볍게 시작']),
+      label:_pickPhr(['⚡ 금방 끝나','⚡ 잠깐이면 돼','⚡ 5분컷','⚡ 후딱 끝내자','⚡ 가볍게 시작','⚡ 손만 대면 끝','⚡ 빠르게 처리']),
       why:_pickPhr([
-        '잠깐 손대면 끝나는 거라 미루지 말고 바로.',
-        '오래 안 걸려. 시작이 반인 종류야.',
-        '몇 분이면 끝나니까 지금 해버리자.',
-        '짧은 거부터 비워두면 머리가 가벼워져.',
-        '5분 정도면 충분해. 부담 없이.'
+        '잠깐 손대면 끝나는 거라 미루지 말고 바로 가자',
+        '오래 안 걸려, 시작이 반인 종류',
+        '몇 분이면 돼. 그냥 지금 해버려',
+        '짧은 거 비워두면 머리 가벼워져',
+        '5분 정도면 충분 — 부담 없이',
+        '이거 미뤄두면 종일 신경 쓰여서 손해야',
+        '솔직히 생각하는 시간이 더 오래 걸려'
       ])
     };
   }
   return {
     level:3,
-    label:_pickPhr(['🌱 천천히 가도 돼','🌱 부담 없이','🌱 가벼운 마음으로','🌱 흐름 타듯이','🌱 여유 있게']),
+    label:_pickPhr(['🌱 천천히 가도 돼','🌱 부담 없이','🌱 가벼운 마음으로','🌱 흐름 타듯이','🌱 여유 있게','🌱 컨디션 맞춰서','🌱 무리 없이']),
     why:_pickPhr([
-      '여유 있으니까 천천히 시작해도 괜찮아.',
-      '몰아치지 말고 흐름 타는 정도로 충분해.',
-      '시작이 어려운 거지, 일단 손대면 흘러가.',
-      '오늘 다 못 해도 괜찮아. 일단 한 발만.',
-      '바쁘지 않은 거니까 컨디션 맞춰서.',
-      '하다 보면 의외로 금방이야.'
+      '여유 있으니까 천천히 시작해도 돼',
+      '몰아치지 말고 흐름 타는 정도면 충분해',
+      '시작이 어려운 거지, 일단 손대면 흘러가더라',
+      '오늘 다 못 해도 괜찮아. 일단 한 발만',
+      '안 급한 거니까 컨디션 맞춰서',
+      '하다 보면 의외로 금방이야',
+      '굳이 오늘일 필요 없으면 내일도 OK',
+      '진짜 부담 없이 가도 되는 거'
     ])
   };
 }
@@ -8255,68 +8261,155 @@ function healthAdvice(){
 
   const advice = [];
 
+  // ====== Exercise ======
   if(last7Days === 0){
-    advice.push('🚶 최근 7일간 운동 기록이 없어. 일주일에 2~3회만 가볍게 움직여도 컨디션 차이가 크게 나. 오늘 10분만이라도 걸어볼까.');
+    advice.push(_pickPhr([
+      '🚶 일주일째 운동 기록이 없네. 진짜 10분만 걸어도 다르더라. 거창하게 말고 그냥 산책 정도',
+      '🚶 운동 0회. 의지 문제 아니야, 시작이 어려운 거지. 신발만 신고 나가는 것부터',
+      '🚶 한 주 동안 못 움직였구나. 부담 갖지 말고 오늘은 5분만이라도 — 그 정도가 딱 좋아',
+      '🚶 몸이 좀 굳어있을 듯. 진짜 가볍게, 음악 한 곡 들으면서 동네 한 바퀴면 충분'
+    ]));
   } else if(last7Days >= 5){
-    advice.push(`💪 최근 7일 중 ${last7Days}일 운동 — 꾸준한 페이스 좋아. ${last7Min}분 누적${last7Km>0?`, ${last7Km.toFixed(1)}km`:''}. 무리되지 않게 하루는 회복일로 두는 거 잊지 마.`);
+    advice.push(_pickPhr([
+      `💪 7일 중 ${last7Days}일 운동 — 솔직히 멋져. ${last7Min}분 누적${last7Km>0?`, ${last7Km.toFixed(1)}km`:''}. 근데 하루쯤은 진짜로 쉬어줘`,
+      `💪 ${last7Days}일이나 했네. 페이스 좋은데 한 번씩 가볍게 쉬는 날도 필요해. 회복도 운동의 일부야`,
+      `💪 꾸준한 거 보이네. ${last7Min}분 채웠어. 무릎이나 어깨에 무리 가는지 한 번 확인해봐`,
+      `💪 잘 하고 있어. 근데 컨디션 안 좋은 날엔 가볍게 줄여도 돼. 매일 똑같이 안 해도 효과 살아있어`
+    ]));
   } else {
-    advice.push(`🏃 최근 7일 중 ${last7Days}일 운동 (${last7Min}분 누적). 일주일에 3~4회로 늘리면 수면·집중력에도 영향 와.`);
+    advice.push(_pickPhr([
+      `🏃 ${last7Days}일 했어 (${last7Min}분). 나쁘지 않은데 한두 번만 더 늘리면 수면이랑 집중이 확 달라져`,
+      `🏃 ${last7Days}일 운동. 이 정도면 시작 잘한 거고, 다음 주엔 한 번만 더 추가해보자`,
+      `🏃 일주일 ${last7Days}회 — 무리 안 한 페이스 좋아. 컨디션 보면서 천천히 늘려가도 충분해`
+    ]));
   }
 
+  // ====== Water ======
   if(todayWater < 4){
-    advice.push(`💧 오늘 물 ${todayWater}잔. 8잔 목표라면 ${8-todayWater}잔 더. 컵 하나를 책상 옆에 두는 게 효과적이야.`);
+    advice.push(_pickPhr([
+      `💧 오늘 ${todayWater}잔밖에 안 마셨네. 책상 옆에 컵 하나만 둬도 진짜 다르더라`,
+      `💧 물 ${todayWater}잔. 카페인 말고 물 — 두통이나 피로 절반은 수분 부족이야`,
+      `💧 ${todayWater}잔이면 좀 부족해. 한 번에 많이 말고 조금씩 자주 마시는 게 편해`,
+      `💧 ${8-todayWater}잔 더 가자. 그냥 텀블러 채워두면 자기도 모르게 마시게 돼`
+    ]));
   } else if(todayWater >= 8){
-    advice.push(`💧 물 ${todayWater}잔 — 충분해 ♡`);
+    advice.push(_pickPhr([
+      `💧 ${todayWater}잔 — 완벽해 ♡`,
+      `💧 오늘 수분 충분! 이런 날 컨디션이 다르지`,
+      `💧 ${todayWater}잔 마셨네, 잘 챙겼어`
+    ]));
   }
 
+  // ====== Mood ======
   if(last7Diary.length === 0){
-    advice.push('📓 일주일 동안 감정 일기 기록이 없어. 한 줄이라도 적어두면 패턴이 보여.');
+    advice.push(_pickPhr([
+      '📓 일주일 동안 일기 한 줄도 없네. 형식 신경 쓰지 말고 단어 하나라도',
+      '📓 감정 기록이 비어있어. 좋은 날이든 힘든 날이든 흔적 남기면 한참 뒤에 도움 돼',
+      '📓 마음에 떠도는 거 하나만이라도 적어줘. 와다다 식이라도 괜찮아'
+    ]));
   } else if(negCount >= last7Diary.length * 0.6){
-    advice.push(`🌙 최근 일주일 부정적 감정이 자주 보여 (${negCount}회). 충분한 수면(7시간 이상) + 자연광 산책 20분이 가장 빠른 처방이야. 너무 힘들면 전문가 도움도 고려해줘.`);
+    advice.push(_pickPhr([
+      `🌙 요즘 좀 힘든 거 같아 (부정 감정 ${negCount}회). 일찍 자고 햇빛 20분 — 이거 진짜 약처럼 들어. 너무 안 풀리면 전문가 만나보는 것도 진지하게`,
+      `🌙 마음이 무거운 주였구나. 수면이랑 산책부터 챙기자. 그래도 안 가라앉으면 혼자 버티지 말고 도움 받아도 돼`,
+      `🌙 부정 감정 ${negCount}번. 컨트롤 가능한 거 하나만 — 자는 시간만 일정하게 잡아도 일주일 안에 표가 나`,
+      `🌙 힘든 거 보여. 너 자신한테 좀 너그러워도 돼. 무리해서 끌어올리려 하지 말고 회복부터`
+    ]));
   } else if(negCount > 0){
-    advice.push(`💗 가끔 힘든 날도 보이지만 전반적으로 균형 잡혀있어. 작은 회복 습관 챙겨가자.`);
+    advice.push(_pickPhr([
+      `💗 좀 힘든 날도 있긴 했지만 전반적으론 균형 잡혀있어. 이 정도면 충분히 잘 살고 있는 거야`,
+      `💗 흔들리는 날도 있는데 휘청대진 않네. 작은 회복 루틴 챙기면서 가자`,
+      `💗 완벽한 한 주는 없지. 이 정도면 좋은 페이스야`
+    ]));
   } else {
-    advice.push('☀️ 최근 일주일 감정 안정적이야. 이 흐름 유지하는 게 무엇보다 중요해.');
+    advice.push(_pickPhr([
+      '☀️ 한 주 마음이 잔잔했네. 이런 흐름이 사실 제일 귀해 — 별일 없는 게 복이야',
+      '☀️ 부정 감정 거의 없는 주. 뭐가 잘 굴러갔는지 한 번 기억해두면 다음에 또 만들 수 있어',
+      '☀️ 안정적이었어. 잘 지내고 있다는 신호 — 너 자신한테 한 마디 칭찬'
+    ]));
   }
 
+  // ====== Focus ======
   if(last7Focus > 0){
     const dailyAvg = last7Focus / 7;
     if(dailyAvg >= 90){
-      advice.push(`🎯 일주일 집중 시간 ${last7Focus}분 (하루 평균 ${Math.round(dailyAvg)}분). 너무 몰아쓰지 말고 휴식도 똑같이 챙기자.`);
+      advice.push(_pickPhr([
+        `🎯 일주일 집중 ${last7Focus}분 (하루 평균 ${Math.round(dailyAvg)}분). 솔직히 너무 몰아쓰는 거 같기도. 쉬는 시간 똑같이 가져가야 지속돼`,
+        `🎯 집중 시간 ${last7Focus}분 — 진짜 많이 했어. 근데 번아웃 사인 없는지 한 번씩 체크해줘`,
+        `🎯 ${Math.round(dailyAvg)}분/일. 좋은데 무리하면 다음 주 망가져. 일부러라도 쉬어줘`
+      ]));
     } else if(dailyAvg >= 25){
-      advice.push(`🎯 일주일 집중 시간 ${last7Focus}분 — 균형 잡힌 페이스. 작은 사이클 계속 쌓아가자.`);
+      advice.push(_pickPhr([
+        `🎯 ${last7Focus}분 집중 — 균형 잡힌 페이스 좋아. 작은 사이클 계속 쌓이면 그게 진짜 자산`,
+        `🎯 일주일 ${last7Focus}분, 무리 없이 잘 굴러가는 중. 이 리듬 유지가 핵심`,
+        `🎯 ${Math.round(dailyAvg)}분/일 평균. 딱 좋은 페이스야`
+      ]));
     }
   }
 
+  // ====== Sleep ======
   if(recentNightSleeps.length === 0){
-    advice.push('🌙 일주일 본수면 기록이 없어. 한 줄이라도 적어두면 컨디션의 원인이 보여.');
+    advice.push(_pickPhr([
+      '🌙 본수면 기록이 비어있어. 잠 패턴 모르면 컨디션 원인 분석이 안 돼 — 일주일만 적어보자',
+      '🌙 일주일 동안 수면 기록 없네. 잠든 시간만이라도'
+    ]));
   } else if(avgSleepH < 6){
-    advice.push(`🌙 최근 평균 수면 ${avgSleepH.toFixed(1)}시간 — 만성적 부족. 단 1시간만 더 자도 집중·감정에 큰 영향. 취침 시간 30분 앞당기는 거 추천.`);
+    advice.push(_pickPhr([
+      `🌙 평균 ${avgSleepH.toFixed(1)}시간 — 진짜 부족해. 1시간만 더 자도 집중이랑 기분이 달라져. 30분만 일찍 누워볼까`,
+      `🌙 ${avgSleepH.toFixed(1)}시간이면 만성 부족이야. 잘 못 자는 게 컨디션 망치는 원흉인 경우 많아`,
+      `🌙 수면 ${avgSleepH.toFixed(1)}시간 — 이 상태 오래 가면 진짜 안 좋아. 일찍 자는 거 우선순위 1번으로`
+    ]));
   } else if(avgSleepH > 9.5){
-    advice.push(`🌙 최근 평균 수면 ${avgSleepH.toFixed(1)}시간 — 약간 많은 편. 컨디션이 무겁다면 일정한 기상 시간부터 잡아봐.`);
+    advice.push(_pickPhr([
+      `🌙 평균 ${avgSleepH.toFixed(1)}시간 — 좀 많이 자는 편. 자도 자도 피곤하면 기상 시간 고정하는 게 도움 돼`,
+      `🌙 ${avgSleepH.toFixed(1)}시간. 많이 잔다고 더 개운한 건 아니더라. 일관성이 중요`
+    ]));
   } else if(avgSleepH >= 7 && avgSleepH <= 8.5){
-    advice.push(`🌙 평균 수면 ${avgSleepH.toFixed(1)}시간 — 이상적인 구간 ♡`);
+    advice.push(_pickPhr([
+      `🌙 ${avgSleepH.toFixed(1)}시간 — 딱 좋은 구간 ♡`,
+      `🌙 수면 ${avgSleepH.toFixed(1)}시간. 이상적이야`,
+      `🌙 ${avgSleepH.toFixed(1)}시간 — 컨디션 잘 받는 양이지`
+    ]));
   } else {
-    advice.push(`🌙 평균 수면 ${avgSleepH.toFixed(1)}시간 — 무난한 편, 7~8시간 목표로 가자.`);
+    advice.push(_pickPhr([
+      `🌙 평균 ${avgSleepH.toFixed(1)}시간 — 나쁘진 않은데 7~8시간이 베스트야`,
+      `🌙 ${avgSleepH.toFixed(1)}시간이면 무난해. 조금만 더 챙기면 컨디션 더 올라와`
+    ]));
   }
 
+  // ====== Weight ======
   if(weights.length >= 2){
     const sorted = weights.slice().sort((a,b)=>a.date.localeCompare(b.date));
     const recent = sorted.slice(-5);
     const change = +(recent[recent.length-1].kg - recent[0].kg);
     if(Math.abs(change) >= 2){
-      advice.push(`⚖️ 최근 ${recent.length}회 측정 중 ${change > 0 ? '+' : ''}${change.toFixed(1)}kg 변화. 식사·수면 패턴 같이 돌아봐.`);
+      advice.push(_pickPhr([
+        `⚖️ 최근 ${recent.length}회 측정에서 ${change > 0 ? '+' : ''}${change.toFixed(1)}kg 변화. 식사랑 수면 같이 돌아봐 — 보통 둘 중 하나야`,
+        `⚖️ 체중 ${change > 0 ? '+' : ''}${change.toFixed(1)}kg. 너무 신경 쓰진 말고 패턴만 알아두자`,
+        `⚖️ ${recent.length}번 잰 동안 ${change > 0 ? '+' : ''}${change.toFixed(1)}kg. 의도한 거면 OK, 아니면 한 번 살펴봐`
+      ]));
     }
   }
 
-  // 종합 한 줄
+  // ====== Summary ======
   let summary = '';
   if(last7Days >= 3 && todayWater >= 4 && negCount < 3){
-    summary = '✦ 전반적으로 건강 관리 잘하고 있어. 지금 페이스 유지가 핵심.';
+    summary = _pickPhr([
+      '✦ 솔직히 잘 굴러가는 중이야. 지금 흐름 유지가 답',
+      '✦ 균형 잘 잡혀있어. 큰 변화 줄 필요 없어 — 지금 페이스 좋아',
+      '✦ 이대로 가자. 별다른 처방 없어도 충분해'
+    ]);
   } else if(last7Days < 2 || negCount >= 5){
-    summary = '✦ 회복이 우선이야. 운동·물·수면 중 한 가지만 일주일 정해서 챙겨봐.';
+    summary = _pickPhr([
+      '✦ 회복이 먼저야. 운동·물·잠 중 진짜 하나만 골라서 일주일 챙겨봐',
+      '✦ 지금은 끌어올리려 하지 말고 그냥 회복 모드. 작은 거 하나만',
+      '✦ 무리하지 말자. 사이클 한 주만 쉬어도 다음 주 달라져'
+    ]);
   } else {
-    summary = '✦ 균형이 살짝 흔들리는 정도. 큰 변화 없이 작은 루틴 하나만 더하면 충분해.';
+    summary = _pickPhr([
+      '✦ 살짝 흔들리는 정도야. 큰 변화 말고 작은 루틴 하나만 더하면 충분',
+      '✦ 나쁘진 않은데 한두 군데 빈 곳이 있어. 거기만 메꿔보자',
+      '✦ 전반적으로 OK. 약간만 손보면 더 가볍게 굴러가'
+    ]);
   }
 
   return { advice, summary };
@@ -11486,34 +11579,75 @@ function briefText(){
   const wkStartK = dkey(weekStart);
   const focusMin = (store.focusLog || []).filter(f => f.date >= wkStartK).reduce((a,b) => a + (b.min||0), 0);
 
-  // Build messages, priority order
+  // Build messages, priority order — variation to avoid robotic feel
   const arr = [];
-  if(todayHot) arr.push(`${todayHot.text} 먼저 처리하면 좀 가벼워질 듯`);
-  if(late >= 3) arr.push(`밀린 게 ${late}개. 한꺼번에 보지 말고 가벼운 거 하나만`);
-  else if(late) arr.push(`밀린 ${late}개, 오늘 처리 가능한 만큼만`);
+  if(todayHot) arr.push(_pickPhr([
+    `${todayHot.text} 먼저 손대면 나머지 가벼워질 듯`,
+    `${todayHot.text} — 이거부터 처리해놓으면 마음이 한결 편할걸`,
+    `오늘 진짜 우선은 ${todayHot.text}. 다른 건 나중에`,
+    `${todayHot.text} 하나만 끝내도 오늘 한 일은 한 거야`
+  ]));
+  if(late >= 3) arr.push(_pickPhr([
+    `밀린 게 ${late}개네. 한꺼번에 보지 마 — 제일 가벼운 거 하나만`,
+    `${late}개 밀려있어. 다 보면 압도되니까 진짜 1개만 골라`,
+    `${late}개 쌓였구나. 그중 5분짜리 있는지 먼저 찾아봐`
+  ]));
+  else if(late) arr.push(_pickPhr([
+    `밀린 ${late}개, 오늘 가능한 만큼만`,
+    `${late}개 늦었어. 부담 갖지 말고 가벼운 거부터`,
+    `${late}개 남았는데, 다 못 해도 괜찮아`
+  ]));
 
-  if(daysSinceMood !== null && daysSinceMood >= 3)
-    arr.push(`감정 일기 ${daysSinceMood}일째 비어있네. 한 줄이라도 좋아`);
+  if(daysSinceMood !== null && daysSinceMood >= 3) arr.push(_pickPhr([
+    `일기 ${daysSinceMood}일째 비어있네. 단어 하나라도`,
+    `${daysSinceMood}일 동안 감정 기록 없네. 한 줄이라도 흔적 남겨두자`,
+    `일기 안 적은 지 ${daysSinceMood}일. 지나고 보면 그 며칠도 다 흔적이야`
+  ]));
 
-  if(daysSinceMemo !== null && daysSinceMemo >= 5)
-    arr.push(`메모 ${daysSinceMemo}일 동안 안 적었네`);
+  if(daysSinceMemo !== null && daysSinceMemo >= 5) arr.push(_pickPhr([
+    `메모 ${daysSinceMemo}일 동안 안 적었네`,
+    `${daysSinceMemo}일째 메모 비어있어. 떠도는 생각 던져둬도 돼`
+  ]));
 
   if(daysSinceInvest !== null && daysSinceInvest >= 4 && (store.invests||[]).length)
-    arr.push(`투자 복기 ${daysSinceInvest}일째. 수익보단 그때 마음이 어땠는지`);
+    arr.push(_pickPhr([
+      `투자 복기 ${daysSinceInvest}일째. 수익보다 그때 마음이 어땠는지가 더 중요해`,
+      `복기 안 한 지 ${daysSinceInvest}일. 결과 말고 판단 과정 한 번만 돌아봐`
+    ]));
 
   if(rate7 !== null && last7.length >= 5){
-    if(rate7 >= 75) arr.push(`지난 일주일 완료율 ${rate7}%. 좋다, 무리하지만 마`);
-    else if(rate7 <= 30) arr.push(`완료율 ${rate7}%. 계획 좀 더 잘게 잘라보는 것도`);
+    if(rate7 >= 75) arr.push(_pickPhr([
+      `지난주 완료율 ${rate7}% — 진짜 잘했어. 무리는 하지 말고`,
+      `${rate7}% 완료. 페이스 너무 좋은데 한 번씩 쉬는 것도 잊지 마`,
+      `완료율 ${rate7}%, 솔직히 멋져`
+    ]));
+    else if(rate7 <= 30) arr.push(_pickPhr([
+      `완료율 ${rate7}%. 계획을 더 잘게 잘라보면 의외로 술술 풀려`,
+      `${rate7}%... 너무 큰 단위로 계획 짠 거 아니야? 30분 단위로 쪼개봐`,
+      `${rate7}%니까 욕심 줄여보자. 양이 아니라 진짜 중요한 거 하나`
+    ]));
   }
 
-  if(focusMin >= 90) arr.push(`이번 주 집중 ${focusMin}분, 꾸준하네`);
+  if(focusMin >= 90) arr.push(_pickPhr([
+    `이번 주 집중 ${focusMin}분 — 꾸준하네`,
+    `${focusMin}분 채웠어. 좋은 페이스야`
+  ]));
 
   if((store.streak?.count || 0) >= 5)
-    arr.push(`${store.streak.count}일 연속이네, 좋다`);
+    arr.push(_pickPhr([
+      `${store.streak.count}일 연속 — 솔직히 대단해`,
+      `연속 ${store.streak.count}일째. 이게 진짜 자산이지`,
+      `${store.streak.count}일 연속이네, 이런 거 잘 안 깨더라`
+    ]));
 
   if(store.weather?.advice) arr.push(store.weather.advice);
 
-  if(!arr.length) arr.push('오늘은 그냥 작은 거 하나만 해도 충분해');
+  if(!arr.length) arr.push(_pickPhr([
+    '오늘은 그냥 작은 거 하나만 해도 충분해',
+    '비어있는 날 — 그것도 괜찮아. 무리하지 말자',
+    '오늘은 가볍게 가도 돼. 별일 없는 게 좋은 거야',
+    '딱히 급한 거 없는 날 같네. 너 자신한테 시간 한 번 줘'
+  ]));
   return arr.slice(0, 4).join(' ');
 }
 
