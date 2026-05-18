@@ -3088,12 +3088,108 @@ $$('.nav-item').forEach(b=>b.addEventListener('click',()=>{
   render();
 }));
 
+/* ===== Daily mission auto-recommender (today's condition based, refusable) ===== */
+function getDailyMissions(){
+  const tk = todayKey();
+  const state = (store.daily && store.daily.missions && store.daily.missions[tk]) || {};
+  if(state.dismissed) return null;
+
+  const water = store.health?.water?.[tk] || 0;
+  const exercise = store.health?.exercise || [];
+  const todayEx = exercise.filter(e => e.date === tk);
+  const last7K = dkey(dateAdd(nowKST(), -7));
+  const last7ExDays = new Set(exercise.filter(e => e.date >= last7K).map(e => e.date)).size;
+  const diary = (store.diaries||[]).find(d => d.date === tk);
+  const focusToday = (store.focusLog||[]).filter(f => f.date === tk && f.kind !== 'break').reduce((a,f)=>a+(+f.min||0), 0);
+  const negMoods = ['우울','불안','짜증','외로움','과부하','지침','화남','무기력','복잡'];
+  const recentNegMood = diary && (diary.mood||[]).some(m => negMoods.includes(m));
+  const todayTasks = (store.tasks||[]).filter(t => t.date === tk);
+  const openTasks = todayTasks.filter(t => !t.done).length;
+  const sleeps = (store.health?.sleeps||[]).filter(s => s.type === 'night' && s.date === tk);
+  const sleptShort = sleeps.length && sleeps[0].duration < 6 * 3600000;
+  const cInfo = (typeof cycleInfo === 'function') ? cycleInfo() : null;
+
+  const candidates = [];
+
+  if(water < 4) candidates.push({ id:'water', icon:'💧', text:'물 한 잔 마시기', why:`오늘 ${water}/8잔`, view:'health' });
+  if(last7ExDays === 0) candidates.push({ id:'walk', icon:'🚶', text:'10분만 가볍게 걷기', why:'일주일째 운동 0회', view:'health' });
+  else if(todayEx.length === 0 && last7ExDays < 4) candidates.push({ id:'stretch', icon:'🤸', text:'5분 스트레칭', why:'몸 살짝 풀어주기', view:'health' });
+  if(recentNegMood) candidates.push({ id:'meditation', icon:'🧘', text:'5분 명상', why:'마음 좀 가라앉히기', view:'focus' });
+  if(sleptShort) candidates.push({ id:'nap', icon:'😴', text:'20분 짧은 낮잠', why:'어제 수면 부족했어', view:'health' });
+  if(!diary) candidates.push({ id:'diary', icon:'📓', text:'한 줄 감정 일기', why:'오늘 아직 안 적었어', view:'mood' });
+  if(focusToday === 0 && openTasks > 0) candidates.push({ id:'focus', icon:'🎯', text:'25분 집중 1세트', why:`할 일 ${openTasks}개 남음`, view:'focus' });
+  if(openTasks >= 5) candidates.push({ id:'cut', icon:'✂️', text:'우선순위 1개만 골라보기', why:`${openTasks}개 → 진짜 급한 거 하나`, view:'add' });
+  if(cInfo && (cInfo.phase === 'pms' || cInfo.phase === 'period')) candidates.push({ id:'warm', icon:'🍵', text:'따뜻한 차 한 잔', why:cInfo.phase === 'period' ? '몸 따뜻하게' : 'PMS 구간 — 무리 X', view:'health' });
+
+  if(candidates.length === 0){
+    candidates.push({ id:'breath', icon:'✨', text:'깊은 호흡 5번', why:'평온한 날 — 그래도 한 번', view:null });
+  }
+
+  // Stable order per day (so refresh doesn't shuffle)
+  const seed = tk.split('-').reduce((a,b) => a + parseInt(b,10), 0);
+  candidates.sort((a,b) => ((a.text.length + seed) % 7) - ((b.text.length + seed) % 7));
+  return { missions: candidates.slice(0, 3), done: state.done || [] };
+}
+function dailyMissionHTML(){
+  const data = getDailyMissions();
+  if(!data) return '';
+  const { missions, done } = data;
+  return `<div id="dailyMissionCard" style="background:linear-gradient(135deg,var(--paper-soft) 0%,var(--paper) 100%);border:1px solid var(--hairline);border-left:3px solid var(--olive);border-radius:6px;padding:14px 16px;margin-bottom:16px;position:relative">
+    <button type="button" id="missionDismiss" title="오늘 안 볼래" style="position:absolute;top:8px;right:10px;background:transparent;border:0;color:var(--ink-muted);font-family:var(--fui);font-size:11px;letter-spacing:.18em;cursor:pointer">패스 ✕</button>
+    <p class="label-eyebrow" style="margin:0 0 8px">오늘의 작은 미션 <span style="font-family:var(--fui);font-size:10px;letter-spacing:.16em;color:var(--ink-muted);margin-left:6px">컨디션 기반</span></p>
+    <div style="display:flex;flex-direction:column;gap:6px">
+      ${missions.map((mi, i) => {
+        const isDone = done.includes(mi.id);
+        return `<div style="display:flex;align-items:center;gap:10px;padding:6px 0;${isDone?'opacity:.5':''}">
+          <span style="font-size:18px;flex:0 0 24px;text-align:center">${mi.icon}</span>
+          <div style="flex:1;min-width:0">
+            <div style="font-family:var(--fb);font-weight:500;font-size:14px;color:var(--ink);${isDone?'text-decoration:line-through':''}">${safe(mi.text)}</div>
+            <div style="font-family:var(--fb);font-weight:400;font-size:12px;color:var(--ink-soft);margin-top:1px">${safe(mi.why)}</div>
+          </div>
+          ${isDone ? '<span style="font-family:var(--fui);font-size:10px;letter-spacing:.18em;color:var(--olive)">완료 ✓</span>' :
+            `<div style="display:flex;gap:4px">
+              <button type="button" data-misdone="${mi.id}" style="background:var(--olive);color:#fff;border:0;border-radius:3px;padding:5px 10px;font-family:var(--fui);font-size:10px;letter-spacing:.16em;cursor:pointer">했어 ✓</button>
+              ${mi.view ? `<button type="button" data-misgo="${mi.view}" style="background:transparent;color:var(--ink-soft);border:1px solid var(--hairline);border-radius:3px;padding:5px 10px;font-family:var(--fui);font-size:10px;letter-spacing:.16em;cursor:pointer">이동 →</button>` : ''}
+            </div>`}
+        </div>`;
+      }).join('')}
+    </div>
+  </div>`;
+}
+function _wireDailyMission(){
+  const dismiss = $('#missionDismiss');
+  if(dismiss) dismiss.onclick = () => {
+    const tk = todayKey();
+    store.daily = store.daily || {};
+    store.daily.missions = store.daily.missions || {};
+    store.daily.missions[tk] = { ...(store.daily.missions[tk]||{}), dismissed:true };
+    saveStore('daily'); render();
+    toast('오늘은 패스 — 무리하지 마');
+  };
+  $$('#main [data-misdone]').forEach(b => b.onclick = () => {
+    const tk = todayKey();
+    store.daily = store.daily || {};
+    store.daily.missions = store.daily.missions || {};
+    const st = store.daily.missions[tk] || { done:[] };
+    st.done = st.done || [];
+    if(!st.done.includes(b.dataset.misdone)) st.done.push(b.dataset.misdone);
+    store.daily.missions[tk] = st;
+    saveStore('daily'); render();
+    toast('👏 잘했어');
+  });
+  $$('#main [data-misgo]').forEach(b => b.onclick = () => {
+    view = b.dataset.misgo;
+    render();
+  });
+}
+
 /* CALENDAR */
 function renderCalendar(root){
   const y=cursor.getFullYear(),m=cursor.getMonth();
   const heroTitle=calMode==='month'?'MONTHLY':'WEEKLY';
   const heroScript=calMode==='month'?'calendar':'planner';
   root.innerHTML=`
+    ${dailyMissionHTML()}
     <div class="hero">
       <h1 class="hero-title">${heroTitle}</h1>
       <span class="hero-script">${heroScript}</span>
@@ -3131,6 +3227,7 @@ function renderCalendar(root){
   };
   $('#todayBtn').onclick=()=>{ selectedDate=nowKST(); cursor=new Date(selectedDate.getFullYear(),selectedDate.getMonth(),1); render(); };
   $('#modeToggle').onclick=()=>{ calMode=calMode==='month'?'week':'month'; render(); };
+  _wireDailyMission();
 }
 function renderMonth(root){
   const y=cursor.getFullYear(),m=cursor.getMonth();
