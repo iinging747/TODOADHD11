@@ -2159,6 +2159,17 @@ function isAdmin(){
   return !!(store && store.adminUnlockedAt);
 }
 
+/* Premium mode — currently a soft flag set in Settings (no payment integration yet).
+   Admins are always treated as premium. Used to gate optional features and to
+   show/hide ad placeholders. */
+function isPremium(){
+  if(isAdmin()) return true;
+  return !!(store && store.settings && store.settings.premium);
+}
+function premiumLockHTML(label){
+  return `<span style="display:inline-flex;align-items:center;gap:4px;background:linear-gradient(135deg,#F5E8C8,#E8D5FA);color:#5E4A9F;font-family:var(--fui);font-size:9.5px;letter-spacing:.18em;text-transform:uppercase;padding:2px 6px;border-radius:99px;font-weight:700">✦ Pro${label?` · ${label}`:''}</span>`;
+}
+
 /* ============ Storage wrapper (window.storage + localStorage fallback) ============ */
 async function sSet(key, value){
   // Try window.storage first, fallback to localStorage on any error
@@ -3228,6 +3239,21 @@ function renderCalendar(root){
   $('#todayBtn').onclick=()=>{ selectedDate=nowKST(); cursor=new Date(selectedDate.getFullYear(),selectedDate.getMonth(),1); render(); };
   $('#modeToggle').onclick=()=>{ calMode=calMode==='month'?'week':'month'; render(); };
   _wireDailyMission();
+  // Ad slot for free users — placeholder card linking to Pro upgrade
+  if(!isPremium()){
+    const adSlot = document.createElement('div');
+    adSlot.style.cssText = 'margin-top:18px;padding:14px 16px;background:linear-gradient(135deg,#FAF5E8,#F5E8FA);border:1px dashed var(--hairline);border-radius:6px;font-family:var(--fb);font-size:13px;color:var(--ink-soft);display:flex;align-items:center;justify-content:space-between;gap:12px';
+    adSlot.innerHTML = `
+      <div>
+        <div style="font-weight:600;color:var(--ink);margin-bottom:2px">✦ Pro로 광고 없이 + AI 무제한</div>
+        <div style="font-size:12px">친구 초대 동기화 · 음성 입력 · PDF 회고도 함께</div>
+      </div>
+      <button class="btn btn-ghost" id="goPro" style="font-size:11px;letter-spacing:.18em">Pro 보기 →</button>
+    `;
+    root.appendChild(adSlot);
+    const gp = $('#goPro');
+    if(gp) gp.onclick = () => { view='settings'; render(); };
+  }
 }
 function renderMonth(root){
   const y=cursor.getFullYear(),m=cursor.getMonth();
@@ -10902,6 +10928,35 @@ function renderSettings(root){
       </div>
       <div style="height:18px"></div>
 
+      <div class="paper" style="background:linear-gradient(135deg,#FAF5E8 0%,#F5E8FA 100%);border:1px solid var(--hairline)">
+        <p class="label-eyebrow">✦ 프리미엄 모드 <span class="right" style="color:${isPremium()?'var(--olive)':'var(--ink-muted)'}">${isPremium() ? (isAdmin()?'관리자 무제한':'활성 ✓') : '비활성'}</span></p>
+        <p style="margin:6px 0 14px;font-family:var(--fb);font-weight:400;font-size:13.5px;line-height:1.7;color:var(--ink-soft)">광고 없는 환경 + 무제한 AI 첨언 + 음성→일정 무제한 + 고급 통계. 결제 연동은 아직 준비 중이라 지금은 베타로 무료로 체험해볼 수 있어.</p>
+        <ul style="margin:0 0 14px;padding:0;list-style:none;display:flex;flex-direction:column;gap:6px;font-family:var(--fb);font-size:13.5px;color:var(--ink)">
+          <li style="display:flex;align-items:center;gap:8px"><span style="color:${isPremium()?'var(--olive)':'var(--ink-muted)'}">${isPremium()?'✓':'•'}</span> 광고 / 후원 배너 제거</li>
+          <li style="display:flex;align-items:center;gap:8px"><span style="color:${isPremium()?'var(--olive)':'var(--ink-muted)'}">${isPremium()?'✓':'•'}</span> AI 첨언 무제한 (감정·메모·건강·예산)</li>
+          <li style="display:flex;align-items:center;gap:8px"><span style="color:${isPremium()?'var(--olive)':'var(--ink-muted)'}">${isPremium()?'✓':'•'}</span> 음성 → 일정 (Whisper API) 무제한</li>
+          <li style="display:flex;align-items:center;gap:8px"><span style="color:${isPremium()?'var(--olive)':'var(--ink-muted)'}">${isPremium()?'✓':'•'}</span> 월간·연간 회고 PDF 내보내기</li>
+          <li style="display:flex;align-items:center;gap:8px"><span style="color:${isPremium()?'var(--olive)':'var(--ink-muted)'}">${isPremium()?'✓':'•'}</span> 친구 초대 실시간 동기화</li>
+          <li style="display:flex;align-items:center;gap:8px"><span style="color:${isPremium()?'var(--olive)':'var(--ink-muted)'}">${isPremium()?'✓':'•'}</span> 커스텀 테마 / 폰트</li>
+        </ul>
+        ${isAdmin() ? `
+          <p style="margin:0;font-family:var(--fb);font-size:12.5px;color:var(--ink-muted);font-style:italic">※ 관리자는 항상 프리미엄 — 추가 설정 불필요</p>
+        ` : `
+          <div class="setting-row" style="padding:8px 0">
+            <div class="setting-info">
+              <div class="setting-title">베타 체험</div>
+              <div class="setting-desc">결제 시스템 들어오기 전까지는 무료로 켤 수 있어. 정식 출시 후 자동 만료될 수 있어요.</div>
+            </div>
+            <label class="toggle">
+              <input type="checkbox" id="premiumToggle" ${isPremium()?'checked':''}>
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+        `}
+      </div>
+
+      <div style="height:18px"></div>
+
       <div class="paper-soft">
         <p class="label-eyebrow">서버 저장 & 구글 연동</p>
         <p style="margin:0;font-family:var(--fb);font-weight:400;font-size:13px;line-height:1.7;color:var(--ink-soft)">현재 데이터는 너의 Google 계정 + Firestore에 저장돼. 다른 기기에서도 같은 계정으로 들어오면 그대로 이어져.</p>
@@ -10965,6 +11020,14 @@ function renderSettings(root){
 
     </div>
   `;
+
+  const premiumT = $('#premiumToggle');
+  if(premiumT) premiumT.onchange = (e) => {
+    store.settings = store.settings || {};
+    store.settings.premium = !!e.target.checked;
+    saveStore('__meta'); render();
+    toast(e.target.checked ? '✦ Pro 모드 켜졌어' : 'Pro 모드 꺼짐');
+  };
 
   $('#notifyToggle').onchange = async (e) => {
     if(e.target.checked){
