@@ -3156,6 +3156,53 @@ $$('.nav-item').forEach(b=>b.addEventListener('click',()=>{
   render();
 }));
 
+/* ===== Cycle AI auto-notifications (once per day) ===== */
+function maybeShowCycleAlert(){
+  if(store.settings?.sex !== 'female') return;
+  if(!store.health?.cycle?.enabled) return;
+  if(store.settings?.cycleNotify === false) return;
+  const info = cycleInfo();
+  if(!info) return;
+  const tk = todayKey();
+  // De-dup: only show one alert per day per type
+  store.daily = store.daily || {};
+  store.daily.cycleAlerts = store.daily.cycleAlerts || {};
+  if(store.daily.cycleAlerts[tk]) return;
+
+  let msg = null;
+  if(info.phase === 'ovulation' || info.cycleDay === info.ovuDay){
+    msg = _pickPhr([
+      '✦ 오늘 배란 예정일이야. 컨디션·체온 살짝 변할 수 있어',
+      '✦ 배란일 — 가임 확률 높은 날. 의식해두자',
+      '✦ 오늘 배란기 정점. 몸 신호 잘 들어'
+    ]);
+  } else if(info.phase === 'period'){
+    msg = _pickPhr([
+      '🩸 생리 중 — 따뜻한 거 챙기고 무리하지 마',
+      '🩸 오늘 생리 기간. 일정 빡빡하면 줄여도 돼',
+      '🩸 컨디션 떨어져도 정상이야. 자기한테 좀 다정하게'
+    ]);
+  } else if(info.phase === 'pms' || (info.daysUntilNext <= 3 && info.daysUntilNext > 0)){
+    msg = _pickPhr([
+      `🌧️ 다음 생리 D-${info.daysUntilNext} · PMS 구간 — 기분·붓기 변동 정상`,
+      `🌧️ D-${info.daysUntilNext} PMS — 큰 결정 미뤄도 돼. 회복 우선`,
+      `🌧️ 생리 곧 시작 (D-${info.daysUntilNext}). 카페인·짠 거 줄이면 가벼워져`
+    ]);
+  } else if(info.daysUntilNext === 0){
+    msg = '🩸 오늘 생리 시작 예정일 — 메인 캘린더에서 시작일 마킹해줘';
+  } else if(info.phase === 'fertile' && info.cycleDay === info.ovuDay - 1){
+    msg = _pickPhr([
+      `✦ 내일 배란 예정. 에너지 절정 구간이야`,
+      `✦ 가임기 정점 임박 (배란 D-1)`
+    ]);
+  }
+  if(msg){
+    store.daily.cycleAlerts[tk] = msg;
+    saveStore('daily');
+    setTimeout(() => toast(msg), 1500); // small delay so it's not overwhelmed by other init toasts
+  }
+}
+
 /* ===== Daily mission auto-recommender (today's condition based, refusable) ===== */
 function getDailyMissions(){
   const tk = todayKey();
@@ -3296,6 +3343,7 @@ function renderCalendar(root){
   $('#todayBtn').onclick=()=>{ selectedDate=nowKST(); cursor=new Date(selectedDate.getFullYear(),selectedDate.getMonth(),1); render(); };
   $('#modeToggle').onclick=()=>{ calMode=calMode==='month'?'week':'month'; render(); };
   _wireDailyMission();
+  maybeShowCycleAlert();
   // Ad slot for free users — placeholder card linking to Pro upgrade
   if(!isPremium()){
     const adSlot = document.createElement('div');
@@ -11573,6 +11621,44 @@ function renderSettings(root){
       </div>
       <div style="height:18px"></div>
 
+      <div class="paper">
+        <p class="label-eyebrow">🌸 생리 주기 추적 <span class="right" style="color:${(store.settings?.sex==='female' && store.health?.cycle?.enabled)?'var(--olive)':'var(--ink-muted)'}">${(store.settings?.sex==='female' && store.health?.cycle?.enabled)?'활성 ✓':'비활성'}</span></p>
+        <p style="margin:6px 0 14px;font-family:var(--fb);font-weight:400;font-size:13.5px;line-height:1.65;color:var(--ink-soft)">생리·배란·가임기·PMS를 캘린더에 자동 표시. 메인 달력에서 날짜 누르면 직접 마킹 가능. <b>불규칙해도 OK</b> — 시작일만 가끔 기록하면 평균 자동 계산.</p>
+
+        <div class="setting-row" style="padding:8px 0">
+          <div class="setting-info">
+            <div class="setting-title">주기 추적 켜기</div>
+            <div class="setting-desc">캘린더 화면에 자동으로 🩸 / ✦ / PMS 마커 표시. 데이터는 너 기기에만 저장.</div>
+          </div>
+          <label class="toggle">
+            <input type="checkbox" id="cycleEnabledToggle" ${(store.settings?.sex==='female' && store.health?.cycle?.enabled)?'checked':''}>
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+
+        ${(store.settings?.sex==='female' && store.health?.cycle?.enabled) ? `
+          <div class="divider"></div>
+          <div class="setting-row" style="padding:8px 0">
+            <div class="setting-info">
+              <div class="setting-title">AI 자동 알림</div>
+              <div class="setting-desc">다음 생리 D-3, 배란 예정일, PMS 시작 같은 알림을 토스트로 띄워줘요.</div>
+            </div>
+            <label class="toggle">
+              <input type="checkbox" id="cycleNotifyToggle" ${store.settings?.cycleNotify!==false?'checked':''}>
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+        ` : ''}
+
+        <p style="margin:14px 0 0;font-family:var(--fb);font-weight:400;font-size:12.5px;color:var(--ink-muted);font-style:italic;line-height:1.6">
+          ${store.settings?.sex==='female'
+            ? '※ 자세한 설정과 8주 캘린더는 <b>건강</b> 메뉴에 있어요.'
+            : '※ "건강" 메뉴 → 신체정보에서 성별 "여성"으로 설정해야 동작해요.'}
+        </p>
+      </div>
+
+      <div style="height:18px"></div>
+
       <div class="paper" style="background:linear-gradient(135deg,#FAF5E8 0%,#F5E8FA 100%);border:1px solid var(--hairline)">
         <p class="label-eyebrow">✦ 프리미엄 모드 <span class="right" style="color:${isPremium()?'var(--olive)':'var(--ink-muted)'}">${isPremium() ? (isAdmin()?'관리자 무제한':'활성 ✓') : '비활성'}</span></p>
         <p style="margin:6px 0 14px;font-family:var(--fb);font-weight:400;font-size:13.5px;line-height:1.7;color:var(--ink-soft)">광고 없는 환경 + 무제한 AI 첨언 + 음성→일정 무제한 + 고급 통계. 결제 연동은 아직 준비 중이라 지금은 베타로 무료로 체험해볼 수 있어.</p>
@@ -11672,6 +11758,37 @@ function renderSettings(root){
     store.settings.premium = !!e.target.checked;
     saveStore('__meta'); render();
     toast(e.target.checked ? '✦ Pro 모드 켜졌어' : 'Pro 모드 꺼짐');
+  };
+
+  // Cycle tracking master toggle (in Settings)
+  const cycleT = $('#cycleEnabledToggle');
+  if(cycleT) cycleT.onchange = (e) => {
+    store.settings = store.settings || {};
+    if(e.target.checked){
+      // Force sex to 'female' if currently empty (don't override if explicit 'male')
+      if(!store.settings.sex || store.settings.sex !== 'male') store.settings.sex = 'female';
+      if(!store.health) store.health = {};
+      store.health.cycle = store.health.cycle || { periodLen:5 };
+      store.health.cycle.enabled = true;
+      if(store.settings.cycleNotify === undefined) store.settings.cycleNotify = true;
+      saveStore('health'); saveStore('__meta'); render();
+      if(store.settings.sex !== 'female'){
+        toast('성별을 "여성"으로 먼저 설정해줘 (건강 → 신체정보)');
+      } else {
+        toast('🌸 주기 추적 켰어. 메인 캘린더에서 날짜 누르고 마킹할 수 있어');
+      }
+    } else {
+      if(store.health?.cycle) store.health.cycle.enabled = false;
+      saveStore('health'); render();
+      toast('주기 추적 꺼짐 (데이터는 남아있어요)');
+    }
+  };
+  const cycleNotifyT = $('#cycleNotifyToggle');
+  if(cycleNotifyT) cycleNotifyT.onchange = (e) => {
+    store.settings = store.settings || {};
+    store.settings.cycleNotify = !!e.target.checked;
+    saveStore('__meta');
+    toast(e.target.checked ? '🌸 주기 알림 켰어' : '주기 알림 꺼짐');
   };
 
   $('#notifyToggle').onchange = async (e) => {
@@ -12120,12 +12237,50 @@ function renderDrawer(){
     <div class="divider"></div>
     <p class="label-eyebrow">감정 일기</p>
     ${diary.text?`<p style="margin:0 0 8px;font-family:var(--fb);font-weight:400;font-size:14.5px;color:var(--ink-soft);line-height:1.7">${safe(diary.text)}</p>${diary.mood?`<span class="tag" style="font-family:var(--fui);font-size:9.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-soft);padding:2px 8px;border:1px solid var(--hairline);border-radius:999px">${safe(diary.mood)}</span>`:''}`:'<p class="empty" style="margin:0">아직 기록 없음</p>'}
+
+    ${(store.settings?.sex === 'female' && store.health?.cycle?.enabled) ? (() => {
+      const cur = (store.health?.cycle?.periodDays || {})[k];
+      const cInfo = cycleInfo();
+      const phaseOn = cInfo ? cyclePhaseOn(new Date(k+'T00:00:00'), cInfo) : { phase:'none' };
+      const phaseLabel = { period:'생리 예상', follicular:'난포기', fertile:'가임기', ovulation:'배란 예정일', luteal:'황체기', pms:'PMS 구간' }[phaseOn.phase] || '';
+      return `
+        <div class="divider"></div>
+        <p class="label-eyebrow">🌸 생리 주기</p>
+        <div style="margin:8px 0 10px;font-family:var(--fb);font-size:14px;color:var(--ink-soft);line-height:1.6">
+          ${cur === 'start' ? '<b style="color:#D14B5C">🩸 생리 시작일로 기록됨</b>' :
+            cur === 'day'   ? '<b style="color:#D14B5C">🩸 생리 중으로 기록됨</b>' :
+            phaseLabel ? `예상: <b style="color:var(--ink)">${phaseLabel}</b>` : '기록 없음 — 아래에서 추가 가능'}
+        </div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
+          <button type="button" data-cyclemark="start" data-date="${k}" style="background:${cur==='start'?'#D14B5C':'transparent'};color:${cur==='start'?'#fff':'#D14B5C'};border:1px solid #D14B5C;border-radius:3px;padding:8px 14px;font-family:var(--fui);font-size:10.5px;letter-spacing:.16em;cursor:pointer;font-weight:600">🩸 시작일</button>
+          <button type="button" data-cyclemark="day" data-date="${k}" style="background:${cur==='day'?'#E89A6F':'transparent'};color:${cur==='day'?'#fff':'#E89A6F'};border:1px solid #E89A6F;border-radius:3px;padding:8px 14px;font-family:var(--fui);font-size:10.5px;letter-spacing:.16em;cursor:pointer">생리 중</button>
+          ${cur ? `<button type="button" data-cyclemark="clear" data-date="${k}" style="background:transparent;color:var(--ink-muted);border:1px solid var(--hairline);border-radius:3px;padding:8px 14px;font-family:var(--fui);font-size:10.5px;letter-spacing:.16em;cursor:pointer">✕ 지우기</button>` : ''}
+        </div>
+      `;
+    })() : ''}
   `;
   $$('#drawerBody [data-toggle]').forEach(b=>b.onchange=()=>toggleTask(b.dataset.toggle));
   $$('#drawerBody [data-del]').forEach(b=>b.onclick=()=>deleteTask(b.dataset.del));
   $$('#drawerBody [data-delall]').forEach(b=>b.onclick=()=>deleteAllOnDay(b.dataset.delall));
   $$('#drawerBody [data-notify]').forEach(b=>b.onclick=()=>setTaskNotify(b.dataset.notify));
   $$('#drawerBody [data-shareday]').forEach(b=>b.onclick=()=>shareDay(b.dataset.shareday));
+  $$('#drawerBody [data-cyclemark]').forEach(b => b.onclick = () => {
+    if(!store.health) store.health = {};
+    store.health.cycle = store.health.cycle || { enabled:true, periodLen:5 };
+    store.health.cycle.periodDays = store.health.cycle.periodDays || {};
+    const dk = b.dataset.date;
+    const mark = b.dataset.cyclemark;
+    if(mark === 'clear'){
+      delete store.health.cycle.periodDays[dk];
+      toast('기록 지움');
+    } else {
+      store.health.cycle.periodDays[dk] = mark;
+      toast(mark === 'start' ? `🩸 ${dk} 생리 시작일로 기록` : `🩸 ${dk} 생리 중`);
+    }
+    saveStore('health');
+    renderDrawer();
+    render();
+  });
   $('#qAdd').onclick=quickAddDrawer;
   $('#qTask').addEventListener('keydown',e=>{if(e.key==='Enter')quickAddDrawer()});
 }
