@@ -3260,6 +3260,10 @@ function renderMonth(root){
   const first=new Date(y,m,1).getDay();
   const days=new Date(y,m+1,0).getDate();
   const prevLast=new Date(y,m,0).getDate();
+  // Show cycle markers only for female users with cycle tracking enabled
+  const showCycle = (store.settings?.sex === 'female') && !!(store.health?.cycle?.enabled);
+  const _cInfo = showCycle ? cycleInfo() : null;
+  const _cStarts = showCycle ? cycleStarts() : [];
   let cells=[];
   for(let i=0;i<42;i++){
     const n=i-first+1;
@@ -3285,10 +3289,25 @@ function renderMonth(root){
     // Mood emoji for this day
     const dayDiary = (store.diaries||[]).find(d=>d.date===k);
     const moodEmoji = dayDiary && dayDiary.mood?.length ? moodToEmoji(dayDiary.mood[0]) : '';
-    cells.push(`<button class="${cls.join(' ')}" data-date="${k}" ${other?'data-other="1"':''}>
+    // Cycle marker (female + enabled only)
+    let cycleMark = '';
+    if(showCycle && (_cInfo || _cStarts.length)){
+      const ph = cyclePhaseOn(d, _cInfo || { avgCycle: cycleAvgFromHistory().avg, periodLen: store.health?.cycle?.periodLen||5, ovuDay: Math.max(10, cycleAvgFromHistory().avg - 14), realStart: _cStarts[0] });
+      if(ph.phase === 'period'){
+        cycleMark = `<span style="position:absolute;bottom:3px;right:4px;width:6px;height:6px;border-radius:50%;background:#D14B5C;box-shadow:0 0 0 1px rgba(255,255,255,.6)" title="생리"></span>`;
+      } else if(ph.phase === 'ovulation'){
+        cycleMark = `<span style="position:absolute;bottom:2px;right:3px;font-size:9px;line-height:1;color:#C49A3A" title="배란일">✦</span>`;
+      } else if(ph.phase === 'fertile'){
+        cycleMark = `<span style="position:absolute;bottom:3px;right:4px;width:5px;height:5px;border-radius:50%;background:#E89A6F;opacity:.7" title="가임기"></span>`;
+      } else if(ph.phase === 'pms'){
+        cycleMark = `<span style="position:absolute;bottom:3px;right:4px;width:5px;height:5px;border-radius:50%;background:#9B6BA8;opacity:.55" title="PMS"></span>`;
+      }
+    }
+    cells.push(`<button class="${cls.join(' ')}" data-date="${k}" ${other?'data-other="1"':''} style="position:relative">
       <span class="tab"></span>
       <span class="num">${d.getDate()}</span>
       ${moodEmoji ? `<span class="day-mood">${moodEmoji}</span>` : ''}
+      ${cycleMark}
       <div class="marks">${marks}${more}</div>
     </button>`);
   }
@@ -4997,11 +5016,16 @@ function _medStartAmbient(){
     const AC = window.AudioContext || window.webkitAudioContext;
     if(!AC) return;
     _medCtx = new AC();
+    // Resume immediately (Chrome/iOS start suspended; this works because the call
+    // chain originates from a user click on the meditation button).
+    if(_medCtx.state === 'suspended'){
+      _medCtx.resume().catch(()=>{});
+    }
     _medMaster = _medCtx.createGain();
-    _medMaster.gain.value = 0;
+    _medMaster.gain.value = 0.0001; // avoid exactly 0 (some browsers cull)
     _medMaster.connect(_medCtx.destination);
     // Soft pad: 3 detuned sine oscillators + LFO + lowpass filter
-    const root = 110; // A2
+    const root = 130.81; // C3 — a bit higher so it's audible on phone speakers
     const intervals = [1, 1.5, 2]; // root, fifth, octave
     intervals.forEach((mul, i) => {
       const osc = _medCtx.createOscillator();
@@ -5015,11 +5039,12 @@ function _medStartAmbient(){
       detune.connect(detuneGain);
       detuneGain.connect(osc.detune);
       const g = _medCtx.createGain();
-      g.gain.value = (i === 0 ? 0.15 : i === 1 ? 0.10 : 0.06);
-      // Lowpass for warmth
+      // Louder so it's actually audible on phone speakers
+      g.gain.value = (i === 0 ? 0.25 : i === 1 ? 0.18 : 0.10);
+      // Lowpass for warmth — open it up a bit so notes come through
       const filter = _medCtx.createBiquadFilter();
       filter.type = 'lowpass';
-      filter.frequency.value = 800 + i * 200;
+      filter.frequency.value = 1400 + i * 300;
       filter.Q.value = 1;
       osc.connect(filter);
       filter.connect(g);
@@ -5027,8 +5052,9 @@ function _medStartAmbient(){
       osc.start();
       detune.start();
     });
-    // Fade in
-    _medMaster.gain.linearRampToValueAtTime(_medSoundOn ? 0.5 : 0, _medCtx.currentTime + 3);
+    // Fade in — shorter ramp so the user hears it within a second
+    const target = _medSoundOn ? 0.8 : 0.0001;
+    _medMaster.gain.linearRampToValueAtTime(target, _medCtx.currentTime + 1.5);
   }catch(e){ console.warn('meditation audio', e); }
 }
 function _medStopAmbient(){
@@ -5041,8 +5067,11 @@ function _medStopAmbient(){
 }
 function _medToggleSound(){
   _medSoundOn = !_medSoundOn;
+  if(_medCtx && _medCtx.state === 'suspended'){
+    _medCtx.resume().catch(()=>{});
+  }
   if(_medMaster && _medCtx){
-    _medMaster.gain.linearRampToValueAtTime(_medSoundOn ? 0.5 : 0, _medCtx.currentTime + 0.4);
+    _medMaster.gain.linearRampToValueAtTime(_medSoundOn ? 0.8 : 0.0001, _medCtx.currentTime + 0.4);
   }
   const btn = document.getElementById('meditationSoundToggle');
   if(btn) btn.textContent = _medSoundOn ? '🎵 ON' : '🔇 OFF';
@@ -8432,24 +8461,58 @@ function tdeeKcal(){
 }
 
 /* ===== Menstrual cycle helpers ===== */
+/* Period data model:
+   store.health.cycle = {
+     enabled, periodLen, avgCycle (legacy),
+     periodDays: { 'YYYY-MM-DD': 'start' | 'day' },   // manual marks
+     lastPeriodStart, history                          // legacy/auto fields kept for back-compat
+   }
+*/
+function cycleStarts(){
+  // Returns sorted ascending array of period-start dates (Date objects)
+  const c = store.health?.cycle || {};
+  const days = c.periodDays || {};
+  const set = new Set();
+  // Manually marked starts
+  Object.entries(days).forEach(([k,v]) => { if(v === 'start') set.add(k); });
+  // Legacy lastPeriodStart
+  if(c.lastPeriodStart) set.add(c.lastPeriodStart);
+  // History entries
+  (c.history||[]).forEach(h => { if(h.start) set.add(h.start); });
+  return [...set].sort().map(k => new Date(k + 'T00:00:00')).filter(d => !isNaN(d));
+}
+function cycleAvgFromHistory(){
+  // Use last 6 starts to compute average + range; fall back to setting/28
+  const starts = cycleStarts();
+  if(starts.length < 2) return { avg: +(store.health?.cycle?.avgCycle) || 28, min: null, max: null, irregular: false, n: starts.length };
+  const recent = starts.slice(-6);
+  const gaps = [];
+  for(let i = 1; i < recent.length; i++){
+    const g = Math.round((recent[i] - recent[i-1]) / 86400000);
+    if(g >= 18 && g <= 60) gaps.push(g);
+  }
+  if(!gaps.length) return { avg: +(store.health?.cycle?.avgCycle) || 28, min: null, max: null, irregular: false, n: starts.length };
+  const avg = Math.round(gaps.reduce((a,b)=>a+b,0) / gaps.length);
+  const min = Math.min(...gaps), max = Math.max(...gaps);
+  const irregular = (max - min) >= 8; // ≥8일 차이는 불규칙
+  return { avg, min, max, irregular, n: starts.length };
+}
 function cycleInfo(){
   const c = store.health?.cycle;
-  if(!c || !c.enabled || !c.lastPeriodStart) return null;
-  const avgCycle = +c.avgCycle || 28;
+  if(!c || !c.enabled) return null;
+  const starts = cycleStarts();
+  if(!starts.length) return null;
   const periodLen = +c.periodLen || 5;
-  // Find the most recent cycle start ≤ today by advancing in avgCycle steps
+  const stats = cycleAvgFromHistory();
+  const avgCycle = stats.avg;
+
   const today = nowKST();
   today.setHours(0,0,0,0);
-  let realStart = new Date(c.lastPeriodStart + 'T00:00:00');
-  if(isNaN(realStart)) return null;
-  while(true){
-    const nextStart = new Date(realStart);
-    nextStart.setDate(nextStart.getDate() + avgCycle);
-    if(nextStart > today) break;
-    realStart = nextStart;
-  }
-  const cycleDay = Math.floor((today - realStart) / 86400000) + 1; // 1-based
-  const ovuDay = Math.max(10, avgCycle - 14); // typical ovulation ~14 days before next period
+  // Most recent recorded start ≤ today
+  let realStart = starts.filter(d => d <= today).pop();
+  if(!realStart) realStart = starts[0];
+  const cycleDay = Math.floor((today - realStart) / 86400000) + 1;
+  const ovuDay = Math.max(10, avgCycle - 14);
   const nextPeriodDate = new Date(realStart);
   nextPeriodDate.setDate(nextPeriodDate.getDate() + avgCycle);
   const daysUntilNext = Math.max(0, Math.ceil((nextPeriodDate - today) / 86400000));
@@ -8457,14 +8520,17 @@ function cycleInfo(){
   ovuDate.setDate(ovuDate.getDate() + ovuDay - 1);
 
   let phase;
-  if(cycleDay <= periodLen) phase = 'period';
+  // Check if today is in a manually-marked period day
+  const tk = dkey(today);
+  const manual = (c.periodDays||{})[tk];
+  if(manual === 'start' || manual === 'day') phase = 'period';
+  else if(cycleDay <= periodLen) phase = 'period';
   else if(cycleDay === ovuDay) phase = 'ovulation';
   else if(cycleDay >= ovuDay - 3 && cycleDay <= ovuDay + 1) phase = 'fertile';
   else if(cycleDay >= avgCycle - 4) phase = 'pms';
   else if(cycleDay < ovuDay) phase = 'follicular';
   else phase = 'luteal';
 
-  // Calendar start: Sunday of the week of realStart (or earlier if realStart already this week)
   const calStart = new Date(realStart);
   calStart.setDate(calStart.getDate() - calStart.getDay());
 
@@ -8473,30 +8539,40 @@ function cycleInfo(){
     realStart, nextPeriodDate, ovuDate, daysUntilNext,
     nextPeriodKey: dkey(nextPeriodDate),
     ovuKey: dkey(ovuDate),
-    calStart
+    calStart,
+    stats
   };
 }
 function cyclePhaseOn(date, info){
-  // Determine which cycle (current or next) this date belongs to
+  // 1) Manual mark wins
   const d = new Date(date); d.setHours(0,0,0,0);
+  const dk = dkey(d);
+  const manual = (store.health?.cycle?.periodDays||{})[dk];
+  if(manual === 'start') return { phase:'period', mark:'🩸', manual:true };
+  if(manual === 'day')   return { phase:'period', mark:'',    manual:true };
+
+  // 2) Otherwise predict based on closest recorded start
+  const starts = cycleStarts();
+  if(!starts.length) return { phase:'none', mark:'' };
+  // Find nearest start ≤ d
+  let cs = null;
+  for(let i = starts.length - 1; i >= 0; i--){
+    if(starts[i] <= d){ cs = starts[i]; break; }
+  }
+  if(!cs) cs = starts[0];
+
   const avgCycle = info.avgCycle, periodLen = info.periodLen, ovuDay = info.ovuDay;
-  // Find cycle start ≤ this date
-  let cs = new Date(info.realStart);
-  while(true){
-    const next = new Date(cs); next.setDate(next.getDate() + avgCycle);
-    if(next > d) break;
-    cs = next;
+  let cd = Math.floor((d - cs) / 86400000) + 1;
+  // If d is BEFORE first recorded start, project backward in avgCycle steps
+  if(cd < 1){
+    while(cd < 1){ cd += avgCycle; }
   }
-  // Also handle dates before realStart (previous cycle)
-  while(cs > d){
-    cs.setDate(cs.getDate() - avgCycle);
-  }
-  const cd = Math.floor((d - cs) / 86400000) + 1;
-  if(cd < 1 || cd > avgCycle) return { phase:'none', mark:'' };
+  // If we're more than one cycle past last start, advance
+  while(cd > avgCycle){ cd -= avgCycle; }
 
   let phase;
   let mark = '';
-  if(cd <= periodLen){ phase = 'period'; mark = '🩸'; }
+  if(cd <= periodLen){ phase = 'period'; }
   else if(cd === ovuDay){ phase = 'ovulation'; mark = '✦'; }
   else if(cd >= ovuDay - 3 && cd <= ovuDay + 1){ phase = 'fertile'; }
   else if(cd >= avgCycle - 4){ phase = 'pms'; }
@@ -9231,69 +9307,94 @@ function renderHealth(root){
                   ${phases[info.phase].emoji} 주기 ${info.cycleDay}일째 · <span style="color:${phases[info.phase].color}">${phases[info.phase].label}</span>
                 </div>
                 <div style="font-family:var(--fb);font-weight:400;font-size:13.5px;color:var(--ink-soft);line-height:1.6">
-                  다음 생리 예정: <b style="color:var(--ink)">${info.nextPeriodKey}</b> (D-${info.daysUntilNext}) · 배란 예정일 ${info.ovuKey}<br>
+                  ${info.stats.irregular
+                    ? `최근 주기 <b style="color:var(--ink)">${info.stats.min}~${info.stats.max}일</b> 사이 — 불규칙해서 예측 정확도 낮을 수 있어`
+                    : `다음 생리 예정: <b style="color:var(--ink)">${info.nextPeriodKey}</b> (D-${info.daysUntilNext}) · 배란 예정일 ${info.ovuKey}`}<br>
                   ${cyclePhaseAdvice(info.phase)}
                 </div>
               </div>
-
-              <!-- Mini calendar: next 5 weeks -->
-              <p class="label-eyebrow" style="font-size:11px;margin-bottom:6px">5주 캘린더</p>
-              <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-bottom:6px">
-                ${['일','월','화','수','목','금','토'].map(d => `<div style="font-family:var(--fui);font-size:10px;letter-spacing:.14em;color:var(--ink-muted);text-align:center">${d}</div>`).join('')}
+            ` : `
+              <div style="padding:12px 14px;background:var(--paper-soft);border-radius:4px;margin-bottom:14px;font-family:var(--fb);font-size:13.5px;color:var(--ink-soft);line-height:1.6">
+                아직 기록이 없어. 아래 캘린더에서 생리 시작한 날을 직접 클릭해서 추가해줘 (한 번 누르면 🩸 시작, 두 번이면 생리 중, 세 번이면 지워짐).
               </div>
-              <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-bottom:14px">
-                ${(() => {
-                  const cells = [];
-                  // Start from Sunday of current week containing realStart, or of today, whichever is earlier
-                  const start = new Date(info.calStart);
-                  for(let i = 0; i < 35; i++){
-                    const d = new Date(start); d.setDate(d.getDate() + i);
-                    const dk = dkey(d);
-                    const day = cyclePhaseOn(d, info);
-                    const ph = phases[day.phase];
-                    const isToday = dk === tk;
-                    cells.push(`<div title="${dk} · ${ph.label}" style="aspect-ratio:1;background:${day.phase==='none'?'var(--paper-soft)':ph.soft};border:1px solid ${isToday?'var(--ink)':'var(--hairline-soft)'};border-radius:3px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:var(--fb);font-size:11px;color:${day.phase==='none'?'var(--ink-muted)':ph.color};font-weight:${isToday?'700':'500'};position:relative">
-                      ${d.getDate()}
-                      ${day.mark ? `<div style="font-size:9px;line-height:1;margin-top:1px">${day.mark}</div>` : ''}
-                    </div>`);
-                  }
-                  return cells.join('');
-                })()}
-              </div>
+            `}
 
-              <!-- Legend -->
-              <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px;font-family:var(--fb);font-size:11px;color:var(--ink-soft)">
-                ${Object.entries(phases).map(([k,p]) => `<span style="display:inline-flex;align-items:center;gap:4px"><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:${p.soft};border:1px solid ${p.color}"></span>${p.label}</span>`).join('')}
+            <!-- Mini calendar: 8 weeks (cover past + future), click to mark -->
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+              <p class="label-eyebrow" style="margin:0;font-size:11px">캘린더 <span style="font-family:var(--fui);font-size:10px;letter-spacing:.14em;color:var(--ink-muted);margin-left:4px">탭해서 시작일·생리중 표시</span></p>
+              <div style="display:flex;gap:4px">
+                <button type="button" id="cycleCalPrev" style="background:transparent;border:1px solid var(--hairline);color:var(--ink-soft);font-family:var(--fui);font-size:10px;padding:3px 8px;border-radius:3px;cursor:pointer">◀</button>
+                <button type="button" id="cycleCalNext" style="background:transparent;border:1px solid var(--hairline);color:var(--ink-soft);font-family:var(--fui);font-size:10px;padding:3px 8px;border-radius:3px;cursor:pointer">▶</button>
               </div>
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-bottom:6px">
+              ${['일','월','화','수','목','금','토'].map(d => `<div style="font-family:var(--fui);font-size:10px;letter-spacing:.14em;color:var(--ink-muted);text-align:center">${d}</div>`).join('')}
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-bottom:12px">
+              ${(() => {
+                // Determine calendar start: based on cycleCalOffset (in weeks from today's Sunday)
+                const offsetWeeks = (window._cycleCalOffset || 0);
+                const base = info ? info.calStart : (() => {
+                  const t = nowKST(); t.setDate(t.getDate() - t.getDay()); return t;
+                })();
+                const start = new Date(base);
+                start.setDate(start.getDate() + offsetWeeks * 7);
+                const dummyInfo = info || { avgCycle: cycleAvgFromHistory().avg, periodLen: c.periodLen||5, ovuDay: Math.max(10, (cycleAvgFromHistory().avg) - 14), realStart: cycleStarts()[0] };
+                const cells = [];
+                for(let i = 0; i < 56; i++){ // 8 weeks
+                  const d = new Date(start); d.setDate(d.getDate() + i);
+                  const dk = dkey(d);
+                  const day = (info || cycleStarts().length) ? cyclePhaseOn(d, dummyInfo) : { phase:'none', mark:'' };
+                  const ph = phases[day.phase] || { color:'var(--ink-muted)', soft:'var(--paper-soft)', label:'없음' };
+                  const isToday = dk === tk;
+                  const isStart = (c.periodDays||{})[dk] === 'start';
+                  cells.push(`<button type="button" data-cycleday="${dk}" title="${dk} · ${ph.label}" style="aspect-ratio:1;background:${day.phase==='none'?'var(--paper-soft)':ph.soft};border:${isStart?'2px solid #D14B5C':'1px solid '+(isToday?'var(--ink)':'var(--hairline-soft)')};border-radius:3px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:var(--fb);font-size:11px;color:${day.phase==='none'?'var(--ink-muted)':ph.color};font-weight:${isToday?'700':'500'};position:relative;cursor:pointer;padding:0;line-height:1">
+                    ${d.getDate()}
+                    ${day.mark ? `<div style="font-size:9px;line-height:1;margin-top:1px">${day.mark}</div>` : ''}
+                  </button>`);
+                }
+                return cells.join('');
+              })()}
+            </div>
 
-              <button class="btn btn-primary" id="cycleStartedToday" style="margin-bottom:10px">🩸 오늘 생리 시작했어 →</button>
-            ` : ''}
+            <!-- Legend -->
+            <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px;font-family:var(--fb);font-size:11px;color:var(--ink-soft)">
+              ${Object.entries(phases).map(([k,p]) => `<span style="display:inline-flex;align-items:center;gap:4px"><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:${p.soft};border:1px solid ${p.color}"></span>${p.label}</span>`).join('')}
+              <span style="display:inline-flex;align-items:center;gap:4px"><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#F8DEE2;border:2px solid #D14B5C"></span>시작일</span>
+            </div>
+
+            <button class="btn btn-primary" id="cycleStartedToday" style="margin-bottom:10px;width:100%">🩸 오늘 생리 시작했어 (빠른 추가)</button>
 
             <div class="divider"></div>
-            <p class="label-eyebrow" style="font-size:11px">주기 설정</p>
-            <div class="row2">
-              <div class="field"><label>지난 생리 시작일</label><input class="input" id="cycleStartDate" type="date" value="${safe(c.lastPeriodStart||'')}"/></div>
-              <div class="field"><label>평균 주기 (일)</label><input class="input" id="cycleAvg" type="number" min="20" max="45" value="${c.avgCycle||28}"/></div>
-            </div>
+            <p class="label-eyebrow" style="font-size:11px">기본 설정</p>
             <div class="row2">
               <div class="field"><label>생리 기간 (일)</label><input class="input" id="cyclePeriodLen" type="number" min="2" max="10" value="${c.periodLen||5}"/></div>
-              <div class="field"><label style="visibility:hidden">_</label>
-                <div style="display:flex;gap:6px;align-items:center;height:42px">
-                  <button class="btn btn-ghost" id="cycleSave" style="flex:1">설정 저장</button>
-                  <button class="btn btn-ghost" id="cycleDisable" style="font-size:11px;color:var(--rose)">끄기</button>
-                </div>
-              </div>
+              <div class="field"><label>평균 주기 (수동 입력 · 자동 계산 우선)</label><input class="input" id="cycleAvg" type="number" min="20" max="45" value="${c.avgCycle||28}" placeholder="기록 2개 이상이면 자동"/></div>
             </div>
-            ${(c.history && c.history.length) ? `
-              <div class="divider"></div>
-              <p class="label-eyebrow" style="font-size:11px">최근 기록 <span class="right">${c.history.length}회</span></p>
-              <div style="display:flex;flex-direction:column;gap:4px;font-family:var(--fb);font-size:13px;color:var(--ink-soft)">
-                ${c.history.slice(-6).reverse().map((h,i) => `<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid var(--hairline-soft)">
-                  <span>🩸 ${h.start}${h.cycleLen?` <span style="font-family:var(--fui);font-size:10.5px;letter-spacing:.12em;color:var(--ink-muted);margin-left:6px">${h.cycleLen}일 주기</span>`:''}</span>
-                  <button type="button" data-cycledel="${c.history.length-1-i}" class="sup-del">삭제</button>
-                </div>`).join('')}
-              </div>
-            ` : ''}
+            <div style="display:flex;gap:6px;align-items:center;margin-top:6px">
+              <button class="btn btn-ghost" id="cycleSave" style="flex:1">설정 저장</button>
+              <button class="btn btn-ghost" id="cycleDisable" style="font-size:11px;color:var(--rose)">추적 끄기</button>
+            </div>
+
+            ${(() => {
+              const starts = cycleStarts();
+              return starts.length ? `
+                <div class="divider"></div>
+                <p class="label-eyebrow" style="font-size:11px">기록된 시작일 <span class="right">${starts.length}회${(() => {
+                  const s = cycleAvgFromHistory();
+                  return s.n >= 2 ? ` · ${s.irregular ? `${s.min}~${s.max}일 불규칙` : `평균 ${s.avg}일`}` : '';
+                })()}</span></p>
+                <div style="display:flex;flex-direction:column;gap:4px;font-family:var(--fb);font-size:13px;color:var(--ink-soft);max-height:200px;overflow-y:auto">
+                  ${starts.slice(-12).reverse().map((d,i) => {
+                    const dk = dkey(d);
+                    return `<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid var(--hairline-soft)">
+                      <span>🩸 ${dk}</span>
+                      <button type="button" data-cyclestartdel="${dk}" class="sup-del">삭제</button>
+                    </div>`;
+                  }).join('')}
+                </div>
+              ` : '';
+            })()}
           `}
         </div>
         <div style="height:18px"></div>`;
@@ -9948,46 +10049,56 @@ function renderHealth(root){
   if(cycleSaveBtn) cycleSaveBtn.onclick = () => {
     ensureHealth();
     store.health.cycle = store.health.cycle || { enabled:true };
-    const start = $('#cycleStartDate').value;
     const avg = parseInt($('#cycleAvg').value, 10);
     const plen = parseInt($('#cyclePeriodLen').value, 10);
-    if(start) store.health.cycle.lastPeriodStart = start;
     if(!isNaN(avg) && avg >= 20 && avg <= 45) store.health.cycle.avgCycle = avg;
     if(!isNaN(plen) && plen >= 2 && plen <= 10) store.health.cycle.periodLen = plen;
     saveStore('health'); render();
-    toast('주기 설정 저장됨');
+    toast('설정 저장됨');
   };
   const cycleStartedBtn = $('#cycleStartedToday');
   if(cycleStartedBtn) cycleStartedBtn.onclick = () => {
-    if(!confirm('오늘을 새 생리 시작일로 기록할까요?')) return;
     ensureHealth();
-    store.health.cycle = store.health.cycle || { enabled:true, avgCycle:28, periodLen:5 };
-    const c = store.health.cycle;
-    c.history = c.history || [];
-    // Calculate actual cycle length from previous start
-    let cycleLen = null;
-    if(c.lastPeriodStart){
-      const prev = new Date(c.lastPeriodStart);
-      const today = nowKST();
-      cycleLen = Math.round((today - prev) / 86400000);
-      // Update average gradually if reasonable
-      if(cycleLen >= 20 && cycleLen <= 45){
-        const histLens = c.history.filter(h => h.cycleLen).map(h => h.cycleLen);
-        const all = [...histLens, cycleLen].slice(-6);
-        c.avgCycle = Math.round(all.reduce((a,b)=>a+b,0) / all.length);
-      }
-      c.history.push({ start: c.lastPeriodStart, cycleLen });
-    }
-    c.lastPeriodStart = todayKey();
+    store.health.cycle = store.health.cycle || { enabled:true, periodLen:5 };
+    store.health.cycle.periodDays = store.health.cycle.periodDays || {};
+    const tk = todayKey();
+    store.health.cycle.periodDays[tk] = 'start';
     saveStore('health'); render();
-    toast(`🩸 기록됨${cycleLen ? ` · 이번 주기 ${cycleLen}일` : ''}`);
+    toast('🩸 오늘 시작일로 기록됐어');
   };
-  $$('#main [data-cycledel]').forEach(b => b.onclick = () => {
-    if(!confirm('이 기록을 지울까요?')) return;
-    const idx = +b.dataset.cycledel;
-    store.health.cycle.history.splice(idx, 1);
+  // Cell tap: cycle through (none → start → day → none)
+  $$('#main [data-cycleday]').forEach(b => b.onclick = () => {
+    ensureHealth();
+    store.health.cycle = store.health.cycle || { enabled:true, periodLen:5 };
+    store.health.cycle.periodDays = store.health.cycle.periodDays || {};
+    const dk = b.dataset.cycleday;
+    const cur = store.health.cycle.periodDays[dk];
+    if(!cur) store.health.cycle.periodDays[dk] = 'start';
+    else if(cur === 'start') store.health.cycle.periodDays[dk] = 'day';
+    else delete store.health.cycle.periodDays[dk];
     saveStore('health'); render();
   });
+  // Delete a recorded start from history list
+  $$('#main [data-cyclestartdel]').forEach(b => b.onclick = () => {
+    if(!confirm('이 시작일을 지울까요?')) return;
+    const dk = b.dataset.cyclestartdel;
+    if(store.health?.cycle){
+      if(store.health.cycle.periodDays && store.health.cycle.periodDays[dk]){
+        delete store.health.cycle.periodDays[dk];
+      }
+      if(store.health.cycle.lastPeriodStart === dk){
+        store.health.cycle.lastPeriodStart = '';
+      }
+      if(Array.isArray(store.health.cycle.history)){
+        store.health.cycle.history = store.health.cycle.history.filter(h => h.start !== dk);
+      }
+    }
+    saveStore('health'); render();
+  });
+  // Calendar pan
+  const calPrev = $('#cycleCalPrev'), calNext = $('#cycleCalNext');
+  if(calPrev) calPrev.onclick = () => { window._cycleCalOffset = (window._cycleCalOffset||0) - 4; render(); };
+  if(calNext) calNext.onclick = () => { window._cycleCalOffset = (window._cycleCalOffset||0) + 4; render(); };
 
   // ===== Body info save =====
   const bodySaveBtn = $('#bodySave');
