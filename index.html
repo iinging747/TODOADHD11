@@ -12358,6 +12358,8 @@ function renderDrawer(){
           </div>
           ${t.reason?`<p class="why">${safe(t.reason)}</p>`:''}
         </div>
+        <button type="button" class="del" data-edittime="${t.id}" aria-label="시간 수정" title="시간 수정">🕐</button>
+        <button type="button" class="del" data-edittext="${t.id}" aria-label="내용 수정" title="내용 수정">✏️</button>
         <button type="button" class="del" data-movetask="${t.id}" aria-label="다른 날로 이동" title="다른 날로 이동">📅</button>
         <button type="button" class="del" data-notify="${t.id}" aria-label="알림 설정" title="알림 설정" style="color:${notifLabel?'var(--rose)':'var(--ink-muted)'}">${notifLabel?'🔔':'🔕'}</button>
         <button type="button" class="del" data-del="${t.id}" aria-label="일정 삭제" title="삭제">삭제</button>
@@ -12399,6 +12401,8 @@ function renderDrawer(){
   $$('#drawerBody [data-toggle]').forEach(b=>b.onchange=()=>toggleTask(b.dataset.toggle));
   $$('#drawerBody [data-del]').forEach(b=>b.onclick=()=>deleteTask(b.dataset.del));
   $$('#drawerBody [data-movetask]').forEach(b=>b.onclick=()=>moveTaskToDate(b.dataset.movetask));
+  $$('#drawerBody [data-edittime]').forEach(b=>b.onclick=()=>editTaskTime(b.dataset.edittime));
+  $$('#drawerBody [data-edittext]').forEach(b=>b.onclick=()=>editTaskText(b.dataset.edittext));
   $$('#drawerBody [data-delall]').forEach(b=>b.onclick=()=>deleteAllOnDay(b.dataset.delall));
   $$('#drawerBody [data-notify]').forEach(b=>b.onclick=()=>setTaskNotify(b.dataset.notify));
   $$('#drawerBody [data-shareday]').forEach(b=>b.onclick=()=>shareDay(b.dataset.shareday));
@@ -12422,6 +12426,57 @@ function renderDrawer(){
   $('#qAdd').onclick=quickAddDrawer;
   $('#qTask').addEventListener('keydown',e=>{if(e.key==='Enter')quickAddDrawer()});
 }
+function editTaskTime(id){
+  const t = store.tasks.find(x => String(x.id) === String(id));
+  if(!t) return;
+  const ans = prompt(
+    `"${t.text}"\n현재 시간: ${t.time || '시간 없음'}\n\n새 시간 입력 (HH:MM)\n비우고 확인 = 시간 제거\n예) 14:30, 09:00`,
+    t.time || ''
+  );
+  if(ans === null) return; // cancel
+  const raw = ans.trim();
+  if(raw === ''){
+    delete t.time;
+    saveStore('tasks');
+    if(typeof renderDrawer === 'function') renderDrawer();
+    render();
+    toast('🕐 시간 제거됨');
+    return;
+  }
+  // Accept HH:MM, H:MM, HHMM, HH시 MM분, HH시
+  let h = null, m = null;
+  let M;
+  if((M = raw.match(/^(\d{1,2}):(\d{2})$/))){ h = +M[1]; m = +M[2]; }
+  else if((M = raw.match(/^(\d{1,2})(\d{2})$/)) && +M[1] <= 23){ h = +M[1]; m = +M[2]; }
+  else if((M = raw.match(/^(\d{1,2})시\s*(\d{1,2})?분?$/))){ h = +M[1]; m = +(M[2]||0); }
+  else if((M = raw.match(/^(\d{1,2})$/)) && +M[1] <= 23){ h = +M[1]; m = 0; }
+  if(h == null || h < 0 || h > 23 || m == null || m < 0 || m > 59){
+    toast('시간 형식이 잘못됐어 (HH:MM)');
+    return;
+  }
+  const pad2 = n => String(n).padStart(2, '0');
+  t.time = `${pad2(h)}:${pad2(m)}`;
+  saveStore('tasks');
+  if(typeof renderDrawer === 'function') renderDrawer();
+  render();
+  toast(`🕐 ${t.time}`);
+}
+
+function editTaskText(id){
+  const t = store.tasks.find(x => String(x.id) === String(id));
+  if(!t) return;
+  const ans = prompt('일정 내용 수정', t.text || '');
+  if(ans === null) return;
+  const v = ans.trim();
+  if(!v){ toast('빈 내용은 안 돼'); return; }
+  if(v === t.text) return;
+  t.text = v;
+  saveStore('tasks');
+  if(typeof renderDrawer === 'function') renderDrawer();
+  render();
+  toast('✏️ 내용 수정됨');
+}
+
 function moveTaskToDate(id){
   const t = store.tasks.find(x => String(x.id) === String(id));
   if(!t) return;
