@@ -661,7 +661,15 @@ body.dark .select{background-image:url("data:image/svg+xml;utf8,<svg xmlns='http
 }
 .memo-body{
   font-family:var(--fb);font-weight:400;font-size:15px;line-height:1.75;
-  color:var(--ink);letter-spacing:.005em;white-space:pre-wrap;word-break:break-word;
+  color:var(--ink);letter-spacing:.005em;word-break:break-word;
+}
+.memo-line{display:block;white-space:pre-wrap}
+.memo-check{display:flex;align-items:flex-start;gap:8px;padding:2px 0;cursor:pointer;user-select:none}
+.memo-check input[type=checkbox]{margin:5px 0 0 0;accent-color:var(--olive);flex:0 0 auto;cursor:pointer}
+.memo-check .memo-check-text{flex:1;white-space:pre-wrap;word-break:break-word}
+.memo-check.checked .memo-check-text{
+  color:var(--ink-muted);text-decoration:line-through;text-decoration-thickness:1px;
+  text-decoration-style:wavy;text-decoration-color:#A89B85;opacity:.75
 }
 .inline-link{
   color:var(--ink);text-decoration:none;
@@ -3204,6 +3212,120 @@ $$('.nav-item').forEach(b=>b.addEventListener('click',()=>{
   render();
 }));
 
+/* ===== Yesterday recap card — encouragement + realistic advice =====
+   Shows on calendar if yesterday had failures or no records.
+   Dismissable per day. */
+function yesterdayRecapHTML(){
+  const tk = todayKey();
+  // Already dismissed today?
+  const st = (store.daily && store.daily.recap && store.daily.recap[tk]) || {};
+  if(st.dismissed) return '';
+
+  const yest = dateAdd(nowKST(), -1);
+  const yk = dkey(yest);
+  const yTasks = (store.tasks||[]).filter(t => t.date === yk);
+  const yDone = yTasks.filter(t => t.done).length;
+  const yFailed = yTasks.length - yDone; // unchecked
+  const yDiary = (store.diaries||[]).find(d => d.date === yk);
+  const yMemos = (store.memos||[]).filter(m => {
+    const md = new Date(m.savedAt||0);
+    return dkey(md) === yk;
+  }).length;
+  const yEx = (store.health?.exercise||[]).filter(e => e.date === yk).length;
+  const yWater = (store.health?.water||{})[yk] || 0;
+
+  // Skip if there was nothing scheduled AND nothing missing — completely empty day, no need to nag
+  const hadActivity = yTasks.length || yDiary || yMemos || yEx || yWater;
+  if(!hadActivity){
+    // Quietly encourage on truly blank days (only sometimes — show 1 of 4 days)
+    const seed = tk.split('-').reduce((a,b)=>a+parseInt(b,10),0);
+    if(seed % 4 !== 0) return '';
+  }
+
+  // Build message
+  const failureRate = yTasks.length ? (yFailed / yTasks.length) : 0;
+  let comfort = '', real = '';
+  if(yTasks.length === 0 && !yDiary && !yMemos){
+    comfort = _pickPhr([
+      '🌿 어제는 기록이 없네. 그런 날도 있는 거야 — 다 비워둬도 괜찮아',
+      '🌿 어제 흔적 없는 거 보니 좀 쉬었나봐. 그것도 일종의 회복이야',
+      '🌿 비워둔 어제도 너의 하루야. 자기한테 너무 엄격하지 마'
+    ]);
+    real = _pickPhr([
+      '오늘은 5분짜리 하나만 — 그것만으로 충분',
+      '오늘은 아주 작은 거 하나로 시작해보자',
+      '거창하게 X. 가벼운 한 줄부터'
+    ]);
+  } else if(failureRate >= 0.7 && yTasks.length >= 2){
+    comfort = _pickPhr([
+      `🫂 어제 ${yFailed}개 못 했구나... 토닥토닥. 진짜 자책하지 마`,
+      `🫂 어제 좀 무너졌네. 그래도 시작은 했잖아 — 그게 어디야`,
+      `🫂 안 됐어도 괜찮아. 어제의 너도 최선이었을 거야`,
+      `🫂 ${yFailed}개 못 했다고 너가 별로인 게 아니야. 계획이 너무 컸을 뿐`
+    ]);
+    real = _pickPhr([
+      '오늘은 양 절반으로 잘라봐. "이거 하나만 하면 성공"이라는 마음으로',
+      `현실적으로 한 사람이 하루에 ${yFailed+yDone}개는 무리야. 2~3개로 줄여`,
+      '계획을 30분 단위로 쪼개봐 — 큰 덩어리는 항상 안 굴러가',
+      '진짜 하나만 — 우선순위 1개에 90% 에너지 쓰고 나머진 보너스로'
+    ]);
+  } else if(failureRate >= 0.4){
+    comfort = _pickPhr([
+      `💗 어제 ${yDone}개는 해냈어. 못 한 ${yFailed}개에만 매달리지 말자`,
+      `💗 절반 정도는 한 거니까 너무 자책 X`,
+      `💗 완벽 못 해도 어제의 너는 노력한 거야`
+    ]);
+    real = _pickPhr([
+      '오늘은 진짜 급한 거 1개만 꼭 잡고 나머진 보너스로',
+      '오전에 가장 큰 거 처리하면 오후가 가벼워',
+      '미룬 거 중 5분짜리 있으면 그것부터 빼봐'
+    ]);
+  } else if(yFailed > 0 && yDone > 0){
+    comfort = _pickPhr([
+      `✨ 어제 ${yDone}개 해냈네 — ${yFailed}개는 못 했지만 잘했어`,
+      `✨ 어제 페이스 좋았어. 못 한 ${yFailed}개는 너무 신경 쓰지 마`,
+      `✨ 한 만큼 한 거야. 그게 진짜야`
+    ]);
+    real = _pickPhr([
+      '오늘은 어제 못 한 거 1개만 옮겨와봐',
+      '컨디션 맞춰서 가자. 무리할 필요 없어',
+      '여세 좋다 — 오늘도 비슷한 페이스로'
+    ]);
+  } else if(yDone > 0 && yFailed === 0){
+    comfort = _pickPhr([
+      `🌟 어제 잡은 거 다 해냈어 — 솔직히 멋져`,
+      `🌟 100% 완료. 이런 날 기억해둬`,
+      `🌟 어제 진짜 잘했어. 자기 칭찬 한 마디`
+    ]);
+    real = _pickPhr([
+      '오늘은 살짝 쉬어가도 돼 — 매일 풀가동은 X',
+      '여세 살리되 무리는 금물',
+      '같은 패턴 유지가 답이야'
+    ]);
+  } else {
+    return '';
+  }
+  // Card HTML
+  return `<div id="recapCard" style="background:linear-gradient(135deg,#F5E8FA 0%,#FAF5E8 100%);border:1px solid var(--hairline);border-left:3px solid var(--rose);border-radius:6px;padding:14px 16px;margin-bottom:14px;position:relative">
+    <button type="button" id="recapDismiss" title="닫기" style="position:absolute;top:8px;right:10px;background:transparent;border:0;color:var(--ink-muted);font-family:var(--fui);font-size:11px;letter-spacing:.16em;cursor:pointer">✕</button>
+    <p class="label-eyebrow" style="margin:0 0 6px">어제의 너에게 <span style="font-family:var(--fui);font-size:10px;letter-spacing:.16em;color:var(--ink-muted);margin-left:6px">recap</span></p>
+    <p style="margin:0 0 6px;font-family:var(--fb);font-weight:500;font-size:14.5px;color:var(--ink);line-height:1.6">${comfort}</p>
+    <p style="margin:0;font-family:var(--fb);font-weight:400;font-size:13.5px;color:var(--ink-soft);line-height:1.6;font-style:italic">💡 오늘은 — ${real}</p>
+  </div>`;
+}
+function _wireYesterdayRecap(){
+  const dismiss = $('#recapDismiss');
+  if(dismiss) dismiss.onclick = () => {
+    const tk = todayKey();
+    store.daily = store.daily || {};
+    store.daily.recap = store.daily.recap || {};
+    store.daily.recap[tk] = { dismissed: true };
+    saveStore('daily');
+    const card = $('#recapCard');
+    if(card) card.remove();
+  };
+}
+
 /* ===== Cycle AI auto-notifications (once per day) ===== */
 function maybeShowCycleAlert(){
   if(store.settings?.sex !== 'female') return;
@@ -3361,6 +3483,7 @@ function renderCalendar(root){
   const heroTitle=calMode==='month'?'MONTHLY':'WEEKLY';
   const heroScript=calMode==='month'?'calendar':'planner';
   root.innerHTML=`
+    ${yesterdayRecapHTML()}
     ${dailyMissionHTML()}
     <div class="hero">
       <h1 class="hero-title">${heroTitle}</h1>
@@ -3400,6 +3523,7 @@ function renderCalendar(root){
   $('#todayBtn').onclick=()=>{ selectedDate=nowKST(); cursor=new Date(selectedDate.getFullYear(),selectedDate.getMonth(),1); render(); };
   $('#modeToggle').onclick=()=>{ calMode=calMode==='month'?'week':'month'; render(); };
   _wireDailyMission();
+  _wireYesterdayRecap();
   maybeShowCycleAlert();
   // Ad slot for free users — placeholder card linking to Pro upgrade
   if(!isPremium()){
@@ -6085,6 +6209,32 @@ function memoComment(text){
   ]);
 }
 
+/* Render memo body with checkable list items.
+   Lines starting with -, *, •, [ ], □, ☐, or "N." are turned into checkboxes. */
+function renderMemoCheckable(m){
+  const text = m.text || '';
+  const lines = text.split(/\r?\n/);
+  const checks = m.checks || {};
+  const out = [];
+  lines.forEach((line, idx) => {
+    const rawMatch = line.match(/^(\s*)([-*•·]|\[\s*[x✓v ]?\s*\]|□|☐|\d+[.)])\s+(.+)$/);
+    if(rawMatch){
+      const indent = rawMatch[1].length;
+      const content = rawMatch[3];
+      const isChecked = !!checks[idx];
+      out.push(`<label class="memo-check ${isChecked?'checked':''}" style="margin-left:${Math.min(indent*4, 24)}px">
+        <input type="checkbox" data-memocheck="${safe(m.id)}|${idx}" ${isChecked?'checked':''}/>
+        <span class="memo-check-text">${renderTextWithLinks(content)}</span>
+      </label>`);
+    } else if(line.trim() === ''){
+      out.push('<br>');
+    } else {
+      out.push(`<div class="memo-line">${renderTextWithLinks(line)}</div>`);
+    }
+  });
+  return out.join('');
+}
+
 function renderMemo(root){
   const memos = (store.memos||[]).slice().sort((a,b)=>(b.savedAt||0)-(a.savedAt||0));
   const hasVault = !!store.vault?.setup;
@@ -6198,14 +6348,14 @@ function renderMemo(root){
 
       ${memos.length?`
       <div style="height:24px"></div>
-      <p class="label-eyebrow" style="max-width:none">저장된 메모 <span class="right">${memos.length}개</span></p>
+      <p class="label-eyebrow" style="max-width:none">저장된 메모 <span class="right">${memos.length}개 <span style="font-family:var(--fb);font-size:11px;color:var(--ink-muted);letter-spacing:0;text-transform:none;font-style:italic;margin-left:6px">— 줄 앞에 - · * 쓰면 체크박스로 변환</span></span></p>
       <div class="memo-list">
         ${memos.map((m,i)=>{
           const d=new Date(m.savedAt||0);
           const ds=`${d.getFullYear()}.${pad(d.getMonth()+1)}.${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
           return `<div class="memo-card" data-mid="${safe(m.id)}">
             <div class="memo-meta">${ds}</div>
-            <div class="memo-body">${renderTextWithLinks(m.text)}</div>
+            <div class="memo-body">${renderMemoCheckable(m)}</div>
             ${renderLinkPreviews(m.text)}
             ${m.aiComment?`
               <div class="memo-ai">
@@ -6246,6 +6396,20 @@ function renderMemo(root){
     m.aiCommentAt=Date.now();
     saveStore();
     render();
+  });
+
+  // Memo checklist item toggle
+  $$('#main [data-memocheck]').forEach(cb => cb.onchange = () => {
+    const [mid, lineIdx] = cb.dataset.memocheck.split('|');
+    const m = (store.memos||[]).find(x => String(x.id) === String(mid));
+    if(!m) return;
+    m.checks = m.checks || {};
+    if(cb.checked) m.checks[lineIdx] = true;
+    else delete m.checks[lineIdx];
+    saveStore('memos');
+    // Don't full re-render — just toggle visual locally
+    const label = cb.closest('.memo-check');
+    if(label) label.classList.toggle('checked', cb.checked);
   });
 
   // ===== Vault handlers =====
